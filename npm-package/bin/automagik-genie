@@ -1,0 +1,110 @@
+#!/usr/bin/env node
+
+const { validateClaude } = require('../lib/claude-cli-check.js');
+const { init } = require('../lib/init.js');
+const path = require('path');
+
+const showHelp = () => {
+  console.log('🧞 Automagik Genie - Universal AI Development Companion');
+  console.log('');
+  console.log('Usage:');
+  console.log('  npx automagik-genie init    Initialize Genie in current project');
+  console.log('  npx automagik-genie --help  Show this help message');
+  console.log('');
+  console.log('Requirements:');
+  console.log('  - Claude CLI must be installed and authenticated');
+  console.log('  - Run in any project directory (any programming language)');
+  console.log('');
+  console.log('What it does:');
+  console.log('  ✨ Analyzes your codebase (any language: Go, Rust, Python, JS, etc.)');
+  console.log('  🤖 Creates project-specific AI agents');
+  console.log('  🎯 Provides /wish command for development assistance');
+  console.log('  🔧 Installs optional development workflow hooks');
+  console.log('');
+  console.log('After initialization:');
+  console.log('  /wish "analyze this codebase"');
+  console.log('  /wish "add authentication system"');
+  console.log('  /wish "fix failing tests"');
+  console.log('');
+  console.log('Learn more: https://github.com/automagik-genie/automagik-genie');
+};
+
+const main = async () => {
+  const args = process.argv.slice(2);
+  
+  // Handle help command
+  if (args.includes('--help') || args.includes('-h')) {
+    showHelp();
+    return;
+  }
+  
+  // Handle version command
+  if (args.includes('--version') || args.includes('-v')) {
+    const packageJson = require('../package.json');
+    console.log(packageJson.version);
+    return;
+  }
+  
+  // Default to init command
+  const command = args[0] || 'init';
+  
+  if (command !== 'init') {
+    console.log('❌ Unknown command:', command);
+    console.log('💡 Run: npx automagik-genie --help');
+    process.exit(1);
+  }
+  
+  console.log('🧞 Initializing Automagik Genie...');
+  console.log('');
+  
+  // Check Claude CLI first
+  const claudeAvailable = await validateClaude();
+  if (!claudeAvailable) {
+    process.exit(1);
+  }
+  
+  const targetPath = process.cwd();
+  
+  try {
+    await init(targetPath);
+    
+    console.log('');
+    console.log('✨ Genie successfully initialized!');
+    console.log('');
+    console.log('🔍 The analyzer agent will auto-detect your tech stack');
+    console.log('💡 Try your first wish:');
+    console.log('   /wish "analyze this codebase and provide development recommendations"');
+    console.log('');
+    console.log('🎯 Available commands:');
+    console.log('   /wish "add feature X"     - Request new functionality');  
+    console.log('   /wish "fix failing tests" - Debug and repair issues');
+    console.log('   /wish "optimize performance" - Improve code efficiency');
+    console.log('');
+    console.log('📚 Check .claude/hooks/examples/ for optional workflow automation');
+    console.log('');
+    console.log('Happy coding! 🧞✨');
+    
+  } catch (error) {
+    console.error('❌ Initialization failed:', error.message);
+    console.log('');
+    console.log('🔧 Troubleshooting:');
+    console.log('   • Ensure you have write permissions in this directory');
+    console.log('   • Check that Claude CLI is properly authenticated');
+    console.log('   • Try running: claude auth');
+    console.log('');
+    process.exit(1);
+  }
+};
+
+// Handle unhandled errors gracefully
+process.on('unhandledRejection', (error) => {
+  console.error('❌ Unexpected error:', error.message);
+  process.exit(1);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('❌ Fatal error:', error.message);
+  process.exit(1);
+});
+
+main();
