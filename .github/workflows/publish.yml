@@ -31,11 +31,61 @@ jobs:
           echo "Package version: $PACKAGE_VERSION"
           echo "Tag version: $TAG_VERSION"
           if [ "$PACKAGE_VERSION" != "$TAG_VERSION" ]; then
-            echo "❌ Version mismatch! Updating package.json..."
-            npm version $TAG_VERSION --no-git-tag-version
+            echo "❌ CRITICAL: Version mismatch detected!"
+            echo "Package.json version: $PACKAGE_VERSION"
+            echo "Git tag version: $TAG_VERSION" 
+            echo "This indicates manual tampering with version management."
+            echo "Use proper bump scripts: npm run bump-patch|bump-minor|bump-major"
+            echo "ABORTING PUBLISH to prevent version sequence violations."
+            exit 1
           else
-            echo "✅ Versions match, no update needed"
+            echo "✅ Versions match, proceeding with publish"
           fi
+
+      - name: Validate version sequence
+        run: |
+          echo "Validating version sequence against git tags..."
+          node -e "
+            const fs = require('fs');
+            const { execSync } = require('child_process');
+            const pkg = JSON.parse(fs.readFileSync('package.json'));
+            const currentVersion = pkg.version;
+            
+            // Get all version tags sorted by version
+            const tags = execSync('git tag -l --sort=-version:refname').toString()
+              .trim().split('\n').filter(t => t.startsWith('v') && t !== 'v' + currentVersion);
+            
+            if (tags.length === 0) {
+              console.log('✅ First release - no sequence validation needed');
+              process.exit(0);
+            }
+            
+            const latestTag = tags[0].replace('v', '');
+            const [currentMaj, currentMin, currentPat] = currentVersion.split('.').map(Number);
+            const [latestMaj, latestMin, latestPat] = latestTag.split('.').map(Number);
+            
+            console.log('Current version:', currentVersion);
+            console.log('Latest tag:', latestTag);
+            
+            // Check if this is a valid next version
+            const validPatch = currentMaj === latestMaj && currentMin === latestMin && currentPat === latestPat + 1;
+            const validMinor = currentMaj === latestMaj && currentMin === latestMin + 1 && currentPat === 0;
+            const validMajor = currentMaj === latestMaj + 1 && currentMin === 0 && currentPat === 0;
+            
+            if (!validPatch && !validMinor && !validMajor) {
+              console.error('❌ INVALID VERSION SEQUENCE!');
+              console.error('Latest version:', latestTag);
+              console.error('Current version:', currentVersion);
+              console.error('Valid next versions would be:');
+              console.error('  Patch:', latestMaj + '.' + latestMin + '.' + (latestPat + 1));
+              console.error('  Minor:', latestMaj + '.' + (latestMin + 1) + '.0');
+              console.error('  Major:', (latestMaj + 1) + '.0.0');
+              console.error('Use proper bump scripts to ensure sequential versioning!');
+              process.exit(1);
+            }
+            
+            console.log('✅ Version sequence validated - proceeding with publish');
+          "
 
       - name: Verify package contents
         run: |

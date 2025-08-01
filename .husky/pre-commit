@@ -1,0 +1,24 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Check if package.json version was manually edited
+if git diff --cached --name-only | grep -q "package.json"; then
+  echo "🔍 Checking package.json changes..."
+  
+  # Check if version field was modified
+  if git diff --cached package.json | grep -q '"version"'; then
+    echo "❌ BLOCKED: Manual package.json version edit detected!"
+    echo ""
+    echo "Version changes must use proper bump scripts:"
+    echo "  npm run bump-patch  # For bug fixes (1.0.5 → 1.0.6)"
+    echo "  npm run bump-minor  # For new features (1.0.5 → 1.1.0)" 
+    echo "  npm run bump-major  # For breaking changes (1.0.5 → 2.0.0)"
+    echo ""
+    echo "This prevents version sequence violations like the 1.0.3 → 1.0.5 incident."
+    echo "Use 'git commit --no-verify' only if you're certain about manual version changes."
+    echo ""
+    exit 1
+  fi
+fi
+
+echo "✅ Pre-commit validation passed"
