@@ -19,6 +19,25 @@ description: 🧞✨ Transform any development wish into reality through intelli
 
 ## 🚀 Execution Protocol - Agent-Powered Magic
 
+### 🎯 FIRST-INTERACTION INTELLIGENCE (NEW USER ONBOARDING)
+
+**AUTOMATIC ACTIVATION**: When detecting first-time usage or initialization requests:
+
+```bash
+# First-time user patterns trigger genie-analyzer immediately:
+"Initialize" / "Setup" / "First time" / "Help me get started"
+→ genie-analyzer performs codebase analysis
+→ Proposes optimal 3 foundation agents based on project context
+→ User chooses which agents to create
+→ Foundation established and ready for development
+```
+
+**ADAPTIVE FOUNDATION STRATEGY**:
+- **No Tests Detected** → Proposes testing infrastructure + implementation + quality agents
+- **Existing Tests** → Proposes TDD enhancement + architecture + validation agents  
+- **Legacy Codebase** → Proposes modernization + documentation + stabilization agents
+- **API-Focused** → Proposes API mastery + integration + monitoring agents
+
 ### 🧠 Step 1: Intelligent Wish Analysis
 
 **Analyze user wish with Master Genie strategic intelligence:**
@@ -27,6 +46,7 @@ description: 🧞✨ Transform any development wish into reality through intelli
 
 | User Says | Instant Agent | Why Skip Analysis |
 |-----------|---------------|-------------------|
+| **"Initialize"** / **"Setup agents"** / **"First time"** | **genie-analyzer** | First-interaction specialist for foundation setup |
 | **"Tests are failing"** / **"Fix coverage"** | **genie-testing-fixer** | TDD-compliant test repair specialist |
 | **"Create tests for X"** / **"Need test coverage"** | **genie-testing-maker** | Comprehensive test suite orchestrator |
 | **"QA testing"** / **"Live endpoint testing"** | **genie-qa-tester** | Systematic real-world endpoint testing |
