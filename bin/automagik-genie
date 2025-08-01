@@ -47,8 +47,12 @@ const showHelp = () => {
   console.log(CONSTANTS.MESSAGES.GENIE_TITLE);
   logSpacing();
   console.log('Usage:');
-  console.log('  npx automagik-genie init    Initialize Genie in current project');
-  console.log('  npx automagik-genie --help  Show this help message');
+  console.log('  npx automagik-genie init      Initialize Genie in current project');
+  console.log('  npx automagik-genie update    Update agents and hooks to latest version');
+  console.log('  npx automagik-genie rollback  Rollback to a previous backup');
+  console.log('  npx automagik-genie status    Show system status and available updates');
+  console.log('  npx automagik-genie cleanup   Clean up old backups and cache');
+  console.log('  npx automagik-genie --help    Show this help message');
   logSpacing();
   console.log('Requirements:');
   console.log('  - Claude CLI must be installed and authenticated');
@@ -59,11 +63,17 @@ const showHelp = () => {
   console.log('  🤖 Creates project-specific AI agents');
   console.log('  🎯 Provides /wish command for development assistance');
   console.log('  🔧 Installs optional development workflow hooks');
+  console.log('  🔄 Keeps agents updated while preserving customizations');
   logSpacing();
   console.log('After initialization:');
   console.log('  /wish "analyze this codebase"');
   console.log('  /wish "add authentication system"');
   console.log('  /wish "fix failing tests"');
+  logSpacing();
+  console.log('Update examples:');
+  console.log('  npx automagik-genie update --dry-run    Preview updates');
+  console.log('  npx automagik-genie update --agents-only Update only agents');
+  console.log('  npx automagik-genie status --check-remote Check for updates');
   logSpacing();
   console.log('Learn more: https://github.com/namastexlabs/automagik-genie');
 };
@@ -197,9 +207,33 @@ const main = async () => {
     return;
   }
   
-  // Default to init command
+  // Extract command
   const command = args[0] || 'init';
   
+  // Handle update-related commands by delegating to update CLI
+  if (['update', 'rollback', 'status', 'cleanup'].includes(command)) {
+    const { spawn } = require('child_process');
+    const updateScript = path.join(__dirname, 'update.js');
+    
+    // Pass all arguments to the update script
+    const updateProcess = spawn('node', [updateScript, ...args], {
+      stdio: 'inherit',
+      cwd: process.cwd()
+    });
+
+    updateProcess.on('close', (code) => {
+      process.exit(code);
+    });
+
+    updateProcess.on('error', (error) => {
+      console.error(CONSTANTS.MESSAGES.UNEXPECTED_ERROR, error.message);
+      process.exit(CONSTANTS.EXIT_CODE.ERROR);
+    });
+
+    return;
+  }
+  
+  // Handle init command
   if (command !== 'init') {
     console.log(CONSTANTS.MESSAGES.UNKNOWN_COMMAND, command);
     console.log(CONSTANTS.MESSAGES.HELP_SUGGESTION);

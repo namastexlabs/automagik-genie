@@ -15,7 +15,11 @@
     "bump-patch": "node scripts/bump-version.js patch",
     "bump-minor": "node scripts/bump-version.js minor",
     "bump-major": "node scripts/bump-version.js major",
-    "release": "node scripts/release.js"
+    "release": "node scripts/release.js",
+    "update": "node bin/update.js update",
+    "rollback": "node bin/update.js rollback",
+    "status": "node bin/update.js status",
+    "cleanup": "node bin/update.js cleanup"
   },
   "keywords": [
     "ai",
@@ -48,7 +52,12 @@
     "README.md",
     ".claude/"
   ],
-  "dependencies": {},
+  "dependencies": {
+    "tar": "^6.0.0",
+    "inquirer": "^8.0.0",
+    "colors": "^1.4.0",
+    "yargs": "^17.0.0"
+  },
   "peerDependencies": {},
   "devDependencies": {}
 }
