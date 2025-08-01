@@ -134,11 +134,7 @@ const main = async () => {
       claudeArgs.push('--dangerously-skip-permissions');
     }
     
-    claudeArgs.push('/wish');
-    claudeArgs.push('analyze this codebase and provide development recommendations following enterprise patterns');
-    
-    // Enhanced logging for debugging
-    console.log('🔧 Debug: Executing command:', claudeCommand, claudeArgs);
+    claudeArgs.push('/wish analyze this codebase and provide development recommendations following enterprise patterns');
     
     // Auto-trigger claude command for immediate analysis
     const claudeProcess = spawn(claudeCommand, claudeArgs, {
@@ -150,15 +146,6 @@ const main = async () => {
     claudeProcess.on('error', (error) => {
       console.log('');
       console.log('⚠️  Could not auto-start analysis:');
-      console.log('🔧 Debug: Command attempted:', claudeCommand, claudeArgs);
-      console.log('🔧 Debug: Working directory:', targetPath);
-      console.log('🔧 Debug: Error details:', {
-        message: error.message,
-        code: error.code,
-        errno: error.errno,
-        syscall: error.syscall,
-        path: error.path
-      });
       
       if (error.code === 'ENOENT') {
         console.log('   Claude CLI not found in PATH');
@@ -179,7 +166,6 @@ const main = async () => {
 
     claudeProcess.on('close', (code) => {
       console.log('');
-      console.log('🔧 Debug: Claude process exited with code:', code);
       
       if (code === 0) {
         console.log('✨ Analysis complete!');
