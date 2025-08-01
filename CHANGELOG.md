@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.0.3 (Pending)
+## v1.0.3 (2025-08-01)
 
 ### Fixed
 - **Backup Creation**: Fixed ENOENT error when creating backups during initialization
