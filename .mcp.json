@@ -7,11 +7,6 @@
     "search-repo-docs": {
       "command": "npx",
       "args": ["-y", "@upstash/context7-mcp"]
-    },
-    "claude-mcp": {
-      "command": "claude",
-      "args": ["--mcp-config", ".mcp.json", "--dangerously-skip-permissions", "mcp", "serve"],
-      "env": {}
     }
   }
 }
