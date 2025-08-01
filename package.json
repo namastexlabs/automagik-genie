@@ -28,11 +28,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/automagik-genie/automagik-genie.git"
+    "url": "https://github.com/namastexlabs/automagik-genie.git"
   },
-  "homepage": "https://github.com/automagik-genie/automagik-genie#readme",
+  "homepage": "https://github.com/namastexlabs/automagik-genie#readme",
   "bugs": {
-    "url": "https://github.com/automagik-genie/automagik-genie/issues"
+    "url": "https://github.com/namastexlabs/automagik-genie/issues"
   },
   "engines": {
     "node": ">=14.0.0"
