@@ -3,6 +3,7 @@
 const { validateClaude } = require('../lib/claude-cli-check.js');
 const { init } = require('../lib/init.js');
 const path = require('path');
+const { spawn } = require('child_process');
 
 const showHelp = () => {
   console.log('🧞 Automagik Genie - Universal AI Development Companion');
@@ -27,6 +28,19 @@ const showHelp = () => {
   console.log('  /wish "fix failing tests"');
   console.log('');
   console.log('Learn more: https://github.com/automagik-genie/automagik-genie');
+};
+
+const showPostInitInstructions = () => {
+  console.log('🔍 The analyzer agent will auto-detect your tech stack');
+  console.log('');
+  console.log('🎯 Available commands:');
+  console.log('   /wish "add feature X"     - Request new functionality');  
+  console.log('   /wish "fix failing tests" - Debug and repair issues');
+  console.log('   /wish "optimize performance" - Improve code efficiency');
+  console.log('');
+  console.log('📚 Check .claude/hooks/examples/ for optional workflow automation');
+  console.log('');
+  console.log('Happy coding! 🧞✨');
 };
 
 const main = async () => {
@@ -71,18 +85,43 @@ const main = async () => {
     console.log('');
     console.log('✨ Genie successfully initialized!');
     console.log('');
-    console.log('🔍 The analyzer agent will auto-detect your tech stack');
-    console.log('💡 Try your first wish:');
-    console.log('   /wish "analyze this codebase and provide development recommendations"');
+    console.log('🧞 Starting intelligent codebase analysis...');
     console.log('');
-    console.log('🎯 Available commands:');
-    console.log('   /wish "add feature X"     - Request new functionality');  
-    console.log('   /wish "fix failing tests" - Debug and repair issues');
-    console.log('   /wish "optimize performance" - Improve code efficiency');
-    console.log('');
-    console.log('📚 Check .claude/hooks/examples/ for optional workflow automation');
-    console.log('');
-    console.log('Happy coding! 🧞✨');
+    
+    // Auto-trigger claude command for immediate analysis
+    const claudeProcess = spawn('claude', ['/wish', 'analyze this codebase and provide development recommendations following enterprise patterns'], {
+      stdio: 'inherit',
+      shell: true,
+      cwd: targetPath
+    });
+
+    claudeProcess.on('error', (error) => {
+      console.log('');
+      console.log('⚠️  Could not auto-start analysis:');
+      if (error.code === 'ENOENT') {
+        console.log('   Claude CLI not found in PATH');
+        console.log('   Please ensure Claude CLI is installed and authenticated');
+      } else {
+        console.log(`   ${error.message}`);
+      }
+      console.log('');
+      console.log('💡 Manual analysis: Run the following when ready:');
+      console.log('   /wish "analyze this codebase and provide development recommendations"');
+      console.log('');
+      showPostInitInstructions();
+    });
+
+    claudeProcess.on('close', (code) => {
+      console.log('');
+      if (code === 0) {
+        console.log('✨ Analysis complete!');
+      } else {
+        console.log('💡 Manual analysis available - run when ready:');
+        console.log('   /wish "analyze this codebase and provide development recommendations"');
+      }
+      console.log('');
+      showPostInitInstructions();
+    });
     
   } catch (error) {
     console.error('❌ Initialization failed:', error.message);
