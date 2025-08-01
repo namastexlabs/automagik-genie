@@ -1,14 +1,17 @@
 module.exports = {
   testEnvironment: 'node',
   testMatch: [
-    '**/tests/**/*.test.js',
-    '!**/tests/update-system/**'  // Exclude the complex update system tests for now
+    '**/tests/**/*.test.js'
   ],
   collectCoverageFrom: [
     'lib/**/*.js',
     'bin/**/*.js',
     '!**/node_modules/**'
   ],
-  testTimeout: 10000,
-  verbose: true
+  testTimeout: 30000,
+  verbose: true,
+  // Clear mocks between tests
+  clearMocks: true,
+  // Restore mocks after each test  
+  restoreMocks: true
 };

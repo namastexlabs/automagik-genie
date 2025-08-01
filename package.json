@@ -7,14 +7,12 @@
     "automagik-genie": "./bin/automagik-genie"
   },
   "scripts": {
-    "test": "jest --testPathIgnorePatterns=tests/update-system",
-    "test:update-system": "cd tests/update-system && npm test",
-    "test:safety": "cd tests/update-system && npm run test:safety",
-    "test:all": "npm test && npm run test:update-system",
+    "test": "jest",
+    "test:coverage": "jest --coverage",
     "clean": "node scripts/clean.js",
     "typecheck": "echo \"No TypeScript in this project\"",
     "build": "echo \"No build needed - pure Node.js\"",
-    "prepublishOnly": "npm run test:all",
+    "prepublishOnly": "npm test",
     "bump-patch": "node scripts/bump-version.js patch",
     "bump-minor": "node scripts/bump-version.js minor",
     "bump-major": "node scripts/bump-version.js major",
