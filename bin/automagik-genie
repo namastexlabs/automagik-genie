@@ -127,17 +127,16 @@ const main = async () => {
     console.log('');
     
     // Construct claude command with conditional permission skip
-    const claudeCommand = 'claude';
-    const claudeArgs = [];
+    let claudeCommand = 'claude';
     
     if (skipPermissions) {
-      claudeArgs.push('--dangerously-skip-permissions');
+      claudeCommand += ' --dangerously-skip-permissions';
     }
     
-    claudeArgs.push('/wish analyze this codebase and provide development recommendations following enterprise patterns');
+    claudeCommand += ' "/wish analyze this codebase and provide development recommendations following enterprise patterns"';
     
     // Auto-trigger claude command for immediate analysis
-    const claudeProcess = spawn(claudeCommand, claudeArgs, {
+    const claudeProcess = spawn(claudeCommand, {
       stdio: 'inherit',
       shell: true,
       cwd: targetPath
