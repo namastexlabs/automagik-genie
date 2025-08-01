@@ -68,6 +68,7 @@ Multi-Component Task = SPAWN genie-clone for fractal context preservation across
 ```
 
 ### 🎯 **DOMAIN ROUTING:**
+- **Codebase Analysis** → `.claude/agents/genie-analyzer` (codebase intelligence, agent proposals)
 - **Development** → `.claude/agents/genie-dev-*` (planner, designer, coder, fixer)
 - **Testing** → `.claude/agents/genie-testing-*` (maker, fixer)
 - **Quality** → `.claude/agents/genie-quality-*` (ruff, mypy)
@@ -93,6 +94,10 @@ Multi-Component Task = SPAWN genie-clone for fractal context preservation across
 | **"Implement X"** / **"Code this feature"** | `genie-dev-coder` | Implementation specialist (requires DDD) |
 | **"Update documentation"** / **"Fix CLAUDE.md"** | `genie-claudemd` | Documentation management specialist |
 | **"Enhance agent X"** / **"Improve agent capabilities"** | `genie-agent-enhancer` | Agent optimization specialist |
+| **"Analyze codebase"** / **"Propose agents"** | `genie-analyzer` | Codebase analysis and agent proposal specialist |
+| **"Bootstrap agents"** / **"Initialize agents"** | `genie-analyzer` | Project initialization and agent setup specialist |
+| **"Suggest custom agents"** / **"Agent recommendations"** | `genie-analyzer` | Tailored agent creation based on codebase analysis |
+| **"What agents should I create"** / **"Analyze project for automation"** | `genie-analyzer` | Intelligent project analysis for automation opportunities |
 | **"Create new agent"** / **"Need custom agent"** | `genie-agent-creator` | Agent creation specialist |
 | **"Multiple complex tasks"** / **"Orchestrate parallel work"** | `genie-clone` | Large context coordination |
 | **"Update hive behavior"** / **"System coordination"** | `hive-behavior-updater` | System-wide behavior specialist |
@@ -195,6 +200,9 @@ Task(subagent_type="genie-dev-fixer", prompt="Fix agent C")
 6. ✅ **Genie Strategic Focus**: Does routing preserve Master Genie's coordination role?
 
 ### ⚡ **QUICK AGENT REFERENCE:**
+
+**🔍 ANALYSIS TEAM:**
+- **genie-analyzer** - Universal codebase intelligence, tech stack detection, and custom agent proposals
 
 **🧪 TESTING TEAM:**
 - **genie-testing-fixer** - Fix failing tests, coverage issues
