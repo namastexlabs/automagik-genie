@@ -24,10 +24,18 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "Extracted version: $VERSION"
 
-      - name: Update package.json version
+      - name: Verify package.json version matches tag
         run: |
-          npm version ${{ steps.version.outputs.VERSION }} --no-git-tag-version
-          echo "Updated package.json to version ${{ steps.version.outputs.VERSION }}"
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          TAG_VERSION=${{ steps.version.outputs.VERSION }}
+          echo "Package version: $PACKAGE_VERSION"
+          echo "Tag version: $TAG_VERSION"
+          if [ "$PACKAGE_VERSION" != "$TAG_VERSION" ]; then
+            echo "❌ Version mismatch! Updating package.json..."
+            npm version $TAG_VERSION --no-git-tag-version
+          else
+            echo "✅ Versions match, no update needed"
+          fi
 
       - name: Verify package contents
         run: |
