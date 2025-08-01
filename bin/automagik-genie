@@ -6,42 +6,146 @@ const path = require('path');
 const { spawn } = require('child_process');
 const readline = require('readline');
 
+// Constants - single source of truth for all repeated values
+const CONSTANTS = {
+  WISH_TEXT: '/wish analyze this codebase, understand patterns, and propose development agents to be created',
+  EXIT_CODE: {
+    SUCCESS: 0,
+    ERROR: 1
+  },
+  MESSAGES: {
+    GENIE_TITLE: '🧞 Automagik Genie - Universal AI Development Companion',
+    INIT_START: '🧞 Initializing Automagik Genie...',
+    INIT_SUCCESS: '✨ Genie successfully initialized!',
+    ANALYSIS_START: '🧞 Starting intelligent codebase analysis...',
+    ANALYSIS_COMPLETE: '✨ Analysis complete!',
+    MANUAL_AVAILABLE: '💡 Manual analysis available - run when ready:',
+    AUTO_START_FAILED: '⚠️  Could not auto-start analysis:',
+    UNKNOWN_COMMAND: '❌ Unknown command:',
+    INIT_FAILED: '❌ Initialization failed:',
+    UNEXPECTED_ERROR: '❌ Unexpected error:',
+    FATAL_ERROR: '❌ Fatal error:',
+    HELP_SUGGESTION: '💡 Run: npx automagik-genie --help',
+    TROUBLESHOOTING: '🔧 Troubleshooting:',
+    HAPPY_CODING: 'Happy coding! 🧞✨'
+  }
+};
+
+// Utility functions
+const logSpacing = () => console.log('');
+const logWithSpacing = (message) => {
+  logSpacing();
+  console.log(message);
+  logSpacing();
+};
+const exitWithError = (message) => {
+  console.error(message);
+  process.exit(CONSTANTS.EXIT_CODE.ERROR);
+};
+
 const showHelp = () => {
-  console.log('🧞 Automagik Genie - Universal AI Development Companion');
-  console.log('');
+  console.log(CONSTANTS.MESSAGES.GENIE_TITLE);
+  logSpacing();
   console.log('Usage:');
   console.log('  npx automagik-genie init    Initialize Genie in current project');
   console.log('  npx automagik-genie --help  Show this help message');
-  console.log('');
+  logSpacing();
   console.log('Requirements:');
   console.log('  - Claude CLI must be installed and authenticated');
   console.log('  - Run in any project directory (any programming language)');
-  console.log('');
+  logSpacing();
   console.log('What it does:');
   console.log('  ✨ Analyzes your codebase (any language: Go, Rust, Python, JS, etc.)');
   console.log('  🤖 Creates project-specific AI agents');
   console.log('  🎯 Provides /wish command for development assistance');
   console.log('  🔧 Installs optional development workflow hooks');
-  console.log('');
+  logSpacing();
   console.log('After initialization:');
   console.log('  /wish "analyze this codebase"');
   console.log('  /wish "add authentication system"');
   console.log('  /wish "fix failing tests"');
-  console.log('');
-  console.log('Learn more: https://github.com/automagik-genie/automagik-genie');
+  logSpacing();
+  console.log('Learn more: https://github.com/namastexlabs/automagik-genie');
 };
 
 const showPostInitInstructions = () => {
   console.log('🔍 The analyzer agent will auto-detect your tech stack');
-  console.log('');
+  logSpacing();
   console.log('🎯 Available commands:');
   console.log('   /wish "add feature X"     - Request new functionality');  
   console.log('   /wish "fix failing tests" - Debug and repair issues');
   console.log('   /wish "optimize performance" - Improve code efficiency');
-  console.log('');
+  logSpacing();
   console.log('📚 Check .claude/hooks/examples/ for optional workflow automation');
-  console.log('');
-  console.log('Happy coding! 🧞✨');
+  logSpacing();
+  console.log(CONSTANTS.MESSAGES.HAPPY_CODING);
+};
+
+/**
+ * Build Claude command with conditional permissions and wish text
+ * @param {boolean} skipPermissions - Whether to add --dangerously-skip-permissions flag
+ * @param {string} wishText - The wish command text to execute
+ * @returns {string} Complete Claude command string
+ */
+const buildClaudeCommand = (skipPermissions, wishText) => {
+  let command = 'claude';
+  
+  if (skipPermissions) {
+    command += ' --dangerously-skip-permissions';
+  }
+  
+  command += ` "${wishText}"`;
+  return command;
+};
+
+/**
+ * Show manual Claude command instructions with consistent formatting
+ * @param {boolean} skipPermissions - Whether instructions should include skip permissions flag
+ * @param {string} context - Context for the instructions (e.g., 'error', 'completion')
+ */
+const showManualInstructions = (skipPermissions, context = 'default') => {
+  const command = buildClaudeCommand(skipPermissions, CONSTANTS.WISH_TEXT);
+  
+  console.log(CONSTANTS.MESSAGES.MANUAL_AVAILABLE);
+  console.log(`   ${command}`);
+};
+
+/**
+ * Handle Claude process errors with consistent messaging
+ * @param {Error} error - The error object from Claude process
+ * @param {boolean} skipPermissions - Whether skip permissions was used
+ */
+const handleClaudeError = (error, skipPermissions) => {
+  logSpacing();
+  console.log(CONSTANTS.MESSAGES.AUTO_START_FAILED);
+  
+  if (error.code === 'ENOENT') {
+    console.log('   Claude CLI not found in PATH');
+    console.log('   Please ensure Claude CLI is installed and authenticated');
+  } else {
+    console.log(`   ${error.message}`);
+  }
+  logSpacing();
+  showManualInstructions(skipPermissions, 'error');
+  logSpacing();
+  showPostInitInstructions();
+};
+
+/**
+ * Handle Claude process completion with consistent messaging
+ * @param {number} code - Exit code from Claude process
+ * @param {boolean} skipPermissions - Whether skip permissions was used
+ */
+const showAnalysisCompletion = (code, skipPermissions) => {
+  logSpacing();
+  
+  if (code === CONSTANTS.EXIT_CODE.SUCCESS) {
+    console.log(CONSTANTS.MESSAGES.ANALYSIS_COMPLETE);
+  } else {
+    showManualInstructions(skipPermissions, 'completion');
+  }
+  logSpacing();
+  showPostInitInstructions();
 };
 
 /**
@@ -56,10 +160,10 @@ const promptForPermissionSkip = () => {
     });
 
     console.log('🔐 Claude CLI Permission Options:');
-    console.log('');
+    logSpacing();
     console.log('Claude CLI can run with enhanced permissions for full functionality,');
     console.log('or with restricted permissions for security-conscious environments.');
-    console.log('');
+    logSpacing();
     
     rl.question('Do you want to start with "--dangerously-skip-permissions"? (y/n): ', (answer) => {
       rl.close();
@@ -70,7 +174,7 @@ const promptForPermissionSkip = () => {
       } else {
         console.log('✅ Will start Claude with full permissions');
       }
-      console.log('');
+      logSpacing();
       
       resolve(skipPermissions);
     });
@@ -97,18 +201,18 @@ const main = async () => {
   const command = args[0] || 'init';
   
   if (command !== 'init') {
-    console.log('❌ Unknown command:', command);
-    console.log('💡 Run: npx automagik-genie --help');
-    process.exit(1);
+    console.log(CONSTANTS.MESSAGES.UNKNOWN_COMMAND, command);
+    console.log(CONSTANTS.MESSAGES.HELP_SUGGESTION);
+    process.exit(CONSTANTS.EXIT_CODE.ERROR);
   }
   
-  console.log('🧞 Initializing Automagik Genie...');
-  console.log('');
+  console.log(CONSTANTS.MESSAGES.INIT_START);
+  logSpacing();
   
   // Check Claude CLI first
   const claudeAvailable = await validateClaude();
   if (!claudeAvailable) {
-    process.exit(1);
+    process.exit(CONSTANTS.EXIT_CODE.ERROR);
   }
   
   const targetPath = process.cwd();
@@ -116,24 +220,16 @@ const main = async () => {
   try {
     await init(targetPath);
     
-    console.log('');
-    console.log('✨ Genie successfully initialized!');
-    console.log('');
+    logWithSpacing(CONSTANTS.MESSAGES.INIT_SUCCESS);
     
     // Prompt for permission skip option
     const skipPermissions = await promptForPermissionSkip();
     
-    console.log('🧞 Starting intelligent codebase analysis...');
-    console.log('');
+    console.log(CONSTANTS.MESSAGES.ANALYSIS_START);
+    logSpacing();
     
-    // Construct claude command with conditional permission skip
-    let claudeCommand = 'claude';
-    
-    if (skipPermissions) {
-      claudeCommand += ' --dangerously-skip-permissions';
-    }
-    
-    claudeCommand += ' "/wish analyze this codebase and provide development recommendations following enterprise patterns"';
+    // Build claude command for immediate analysis
+    const claudeCommand = buildClaudeCommand(skipPermissions, CONSTANTS.WISH_TEXT);
     
     // Auto-trigger claude command for immediate analysis
     const claudeProcess = spawn(claudeCommand, {
@@ -143,64 +239,32 @@ const main = async () => {
     });
 
     claudeProcess.on('error', (error) => {
-      console.log('');
-      console.log('⚠️  Could not auto-start analysis:');
-      
-      if (error.code === 'ENOENT') {
-        console.log('   Claude CLI not found in PATH');
-        console.log('   Please ensure Claude CLI is installed and authenticated');
-      } else {
-        console.log(`   ${error.message}`);
-      }
-      console.log('');
-      console.log('💡 Manual analysis: Run the following when ready:');
-      if (skipPermissions) {
-        console.log('   claude --dangerously-skip-permissions "/wish analyze this codebase and provide development recommendations"');
-      } else {
-        console.log('   claude "/wish analyze this codebase and provide development recommendations"');
-      }
-      console.log('');
-      showPostInitInstructions();
+      handleClaudeError(error, skipPermissions);
     });
 
     claudeProcess.on('close', (code) => {
-      console.log('');
-      
-      if (code === 0) {
-        console.log('✨ Analysis complete!');
-      } else {
-        console.log('💡 Manual analysis available - run when ready:');
-        if (skipPermissions) {
-          console.log('   claude --dangerously-skip-permissions "/wish analyze this codebase and provide development recommendations"');
-        } else {
-          console.log('   claude "/wish analyze this codebase and provide development recommendations"');
-        }
-      }
-      console.log('');
-      showPostInitInstructions();
+      showAnalysisCompletion(code, skipPermissions);
     });
     
   } catch (error) {
-    console.error('❌ Initialization failed:', error.message);
-    console.log('');
-    console.log('🔧 Troubleshooting:');
+    console.error(CONSTANTS.MESSAGES.INIT_FAILED, error.message);
+    logSpacing();
+    console.log(CONSTANTS.MESSAGES.TROUBLESHOOTING);
     console.log('   • Ensure you have write permissions in this directory');
     console.log('   • Check that Claude CLI is properly authenticated');
     console.log('   • Try running: claude auth');
-    console.log('');
-    process.exit(1);
+    logSpacing();
+    process.exit(CONSTANTS.EXIT_CODE.ERROR);
   }
 };
 
 // Handle unhandled errors gracefully
 process.on('unhandledRejection', (error) => {
-  console.error('❌ Unexpected error:', error.message);
-  process.exit(1);
+  exitWithError(`${CONSTANTS.MESSAGES.UNEXPECTED_ERROR} ${error.message}`);
 });
 
 process.on('uncaughtException', (error) => {
-  console.error('❌ Fatal error:', error.message);
-  process.exit(1);
+  exitWithError(`${CONSTANTS.MESSAGES.FATAL_ERROR} ${error.message}`);
 });
 
 main();
