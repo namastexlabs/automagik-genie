@@ -1,6 +1,6 @@
 {
   "name": "automagik-genie",
-  "version": "1.0.3",
+  "version": "1.0.5",
   "description": "Universal AI development companion that can be initialized in any codebase",
   "main": "lib/init.js",
   "bin": {
