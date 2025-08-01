@@ -7,7 +7,11 @@
     "automagik-genie": "./bin/automagik-genie"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "clean": "rm -rf dist/",
+    "typecheck": "echo \"No TypeScript in this project\"",
+    "build": "echo \"No build needed - pure Node.js\"",
+    "prepublishOnly": "npm run test"
   },
   "keywords": [
     "ai",
@@ -37,7 +41,8 @@
     "bin/",
     "lib/",
     "templates/",
-    "README.md"
+    "README.md",
+    ".claude/"
   ],
   "dependencies": {},
   "peerDependencies": {},
