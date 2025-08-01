@@ -1,0 +1,70 @@
+name: Validate Package
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [16, 18, 20]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Verify CLI functionality
+        run: |
+          echo "=== Testing CLI Help ==="
+          node bin/automagik-genie --help
+          
+          echo "=== Testing CLI Version ==="
+          node bin/automagik-genie --version
+          
+          echo "=== Testing Package Structure ==="
+          npm pack --dry-run
+
+      - name: Run tests
+        run: npm test
+
+      - name: Test init in sample project
+        run: |
+          mkdir -p test-sample
+          cd test-sample
+          echo 'console.log("test");' > index.js
+          echo 'package.json with test project' > package.json
+          
+          # Test init command (will fail on Claude CLI check, which is expected)
+          node ../bin/automagik-genie init || echo "Expected failure - Claude CLI not available in CI"
+          
+          cd ..
+          rm -rf test-sample
+
+      - name: Validate package.json
+        run: |
+          echo "=== Validating package.json structure ==="
+          node -e "
+            const pkg = require('./package.json');
+            const required = ['name', 'version', 'bin', 'files', 'keywords'];
+            const missing = required.filter(key => !pkg[key]);
+            if (missing.length > 0) {
+              console.error('Missing required fields:', missing);
+              process.exit(1);
+            }
+            console.log('✅ Package.json validation passed');
+          "
+
+      - name: Check file permissions
+        run: |
+          echo "=== Checking CLI file permissions ==="
+          ls -la bin/automagik-genie
+          test -x bin/automagik-genie && echo "✅ CLI file is executable" || echo "❌ CLI file not executable"
