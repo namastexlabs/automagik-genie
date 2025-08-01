@@ -11,7 +11,11 @@
     "clean": "rm -rf dist/",
     "typecheck": "echo \"No TypeScript in this project\"",
     "build": "echo \"No build needed - pure Node.js\"",
-    "prepublishOnly": "npm run test"
+    "prepublishOnly": "npm run test",
+    "bump-patch": "npm version patch --no-git-tag-version && git add package.json && git commit -m \"chore: bump patch version to $(node -p 'require(\"./package.json\").version')\" && echo \"✅ Patch version bumped to $(node -p 'require(\"./package.json\").version')\"",
+    "bump-minor": "npm version minor --no-git-tag-version && git add package.json && git commit -m \"chore: bump minor version to $(node -p 'require(\"./package.json\").version')\" && echo \"✅ Minor version bumped to $(node -p 'require(\"./package.json\").version')\"",
+    "bump-major": "npm version major --no-git-tag-version && git add package.json && git commit -m \"chore: bump major version to $(node -p 'require(\"./package.json\").version')\" && echo \"✅ Major version bumped to $(node -p 'require(\"./package.json\").version')\"",
+    "release": "VERSION=$(node -p 'require(\"./package.json\").version') && git tag v$VERSION && git push && git push --tags && gh release create v$VERSION --title \"Release v$VERSION\" --notes \"Automated release v$VERSION\" && echo \"🚀 Released v$VERSION - GitHub Actions will publish to NPM\""
   },
   "keywords": [
     "ai",
