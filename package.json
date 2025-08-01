@@ -7,11 +7,14 @@
     "automagik-genie": "./bin/automagik-genie"
   },
   "scripts": {
-    "test": "node scripts/test.js",
+    "test": "jest --testPathIgnorePatterns=tests/update-system",
+    "test:update-system": "cd tests/update-system && npm test",
+    "test:safety": "cd tests/update-system && npm run test:safety",
+    "test:all": "npm test && npm run test:update-system",
     "clean": "node scripts/clean.js",
     "typecheck": "echo \"No TypeScript in this project\"",
     "build": "echo \"No build needed - pure Node.js\"",
-    "prepublishOnly": "npm run test",
+    "prepublishOnly": "npm run test:all",
     "bump-patch": "node scripts/bump-version.js patch",
     "bump-minor": "node scripts/bump-version.js minor",
     "bump-major": "node scripts/bump-version.js major",
@@ -53,11 +56,15 @@
     ".claude/"
   ],
   "dependencies": {
-    "tar": "^6.0.0",
-    "inquirer": "^8.0.0",
+    "axios": "^1.11.0",
     "colors": "^1.4.0",
+    "fs-extra": "^11.3.0",
+    "inquirer": "^8.2.6",
+    "semver": "^7.7.2",
+    "tar": "^6.0.0",
     "yargs": "^17.0.0"
   },
-  "peerDependencies": {},
-  "devDependencies": {}
+  "devDependencies": {
+    "jest": "^30.0.5"
+  }
 }
