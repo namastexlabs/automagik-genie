@@ -4,6 +4,7 @@ const { validateClaude } = require('../lib/claude-cli-check.js');
 const { init } = require('../lib/init.js');
 const path = require('path');
 const { spawn } = require('child_process');
+const readline = require('readline');
 
 const showHelp = () => {
   console.log('🧞 Automagik Genie - Universal AI Development Companion');
@@ -41,6 +42,39 @@ const showPostInitInstructions = () => {
   console.log('📚 Check .claude/hooks/examples/ for optional workflow automation');
   console.log('');
   console.log('Happy coding! 🧞✨');
+};
+
+/**
+ * Prompt user for permission skip option
+ * @returns {Promise<boolean>} True if user wants to skip permissions
+ */
+const promptForPermissionSkip = () => {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+
+    console.log('🔐 Claude CLI Permission Options:');
+    console.log('');
+    console.log('Claude CLI can run with enhanced permissions for full functionality,');
+    console.log('or with restricted permissions for security-conscious environments.');
+    console.log('');
+    
+    rl.question('Do you want to start with "--dangerously-skip-permissions"? (y/n): ', (answer) => {
+      rl.close();
+      const skipPermissions = answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes';
+      
+      if (skipPermissions) {
+        console.log('✅ Will start Claude with --dangerously-skip-permissions');
+      } else {
+        console.log('✅ Will start Claude with full permissions');
+      }
+      console.log('');
+      
+      resolve(skipPermissions);
+    });
+  });
 };
 
 const main = async () => {
@@ -85,11 +119,29 @@ const main = async () => {
     console.log('');
     console.log('✨ Genie successfully initialized!');
     console.log('');
+    
+    // Prompt for permission skip option
+    const skipPermissions = await promptForPermissionSkip();
+    
     console.log('🧞 Starting intelligent codebase analysis...');
     console.log('');
     
+    // Construct claude command with conditional permission skip
+    const claudeCommand = 'claude';
+    const claudeArgs = [];
+    
+    if (skipPermissions) {
+      claudeArgs.push('--dangerously-skip-permissions');
+    }
+    
+    claudeArgs.push('/wish');
+    claudeArgs.push('analyze this codebase and provide development recommendations following enterprise patterns');
+    
+    // Enhanced logging for debugging
+    console.log('🔧 Debug: Executing command:', claudeCommand, claudeArgs);
+    
     // Auto-trigger claude command for immediate analysis
-    const claudeProcess = spawn('claude', ['/wish', 'analyze this codebase and provide development recommendations following enterprise patterns'], {
+    const claudeProcess = spawn(claudeCommand, claudeArgs, {
       stdio: 'inherit',
       shell: true,
       cwd: targetPath
@@ -98,6 +150,16 @@ const main = async () => {
     claudeProcess.on('error', (error) => {
       console.log('');
       console.log('⚠️  Could not auto-start analysis:');
+      console.log('🔧 Debug: Command attempted:', claudeCommand, claudeArgs);
+      console.log('🔧 Debug: Working directory:', targetPath);
+      console.log('🔧 Debug: Error details:', {
+        message: error.message,
+        code: error.code,
+        errno: error.errno,
+        syscall: error.syscall,
+        path: error.path
+      });
+      
       if (error.code === 'ENOENT') {
         console.log('   Claude CLI not found in PATH');
         console.log('   Please ensure Claude CLI is installed and authenticated');
@@ -106,18 +168,28 @@ const main = async () => {
       }
       console.log('');
       console.log('💡 Manual analysis: Run the following when ready:');
-      console.log('   /wish "analyze this codebase and provide development recommendations"');
+      if (skipPermissions) {
+        console.log('   claude --dangerously-skip-permissions "/wish analyze this codebase and provide development recommendations"');
+      } else {
+        console.log('   claude "/wish analyze this codebase and provide development recommendations"');
+      }
       console.log('');
       showPostInitInstructions();
     });
 
     claudeProcess.on('close', (code) => {
       console.log('');
+      console.log('🔧 Debug: Claude process exited with code:', code);
+      
       if (code === 0) {
         console.log('✨ Analysis complete!');
       } else {
         console.log('💡 Manual analysis available - run when ready:');
-        console.log('   /wish "analyze this codebase and provide development recommendations"');
+        if (skipPermissions) {
+          console.log('   claude --dangerously-skip-permissions "/wish analyze this codebase and provide development recommendations"');
+        } else {
+          console.log('   claude "/wish analyze this codebase and provide development recommendations"');
+        }
       }
       console.log('');
       showPostInitInstructions();
