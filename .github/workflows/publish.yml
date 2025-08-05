@@ -87,6 +87,9 @@ jobs:
             console.log('✅ Version sequence validated - proceeding with publish');
           "
 
+      - name: Install dependencies
+        run: npm install
+
       - name: Verify package contents
         run: |
           echo "=== Package.json ==="

@@ -85,9 +85,9 @@ Follow TDD practices:
       const agentsDir = path.join(tempDir, '.claude', 'agents');
       const agentFiles = await fs.readdir(agentsDir);
       
-      expect(agentFiles).toContain('test-backup-project-analyzer.md');
-      expect(agentFiles).toContain('test-backup-project-dev-coder.md');
-      expect(agentFiles).toContain('test-backup-project-dev-planner.md');
+      expect(agentFiles).toContain('test-backup-project-genie-analyzer.md');
+      expect(agentFiles).toContain('test-backup-project-genie-dev-coder.md');
+      expect(agentFiles).toContain('test-backup-project-genie-dev-planner.md');
       
     } finally {
       console.log = originalLog;
@@ -117,7 +117,7 @@ Follow TDD practices:
       expect(claudeMdContent).not.toContain('🔄 Recovered Project Information');
       expect(claudeMdContent).not.toContain('Enhanced Configuration');
       expect(claudeMdContent).toContain('test-clean-project');
-      expect(claudeMdContent).toContain('Getting Started');
+      expect(claudeMdContent).toContain('GENIE PERSONALITY CORE');
       
     } finally {
       console.log = originalLog;
@@ -151,7 +151,7 @@ Follow TDD practices:
       const claudeMdContent = await fs.readFile(claudeMdPath, 'utf-8');
       
       expect(claudeMdContent).toContain('test-corrupt-backup');
-      expect(claudeMdContent).toContain('Getting Started');
+      expect(claudeMdContent).toContain('GENIE PERSONALITY CORE');
       
     } finally {
       console.log = originalLog;
