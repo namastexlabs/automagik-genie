@@ -39,8 +39,8 @@ This is a test project for authentication services.
 - Cypress for e2e testing
 
 ## Custom Agents
-- **test-project-genie-analyzer**: Custom analysis
-- **test-project-genie-payment**: Payment processing agent
+- **test-project-analyzer**: Custom analysis
+- **test-project-payment**: Payment processing agent
 
 ## Development Workflow
 Follow TDD practices:
@@ -75,8 +75,8 @@ Follow TDD practices:
       expect(claudeMdContent).toContain('npm run test');
       expect(claudeMdContent).toContain('eslint, prettier');
       expect(claudeMdContent).toContain('jest, cypress');
-      expect(claudeMdContent).toContain('test-project-genie-analyzer');
-      expect(claudeMdContent).toContain('test-project-genie-payment');
+      expect(claudeMdContent).toContain('test-project-analyzer');
+      expect(claudeMdContent).toContain('test-project-payment');
       expect(claudeMdContent).toContain('2024-01-01T10:00:00Z');
       expect(claudeMdContent).toContain('This is a test project for authentication services');
       expect(claudeMdContent).toContain('Enhanced Configuration');
@@ -85,9 +85,9 @@ Follow TDD practices:
       const agentsDir = path.join(tempDir, '.claude', 'agents');
       const agentFiles = await fs.readdir(agentsDir);
       
-      expect(agentFiles).toContain('test-backup-project-genie-analyzer.md');
-      expect(agentFiles).toContain('test-backup-project-genie-dev-coder.md');
-      expect(agentFiles).toContain('test-backup-project-genie-dev-planner.md');
+      expect(agentFiles).toContain('test-backup-project-analyzer.md');
+      expect(agentFiles).toContain('test-backup-project-dev-coder.md');
+      expect(agentFiles).toContain('test-backup-project-dev-planner.md');
       
     } finally {
       console.log = originalLog;
