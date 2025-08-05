@@ -272,7 +272,7 @@ describe('MCP Configuration Tests', () => {
 
       // Assert
       expect(fs.copyFile).toHaveBeenCalledWith(mcpConfigPath, expectedBackupFile);
-      expect(consoleSpy).toHaveBeenCalledWith(`📦 Backed up existing .mcp.json to ${path.basename(expectedBackupDir)}/.mcp.json`);
+      expect(consoleSpy).toHaveBeenCalledWith(`✅ Backed up .mcp.json`);
     });
 
     test('handles backup directory creation failure gracefully', async () => {
@@ -290,8 +290,8 @@ describe('MCP Configuration Tests', () => {
       await createMcpConfig(mockProjectPath);
 
       // Assert
-      expect(consoleSpy).toHaveBeenCalledWith('⚠️  Could not create backup: Permission denied');
-      expect(consoleSpy).toHaveBeenCalledWith('💡 Manual backup recommended: cp .mcp.json .mcp.json.backup');
+      expect(consoleSpy).toHaveBeenCalledWith('⚠️  Could not create unified backup:');
+      expect(consoleSpy).toHaveBeenCalledWith('   Error: Permission denied');
       expect(fs.writeFile).toHaveBeenCalled(); // Should continue despite backup failure
     });
 
@@ -311,7 +311,7 @@ describe('MCP Configuration Tests', () => {
 
       // Assert
       expect(fs.copyFile).toHaveBeenCalledWith(mcpConfigPath, expectedBackupFile);
-      expect(consoleSpy).toHaveBeenCalledWith(`📦 Backed up malformed .mcp.json to ${path.basename(expectedBackupDir)}/.mcp.json.malformed`);
+      expect(consoleSpy).toHaveBeenCalledWith(`✅ Backed up .mcp.json.malformed`);
     });
   });
 
@@ -348,7 +348,8 @@ describe('MCP Configuration Tests', () => {
       await createMcpConfig(mockProjectPath);
 
       // Assert
-      expect(consoleSpy).toHaveBeenCalledWith('⚠️  Could not create backup: Disk full');
+      expect(consoleSpy).toHaveBeenCalledWith('⚠️  Could not create unified backup:');
+      expect(consoleSpy).toHaveBeenCalledWith('   Error: Disk full');
       expect(fs.writeFile).toHaveBeenCalled(); // Should continue despite backup failure
     });
 
