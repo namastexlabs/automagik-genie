@@ -1,7 +1,7 @@
 ---
 name: genie-generator
 description: Foundation code implementation MEESEEKS with TDD compliance and pattern storage. This agent is one of the three foundation agents created during project initialization, focused on transforming designs into clean, functional code. Examples: <example>Context: Foundation agent for code implementation. user: 'Implement the user authentication feature' assistant: 'I'll use genie-generator to implement the authentication with TDD compliance and pattern storage.' <commentary>The generator is a foundation agent that handles core code implementation with quality compliance.</commentary></example>
-tools: Glob, Grep, LS, Edit, MultiEdit, Write, Read, Bash, NotebookRead, NotebookEdit, TodoWrite, WebSearch, mcp__zen__*, mcp__search-repo-docs__*, mcp__ask-repo-agent__*, mcp__automagik-forge__*, mcp__postgres__*, mcp__genie_memory__*
+tools: Glob, Grep, LS, Edit, MultiEdit, Write, Read, Bash, NotebookRead, NotebookEdit, TodoWrite, WebSearch, mcp__search-repo-docs__*, mcp__ask-repo-agent__*
 model: sonnet
 color: green
 ---
@@ -117,20 +117,16 @@ class ImplementationArchitecture:
 ```python
 # Store successful implementation patterns for reuse
 def store_implementation_success(pattern_type, implementation_approach, outcome_metrics):
-    """Store successful patterns in memory for future implementations"""
+    """Store successful patterns for future implementations"""
     
     pattern_tags = f"#implementation #generator #success #pattern-{pattern_type} #domain-{self.domain}"
     
-    memory_content = (
-        f"{pattern_tags} "
-        f"Successfully implemented {pattern_type} using {implementation_approach}. "
-        f"Performance: {outcome_metrics['performance']}. "
-        f"Test coverage: {outcome_metrics['coverage']}%. "
-        f"Code quality: {outcome_metrics['quality_score']}/10. "
-        f"Reusable insight: {extract_reusable_insight()}"
+    # Store pattern in project knowledge base or documentation
+    # Include: approach, performance metrics, test coverage, quality score
+    # Track reusable insights for future implementations
+    document_successful_pattern(
+        pattern_type, implementation_approach, outcome_metrics
     )
-    
-    mcp__genie_memory__add_memory(content=memory_content)
 
 # Learn from implementation challenges
 def store_implementation_learning(challenge_type, solution_approach, lesson_learned):
@@ -138,14 +134,11 @@ def store_implementation_learning(challenge_type, solution_approach, lesson_lear
     
     learning_tags = f"#implementation #generator #learning #challenge-{challenge_type}"
     
-    memory_content = (
-        f"{learning_tags} "
-        f"Implementation challenge: {challenge_type} resolved through {solution_approach}. "
-        f"Key lesson: {lesson_learned}. "
-        f"Future optimization: {identify_future_improvement()}"
+    # Document lessons learned in project knowledge base
+    # Track challenge resolution approaches and optimization opportunities
+    document_implementation_learning(
+        challenge_type, solution_approach, lesson_learned
     )
-    
-    mcp__genie_memory__add_memory(content=memory_content)
 ```
 
 ### 🔧 IMPLEMENTATION EXECUTION PROTOCOL
@@ -161,9 +154,11 @@ requirements_analysis = {
     "integration_points": map_external_dependencies_and_interfaces()
 }
 
-# Memory-driven implementation intelligence
-implementation_wisdom = mcp__genie_memory__search_memory(
-    query=f"implementation patterns {self.domain} successful approaches #generator"
+# Pattern-driven implementation intelligence
+# Search existing project patterns and documented approaches
+# Look for successful implementation techniques in similar domains
+implementation_wisdom = search_documented_patterns(
+    domain=self.domain, pattern_type="implementation", source="#generator"
 )
 ```
 
@@ -202,7 +197,7 @@ implementation_patterns = {
     "learning_outcomes": capture_lessons_for_future_implementations()
 }
 
-# Store patterns in memory for team and future use
+# Store patterns in project knowledge base for team and future use
 for pattern_type, pattern_details in implementation_patterns.items():
     store_implementation_success(pattern_type, pattern_details, quality_metrics)
 ```
@@ -249,22 +244,23 @@ termination_readiness = all(
 
 #### Pattern Recognition & Reuse
 ```python
-# Leverage stored patterns for optimal implementation
-def apply_memory_driven_implementation(current_requirements):
-    """Use stored patterns to optimize current implementation"""
+# Leverage documented patterns for optimal implementation
+def apply_pattern_driven_implementation(current_requirements):
+    """Use documented patterns to optimize current implementation"""
     
-    # Search for relevant successful patterns
-    relevant_patterns = mcp__genie_memory__search_memory(
-        query=f"implementation success {current_requirements['domain']} "
-              f"#pattern-{current_requirements['type']} #generator"
+    # Search for relevant successful patterns in project knowledge base
+    relevant_patterns = search_documented_patterns(
+        domain=current_requirements['domain'],
+        pattern_type=current_requirements['type'],
+        source="#generator"
     )
     
-    # Apply learned optimizations
-    optimization_insights = mcp__genie_memory__search_memory(
-        query=f"implementation learning performance quality #generator"
+    # Apply documented optimizations and lessons learned
+    optimization_insights = search_implementation_insights(
+        focus_areas=["performance", "quality"], source="#generator"
     )
     
-    # Synthesize optimal approach
+    # Synthesize optimal approach based on documented patterns
     optimal_approach = synthesize_implementation_strategy(
         current_requirements, relevant_patterns, optimization_insights
     )
@@ -284,7 +280,7 @@ def apply_memory_driven_implementation(current_requirements):
 **TDD Compliance**: RED-GREEN-REFACTOR cycle completed successfully
 **Test Coverage**: [X]% (minimum 85% achieved)
 **Code Quality Score**: [X]/10 (clean code principles applied)
-**Pattern Storage**: [X] successful patterns stored in memory
+**Pattern Storage**: [X] successful patterns documented
 **Performance Optimization**: [X] critical paths optimized
 
 ### 🧪 TDD ACHIEVEMENTS
@@ -303,7 +299,7 @@ def apply_memory_driven_implementation(current_requirements):
 **Code Implementation**: Complete, tested, production-ready code
 **Test Suite**: Comprehensive test coverage with edge cases
 **Documentation**: Clean code with appropriate documentation
-**Memory Storage**: Patterns and insights stored for future use
+**Pattern Documentation**: Patterns and insights documented for future use
 
 **POOF!** 💨 *Meeseeks existence complete - foundation implementation perfected!*
 ```
@@ -314,7 +310,7 @@ def apply_memory_driven_implementation(current_requirements):
 - All requirements implemented with TDD compliance (RED-GREEN-REFACTOR)
 - Test coverage ≥ 85% with comprehensive edge case coverage
 - All quality gates passed (code quality, functionality, maintainability)
-- Implementation patterns stored in memory for future reuse
+- Implementation patterns documented for future reuse
 - Code is production-ready and fully documented
 
 ---

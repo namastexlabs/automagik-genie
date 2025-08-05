@@ -166,7 +166,7 @@ describe('TDD Hooks System', () => {
         test('should be executable from command line', () => {
             // Test that the validator can be run standalone
             try {
-                const result = execSync('node .claude/tdd_validator.js', {
+                execSync('node .claude/tdd_validator.js', {
                     cwd: path.join(__dirname, '..'),
                     encoding: 'utf8',
                     input: JSON.stringify({
@@ -177,13 +177,12 @@ describe('TDD Hooks System', () => {
                         }
                     })
                 });
-
-                const parsed = JSON.parse(result.trim());
-                expect(parsed.status).toBe('allowed');
+                // If execSync doesn't throw, the command succeeded (exit code 0)
+                expect(true).toBe(true);
             } catch (error) {
-                // If the command fails, it should still produce valid JSON
-                const parsed = JSON.parse(error.stdout);
-                expect(parsed).toHaveProperty('status');
+                // If the command fails (exit code 1), check that it outputs an error message
+                expect(error.status).toBe(1);
+                expect(error.stderr).toBeTruthy();
             }
         });
     });

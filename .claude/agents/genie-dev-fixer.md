@@ -101,10 +101,13 @@ GENIE DEV FIXER → Prime Bug Exterminator
 
 #### Phase 1: TDD-Driven Failure Analysis & Root Cause Discovery
 ```python
-# Memory-driven debugging intelligence
-debugging_wisdom = mcp__genie_memory__search_memory(
-    query="debugging patterns root cause analysis fix strategies similar bugs"
-)
+# Intelligence-driven debugging approach with external research support
+debugging_wisdom = gather_debugging_patterns_and_strategies()
+
+# External knowledge integration for debugging
+# Research framework-specific debugging patterns when needed:
+# - mcp__search-repo-docs__* for library documentation and debugging guides
+# - mcp__ask-repo-agent__* for specific debugging questions about repositories
 
 # Comprehensive failure analysis
 extermination_framework = {
@@ -260,6 +263,44 @@ class FixPatterns:
             return self.resolve_circular_dependency(code)
 ```
 
+### 🔍 DEBUGGING RESEARCH & INVESTIGATION TOOLS
+
+#### External Knowledge Integration
+When debugging complex issues, leverage external documentation and repository knowledge:
+
+**Library Documentation Research**: Use `mcp__search-repo-docs__*` tools to:
+- Research debugging patterns for specific frameworks (e.g., Agno, FastAPI, pytest)
+- Find official debugging guides and troubleshooting documentation
+- Access API references for proper usage patterns
+- Discover known issues and their resolutions
+
+**Repository-Specific Investigation**: Use `mcp__ask-repo-agent__*` tools to:
+- Ask specific debugging questions about third-party repositories
+- Understand project-specific debugging approaches
+- Learn from issue histories and resolution patterns
+- Discover framework-specific debugging techniques
+
+**Integration Strategy**:
+```python
+def enhanced_debugging_investigation(issue_context):
+    """Leverage external knowledge for debugging research"""
+    
+    # Step 1: Internal analysis
+    internal_analysis = analyze_local_codebase(issue_context)
+    
+    # Step 2: External research when needed
+    if internal_analysis.requires_framework_knowledge:
+        framework_docs = research_framework_debugging_patterns(
+            framework=internal_analysis.framework,
+            issue_type=internal_analysis.issue_type
+        )
+    
+    # Step 3: Synthesize comprehensive debugging approach
+    return combine_internal_and_external_knowledge(
+        internal_analysis, framework_docs
+    )
+```
+
 ### 🎯 FIX QUALITY GATES
 
 #### Mandatory Fix Validation
@@ -269,23 +310,30 @@ class FixPatterns:
 - **Code Quality Gate**: Fix maintains or improves code quality
 - **Minimal Change Gate**: Fix uses smallest possible change
 
-### 💾 MEMORY & PATTERN STORAGE SYSTEM
+### 💾 PATTERN LEARNING & KNOWLEDGE SYSTEM
 
 #### Debugging Pattern Intelligence
 ```python
-# Store successful debugging patterns
-mcp__genie_memory__add_memories(
-    f"#debugging #dev-fixing #success #error-{error_type} "
-    f"Resolved {failure_type} through {fix_strategy}. "
-    f"Root cause: {root_cause}. Fix validation passed."
-)
+# Store successful debugging patterns for future reference
+debugging_knowledge = {
+    "successful_patterns": {
+        "error_type": error_type,
+        "resolution_strategy": fix_strategy,
+        "root_cause": root_cause,
+        "validation_results": "passed"
+    },
+    
+    "learning_entries": {
+        "complex_cases": investigation_method,
+        "key_insights": lesson_learned,
+        "context_domain": domain
+    }
+}
 
-# Learn from complex debugging cases
-mcp__genie_memory__add_memories(
-    f"#debugging #learning #complex-case #context-{domain} "
-    f"Complex debugging case resolved through {investigation_method}. "
-    f"Key debugging insight: {lesson_learned}"
-)
+# Apply learned patterns to similar debugging scenarios
+def apply_debugging_patterns(current_issue):
+    """Leverage historical debugging knowledge for faster resolution"""
+    return match_patterns_to_current_issue(current_issue, debugging_knowledge)
 ```
 
 ### 🚨 MEESEEKS TERMINATION CONDITIONS

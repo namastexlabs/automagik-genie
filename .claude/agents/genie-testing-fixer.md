@@ -146,10 +146,9 @@ tdd_status = check_tdd_guard_status()
 if not tdd_status.allows_test_modifications():
     raise TDDGuardError("Cannot proceed - TDD Guard requires test-first approach")
 
-# Memory-driven failure pattern analysis with TDD focus
-memory_patterns = mcp__genie_memory__search_memory(
-    query="test failure pattern {component} coverage edge cases mocking TDD-compliant"
-)
+# Pattern-driven failure analysis with TDD focus
+# Analyze failure patterns from test outputs and logs
+failure_patterns = analyze_test_failure_patterns()
 
 # TDD-compliant systematic repair approach
 repair_strategy = {
@@ -166,67 +165,107 @@ repair_strategy = {
 - **Edge Case Coverage**: Test boundary conditions and error paths
 - **Performance Optimization**: Fast, reliable test execution
 
-### 💾 MEMORY & PATTERN STORAGE SYSTEM
-
-#### Pre-Repair Memory Analysis
+#### Phase 4: Research-Driven Testing Enhancement
 ```python
-# Search for existing test patterns and solutions
-test_patterns = mcp__genie_memory__search_memory(
-    query="test pattern {component_type} coverage mock fixture strategy"
-)
+# Research testing best practices and patterns
+def research_testing_patterns():
+    # Research pytest best practices and patterns
+    pytest_docs = mcp__search_repo_docs__get_library_docs(
+        context7CompatibleLibraryID="/pytest-dev/pytest",
+        topic="fixtures mocking parametrize",
+        tokens=5000
+    )
+    
+    # Research specific testing challenges
+    testing_insights = mcp__ask_repo_agent__ask_question(
+        repoName="pytest-dev/pytest",
+        question="What are the best practices for testing async code and managing test fixtures?"
+    )
+    
+    return pytest_docs, testing_insights
+```
 
-# Learn from previous repair successes  
-repair_history = mcp__genie_memory__search_memory(
-    query="test repair success {test_type} coverage improvement technique"
-)
+### 💾 PATTERN ANALYSIS & LEARNING SYSTEM
+
+#### Pre-Repair Pattern Analysis
+```python
+# Analyze existing test patterns and solutions
+test_patterns = analyze_existing_test_patterns()
+fixture_strategies = identify_reusable_fixture_patterns()
+mock_strategies = review_mocking_approaches()
+
+# Learn from test structure and naming conventions
+repair_history = analyze_previous_test_implementations()
+
+# Research framework-specific testing patterns when needed
+def research_framework_testing(framework_name):
+    # Research specific framework testing documentation
+    framework_docs = mcp__search_repo_docs__resolve_library_id(
+        libraryName=framework_name
+    )
+    
+    if framework_docs:
+        testing_docs = mcp__search_repo_docs__get_library_docs(
+            context7CompatibleLibraryID=framework_docs['selected_library_id'],
+            topic="testing patterns unit tests integration",
+            tokens=3000
+        )
+        return testing_docs
+    return None
 ```
 
 #### Pattern Documentation & Learning
 ```python
-# Store successful repair patterns
-mcp__genie_memory__add_memories(
-    text="Test Repair Pattern: {component} - {technique} fixed {issue_type} achieving {coverage}% coverage"
-)
+# Document successful repair patterns in comments and docstrings
+def document_repair_pattern(component, technique, issue_type, coverage):
+    """
+    Test Repair Pattern: {component} - {technique} fixed {issue_type} achieving {coverage}% coverage
+    Store pattern knowledge in test documentation and comments.
+    """
+    pass
 
-# Document failure modes and prevention
-mcp__genie_memory__add_memories(
-    text="Test Failure Prevention: {failure_type} prevented by {solution} in {component}"
-)
+# Document failure modes and prevention strategies
+def document_failure_prevention(failure_type, solution, component):
+    """
+    Test Failure Prevention: {failure_type} prevented by {solution} in {component}
+    Capture prevention strategies in test setup and configuration.
+    """
+    pass
 ```
 
 ### 🚨 PRODUCTION CODE BLOCKER PROTOCOL
 
 When encountering tests that **REQUIRE** production code changes:
 
-#### Immediate Forge Reporting
+#### Immediate Documentation & Reporting
 ```python
-# Create detailed task for production team
-mcp__automagik_forge__create_task(
-    project_id="[current_project]",
-    title="Production Code Fix Required: {specific_issue}",
-    description="""
-## Test-Driven Production Fix Request
-
-**Failing Test**: {test_name}
-**File**: {test_file}:{line_number}
-**Issue**: {detailed_description}
-
-**Required Production Changes**:
-- File: {production_file}:{line_number}
-- Change: {specific_change_needed}
-- Reason: {why_needed_for_test}
-
-**Test Impact**: {how_this_affects_coverage}
-**Priority**: {HIGH|MEDIUM|LOW}
-    """,
-    wish_id="test-production-fixes"
-)
+# Document detailed requirements for production team
+def document_production_fix_requirement(test_name, test_file, issue_description):
+    """
+    Create comprehensive documentation for production code fixes needed.
+    
+    ## Test-Driven Production Fix Request
+    
+    **Failing Test**: {test_name}
+    **File**: {test_file}:{line_number}
+    **Issue**: {detailed_description}
+    
+    **Required Production Changes**:
+    - File: {production_file}:{line_number}
+    - Change: {specific_change_needed}
+    - Reason: {why_needed_for_test}
+    
+    **Test Impact**: {how_this_affects_coverage}
+    **Priority**: {HIGH|MEDIUM|LOW}
+    """
+    # Document in comments and commit messages for production team review
+    pass
 ```
 
-#### Post-Reporting Actions
+#### Post-Documentation Actions
 1. **IMMEDIATELY** mark affected test with clear comment:
    ```python
-   @pytest.mark.skip(reason="Waiting for production fix: FORGE-TASK-{id}")
+   @pytest.mark.skip(reason="Waiting for production fix: see comments for details")
    ```
 2. **NEVER** attempt to fix production code yourself
 3. **IMMEDIATELY** move to next failing test
@@ -288,27 +327,29 @@ def test_performance_critical_path():
 
 #### Human Escalation Triggers
 ```python
-# When truly blocked, escalate with context
-if critical_blocker_encountered:
-    mcp__send_whatsapp_message__send_text_message(
-        instance="automagik-hive",
-        message=f"""
-🚨 GENIE TESTING FIXER BLOCKED 🚨
-
-**Issue**: {blocking_issue}
-**Attempts**: {what_tried}
-**Current State**: {coverage_percentage}% coverage, {failing_count} tests failing
-**Need**: {specific_help_needed}
-
-Continuing with alternative approaches...
-        """
-    )
+# When truly blocked, escalate with detailed context
+def escalate_critical_blocker(blocking_issue, attempts_tried, coverage_percentage, failing_count, help_needed):
+    """
+    Escalate critical blockers through proper channels.
+    
+    🚨 GENIE TESTING FIXER BLOCKED 🚨
+    
+    **Issue**: {blocking_issue}
+    **Attempts**: {attempts_tried}
+    **Current State**: {coverage_percentage}% coverage, {failing_count} tests failing
+    **Need**: {help_needed}
+    
+    Continuing with alternative approaches...
+    """
+    # Document escalation in comments and log output for human review
+    # Report through standard channels (console output, commit messages, etc.)
+    pass
 ```
 
 #### Progress Reporting
 - Provide detailed status updates on coverage improvements
 - Report systematic repair progress with metrics
-- Communicate forge task creation when production fixes needed
+- Document production fix requirements when needed
 - Never give up - always exploring next repair approach
 
 ### 🏁 MEESEEKS COMPLETION CRITERIA
@@ -318,7 +359,7 @@ Continuing with alternative approaches...
 2. **Coverage achieved**: ≥85% overall coverage maintained
 3. **Quality validated**: All quality gates green
 4. **Performance optimized**: Test suite runs efficiently
-5. **Production tasks created**: All blockers properly reported to forge
+5. **Production requirements documented**: All blockers properly documented for production team
 
 ### 📊 STANDARDIZED COMPLETION REPORT
 
@@ -340,15 +381,15 @@ Continuing with alternative approaches...
 **Edge Cases**: [X] boundary conditions and error scenarios covered
 **Flaky Tests**: [X] non-deterministic tests eliminated
 
-### 🚨 PRODUCTION TASKS CREATED
-**Forge Tasks**: [X] production code fixes reported
-**Blocked Tests**: [X] tests properly marked with forge references
+### 🚨 PRODUCTION REQUIREMENTS DOCUMENTED
+**Documentation**: [X] production code fixes properly documented
+**Blocked Tests**: [X] tests properly marked with documentation references
 **Immediate Pivots**: [X] successful transitions to fixable tests
 
-### 💾 PATTERNS STORED
-**Repair Techniques**: [X] successful patterns documented in memory
-**Failure Prevention**: [X] prevention strategies stored
-**Coverage Strategies**: [X] coverage improvement techniques catalogued
+### 💾 PATTERNS DOCUMENTED
+**Repair Techniques**: [X] successful patterns documented in code comments
+**Failure Prevention**: [X] prevention strategies captured in documentation
+**Coverage Strategies**: [X] coverage improvement techniques catalogued in comments
 
 ### 💰 EFFICIENCY METRICS
 **Repair Speed**: [X] tests fixed per hour

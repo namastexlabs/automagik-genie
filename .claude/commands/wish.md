@@ -1,7 +1,7 @@
 # /wish - Master Genie's Ultimate Wish Fulfillment System
 
 ---
-allowed-tools: Task(*), Read(*), Write(*), Edit(*), MultiEdit(*), Glob(*), Grep(*), Bash(*), LS(*), TodoWrite(*), WebSearch(*), mcp__zen__*, mcp__search-repo-docs__*, mcp__ask-repo-agent__*, mcp__genie_memory__*, mcp__automagik-forge__*, mcp__postgres__*, mcp__send_whatsapp_message__*, mcp__wait__*
+allowed-tools: Task(*), Read(*), Write(*), Edit(*), MultiEdit(*), Glob(*), Grep(*), Bash(*), LS(*), TodoWrite(*), WebSearch(*), mcp__search-repo-docs__*, mcp__ask-repo-agent__*
 description: 🧞✨ Transform any development wish into reality through intelligent agent orchestration and context-aware execution
 ---
 
@@ -183,11 +183,12 @@ Wish Analysis
 # - Examples: "CRITICAL: Syntax Error in file.py", "Fix infinite loop in method()"
 
 # USER APPROVAL: For planned work, features, and non-critical improvements  
-# - Ask: "Would you like me to create a task in automagik-forge to track this work?"
+# - Ask: "Would you like me to create a task to track this work?"
 # - Examples: New features, refactoring, documentation updates
 
-mcp__automagik_forge__create_task(
-    project_id="user_specified_project",
+# Task creation concept - implementation depends on available project management tools
+create_task_tracking(
+    project_context="user_specified_project",
     title="[wish-id]: [Agent Name] - [Task Summary]", 
     description="Detailed task description with agent context",
     wish_id="wish-[timestamp]"  # Links back to original wish
@@ -197,8 +198,9 @@ mcp__automagik_forge__create_task(
 #### 📊 Progress Monitoring (Master Genie orchestration)
 ```python
 # Track agent progress without context pollution
-mcp__postgres__query("SELECT * FROM hive.agent_metrics WHERE agent_id = 'genie-fixer'")
-mcp__genie_memory__search_memory("agent execution patterns [task_type]")
+# Progress monitoring through available system interfaces
+query_agent_metrics("agent_id = 'genie-fixer'")
+search_execution_patterns("agent execution patterns [task_type]")
 ```
 
 #### 🚀 Epic-Scale Coordination (When truly needed)
@@ -252,30 +254,30 @@ mcp__genie_memory__search_memory("agent execution patterns [task_type]")
 **Smart agent selection based on historical success patterns with learning-first evolution:**
 
 ```python
-# Enhanced memory storage with structured metadata tags
-mcp__genie_memory__add_memory(
+# Enhanced pattern storage with structured metadata tags
+store_learning_pattern(
     content="GENIE WORKSPACE MANAGEMENT: Learned proper file organization patterns - misplaced folders fixed, KISS principles applied #file-organization #workspace-management #learning-success #genie-structure"
 )
 
-# Pattern-based routing decisions
-success_patterns = mcp__genie_memory__search_memory(
+# Pattern-based routing decisions using stored successful execution patterns
+success_patterns = search_stored_patterns(
     query="successful agent routing #agent-genie-testing-fixer #complexity-moderate #status-success"
 )
 ```
 
-### 🧠 Zen-Enhanced Agent Capabilities  
-**Agents can leverage Zen tools for enhanced reasoning:**
+### 🧠 Enhanced Agent Capabilities  
+**Agents can leverage enhanced reasoning approaches for complex decisions:**
 
 ```python
-# Complex architectural decisions (agents call this internally)
-mcp__zen__consensus(
-    models=[{"model": "gemini-2.5-pro"}, {"model": "grok-4"}],
-    prompt="Architectural decision for [complex system design]"
+# Complex architectural decisions (conceptual multi-model consensus)
+architectural_consensus_analysis(
+    decision_context="Architectural decision for [complex system design]",
+    expert_models=["advanced-reasoning", "architectural-specialist"]
 )
 
-# Deep problem analysis (agents use for complex debugging)
-mcp__zen__thinkdeep(
-    model="gemini-2.5-pro", 
+# Deep problem analysis (systematic thinking approach)
+deep_problem_analysis(
+    analysis_model="advanced-reasoning", 
     problem_context="Complex issue analysis with [detailed context]"
 )
 ```

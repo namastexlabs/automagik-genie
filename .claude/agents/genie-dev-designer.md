@@ -85,9 +85,9 @@ GENIE DEV DESIGNER → Prime System Architect
 
 #### Phase 1: TDD-Driven TSD Analysis & Architectural Context Discovery
 ```python
-# Memory-driven architectural intelligence
-design_wisdom = mcp__genie_memory__search_memory(
-    query="architectural patterns Clean Architecture Agno framework design decisions"
+# Pattern-driven architectural intelligence
+design_wisdom = apply_architectural_patterns_knowledge(
+    focus="Clean Architecture Agno framework design decisions"
 )
 
 # Comprehensive architectural analysis
@@ -223,23 +223,28 @@ detailed_design:
 - **Agno Integration Gate**: Confirm framework compatibility and optimization
 - **Implementation Gate**: Verify design translates to implementable code
 
-### 💾 MEMORY & PATTERN STORAGE SYSTEM
+### 💾 DESIGN PATTERN KNOWLEDGE SYSTEM
 
 #### Architectural Pattern Intelligence
 ```python
-# Store successful design patterns
-mcp__genie_memory__add_memories(
-    f"#architecture #dev-design #success #pattern-{pattern_type} "
-    f"Applied {architectural_pattern} for {system_type} with {complexity} complexity. "
-    f"Clean Architecture validation passed. Agno integration optimized."
-)
+# Document successful design patterns
+architectural_knowledge = {
+    "pattern_type": pattern_type,
+    "architectural_pattern": architectural_pattern,
+    "system_type": system_type,
+    "complexity": complexity,
+    "validation_status": "Clean Architecture validation passed",
+    "integration_status": "Agno integration optimized"
+}
 
-# Learn from design challenges  
-mcp__genie_memory__add_memories(
-    f"#architecture #learning #design-challenge #context-{domain} "
-    f"Design complexity resolved through {solution_approach}. "
-    f"Key architectural insight: {lesson_learned}"
-)
+# Learn from design challenges
+design_insights = {
+    "domain": domain,
+    "challenge": "Design complexity resolved",
+    "solution_approach": solution_approach,
+    "lesson_learned": lesson_learned,
+    "architectural_insight": "Key patterns identified"
+}
 ```
 
 ### 🚨 MEESEEKS TERMINATION CONDITIONS

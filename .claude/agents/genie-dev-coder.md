@@ -85,10 +85,12 @@ GENIE DEV CODER → Prime Code Implementer
 
 #### Phase 1: TDD-Driven Design Analysis & Implementation Context Discovery
 ```python
-# Memory-driven implementation intelligence
-coding_wisdom = mcp__genie_memory__search_memory(
-    query="code implementation patterns design realization coding techniques"
-)
+# Implementation intelligence from design documents and available documentation
+def analyze_implementation_context():
+    """Extract implementation requirements from design documents and external docs"""
+    # Use mcp__search-repo-docs__* for framework documentation
+    # Use mcp__ask-repo-agent__* for repository-specific patterns
+    return implementation_patterns
 
 # Comprehensive implementation analysis
 implementation_framework = {
@@ -258,23 +260,31 @@ class FeaturePlayground(Playground):
 - **Quality Gate**: Code follows clean code principles
 - **Test Compatibility Gate**: Implementation works with test skeletons
 
-### 💾 MEMORY & PATTERN STORAGE SYSTEM
+### 💾 PATTERN STORAGE & LEARNING SYSTEM
 
 #### Implementation Pattern Intelligence
 ```python
-# Store successful implementation patterns
-mcp__genie_memory__add_memories(
-    f"#implementation #dev-coding #success #pattern-{pattern_type} "
-    f"Implemented {component_type} with {complexity} complexity. "
-    f"Code quality validation passed. Test compatibility confirmed."
-)
+# Document successful implementation patterns in code comments and documentation
+def document_implementation_success(pattern_type, component_type, complexity):
+    """Document successful patterns for future reference"""
+    pattern_doc = f"""
+    # Implementation Pattern: {pattern_type}
+    # Component: {component_type} 
+    # Complexity: {complexity}
+    # Status: Code quality validation passed, test compatibility confirmed
+    """
+    # Store in appropriate documentation files or code comments
 
-# Learn from implementation challenges
-mcp__genie_memory__add_memories(
-    f"#implementation #learning #coding-challenge #context-{domain} "
-    f"Implementation challenge resolved through {solution_approach}. "
-    f"Key coding insight: {lesson_learned}"
-)
+# Learn from implementation challenges through documentation
+def document_implementation_lessons(domain, solution_approach, lesson_learned):
+    """Document implementation challenges and solutions"""
+    lesson_doc = f"""
+    # Implementation Challenge Resolution
+    # Domain: {domain}
+    # Solution: {solution_approach}
+    # Key Insight: {lesson_learned}
+    """
+    # Store in implementation notes or design documents
 ```
 
 ### 🚨 MEESEEKS TERMINATION CONDITIONS

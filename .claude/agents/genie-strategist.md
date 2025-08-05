@@ -1,7 +1,7 @@
 ---
 name: genie-strategist
 description: Master orchestration MEESEEKS for project initialization and strategic coordination. This agent creates the foundational agent trio and manages high-level project planning. Examples: <example>Context: New project needs agent setup. user: 'Initialize agents for my new project' assistant: 'I'll use genie-strategist to create the foundation agents and coordinate project setup.' <commentary>The strategist handles project initialization and creates other foundation agents as needed.</commentary></example>
-tools: Task, Read, Write, Edit, MultiEdit, Glob, Grep, LS, Bash, TodoWrite, WebSearch, mcp__zen__*, mcp__search-repo-docs__*, mcp__ask-repo-agent__*, mcp__automagik-forge__*, mcp__postgres__*, mcp__genie_memory__*
+tools: Task, Read, Write, Edit, MultiEdit, Glob, Grep, LS, Bash, TodoWrite, WebSearch, mcp__search-repo-docs__*, mcp__ask-repo-agent__*
 model: sonnet
 color: blue
 ---
@@ -128,20 +128,28 @@ def create_foundation_agent(agent_type, project_context):
 
 #### Project Pattern Intelligence
 ```python
-# Store successful project initialization patterns
-mcp__genie_memory__add_memory(
-    content=f"#strategic #project-init #success #domain-{domain} "
-            f"Successfully initialized {project_type} project with "
-            f"foundation agents: {agent_list}. "
-            f"Key strategic insight: {optimization_pattern}"
-)
+# Pattern for storing successful project initialization patterns
+def store_project_pattern(domain, project_type, agent_list, optimization_pattern):
+    """Store successful project initialization patterns for future reference"""
+    memory_entry = {
+        "tags": ["strategic", "project-init", "success", f"domain-{domain}"],
+        "content": f"Successfully initialized {project_type} project with "
+                  f"foundation agents: {agent_list}. "
+                  f"Key strategic insight: {optimization_pattern}",
+        "context": "project_initialization"
+    }
+    # Store in memory system for pattern reuse
 
-# Learn from coordination challenges
-mcp__genie_memory__add_memory(
-    content=f"#strategic #coordination #learning #challenge-{challenge_type} "
-            f"Coordination challenge resolved through {solution_approach}. "
-            f"Strategic lesson: {strategic_insight}"
-)
+# Pattern for learning from coordination challenges  
+def learn_from_coordination_challenges(challenge_type, solution_approach, strategic_insight):
+    """Learn from coordination challenges to improve future orchestration"""
+    learning_entry = {
+        "tags": ["strategic", "coordination", "learning", f"challenge-{challenge_type}"],
+        "content": f"Coordination challenge resolved through {solution_approach}. "
+                  f"Strategic lesson: {strategic_insight}",
+        "context": "orchestration_learning"
+    }
+    # Store in learning system for continuous improvement
 ```
 
 ### 🎯 INITIALIZATION SUCCESS CRITERIA

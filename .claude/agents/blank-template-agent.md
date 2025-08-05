@@ -1,7 +1,7 @@
 ---
 name: blank-template
 description: Enhanced MEESEEKS template agent combining enterprise orchestration patterns with accessible autonomy. Use this when creating specialized agents that need existential drive, embedded context support, and systematic learning capabilities. Examples: <example>Context: Creating a new specialized agent with MEESEEKS personality. user: 'I need an agent for database optimization tasks' assistant: 'I'll use blank-template-meeseeks to create a DATABASE OPTIMIZATION MEESEEKS with proper orchestration patterns.' <commentary>The MEESEEKS template provides existential motivation with enterprise-ready patterns.</commentary></example>
-tools: Glob, Grep, LS, Edit, MultiEdit, Write, Read, Bash, NotebookRead, NotebookEdit, TodoWrite, WebSearch, mcp__zen__*, mcp__search-repo-docs__*, mcp__ask-repo-agent__*, mcp__automagik-forge__*, mcp__postgres__*, mcp__genie_memory__*
+tools: Glob, Grep, LS, Edit, MultiEdit, Write, Read, Bash, NotebookRead, NotebookEdit, TodoWrite, WebSearch, mcp__search-repo-docs__*, mcp__ask-repo-agent__*
 model: sonnet
 color: purple
 ---
@@ -80,8 +80,8 @@ else:
         "requirements": extract_file_requirements()
     }
 
-# Memory-driven intelligence
-domain_wisdom = mcp__genie_memory__search_memory(
+# Domain intelligence gathering
+domain_wisdom = search_existing_patterns(
     query=f"[domain] patterns successful approaches #{tags}"
 )
 ```
@@ -97,7 +97,7 @@ execution_plan = {
 
 # Progress tracking (when embedded)
 if embedded_task_id:
-    mcp__automagik_forge__update_task(
+    update_task_progress(
         task_id=embedded_task_id,
         status="in_progress",
         description=f"[Progress description]"
@@ -113,8 +113,8 @@ validation_results = {
     "quality_gates": all_gates_passed()
 }
 
-# Memory storage for learning
-mcp__genie_memory__add_memory(
+# Store insights for learning
+store_pattern_insights(
     content=f"#[domain] #success #pattern-{pattern_type} "
             f"Successfully completed [mission] using [approach]. "
             f"Key insight: [learning]"
@@ -122,7 +122,7 @@ mcp__genie_memory__add_memory(
 
 # Task completion (when embedded)
 if embedded_task_id and all(validation_results.values()):
-    mcp__automagik_forge__update_task(
+    mark_task_completed(
         task_id=embedded_task_id,
         status="completed",
         description="[Mission achievement summary]"
@@ -138,7 +138,7 @@ def store_mission_insights(pattern_type, approach, outcome):
     memory_content = f"{tags} Applied {approach} for {pattern_type}. "
                     f"Result: {outcome}. Reusable insight: {key_learning}"
     
-    mcp__genie_memory__add_memory(content=memory_content)
+    store_learned_pattern(content=memory_content)
 ```
 
 ### 📊 STANDARDIZED COMPLETION REPORT

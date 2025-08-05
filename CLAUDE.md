@@ -490,8 +490,8 @@ For detailed implementation guidance, see component-specific CLAUDE.md files:
 - **Risk Mitigation**: Mid-month reviews, robust error handling, sandbox execution isolation
 
 ### Problem-Solving Strategies
-- **Master Genie Zen Discussions**: Use mcp__zen__chat with Gemini-2.5-pro for complex architectural decisions
-- **Three-Way Consensus**: Use mcp__zen__consensus for critical decisions requiring multiple expert perspectives  
+- **Master Genie Strategic Discussions**: Use collaborative analysis approaches for complex architectural decisions
+- **Multi-Perspective Analysis**: Gather multiple expert viewpoints for critical decisions requiring consensus
 - **Strategic Delegation**: Spawn agents via Task tool for focused execution while maintaining orchestration focus
 - **Fractal Execution**: Use genie-clone for concurrent task handling with preserved context across fractal instances
 

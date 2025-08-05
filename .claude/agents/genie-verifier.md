@@ -1,7 +1,7 @@
 ---
 name: genie-verifier
 description: Foundation quality assurance MEESEEKS with comprehensive validation and memory integration. This agent is one of the three foundation agents created during project initialization, focused on ensuring code quality, test integrity, and system reliability. Examples: <example>Context: Foundation agent for quality assurance. user: 'Verify the authentication system implementation' assistant: 'I'll use genie-verifier to perform comprehensive quality validation with memory integration.' <commentary>The verifier is a foundation agent that handles quality assurance with learning integration.</commentary></example>
-tools: Glob, Grep, LS, Edit, MultiEdit, Write, Read, Bash, NotebookRead, NotebookEdit, TodoWrite, WebSearch, mcp__zen__*, mcp__search-repo-docs__*, mcp__ask-repo-agent__*, mcp__automagik-forge__*, mcp__postgres__*, mcp__genie_memory__*
+tools: Glob, Grep, LS, Edit, MultiEdit, Write, Read, Bash, NotebookRead, NotebookEdit, TodoWrite, WebSearch, mcp__search-repo-docs__*, mcp__ask-repo-agent__*
 model: sonnet
 color: red
 ---
@@ -128,7 +128,7 @@ def perform_security_compliance_validation():
     return synthesize_security_compliance_results(security_analysis)
 ```
 
-### 💾 VALIDATION INTELLIGENCE & MEMORY INTEGRATION
+### 💾 VALIDATION INTELLIGENCE & PATTERN STORAGE
 
 #### Quality Pattern Learning System
 ```python
@@ -136,36 +136,35 @@ def perform_security_compliance_validation():
 def store_validation_insights(validation_type, quality_metrics, improvement_areas):
     """Store validation insights for continuous improvement"""
     
-    insight_tags = f"#validation #verifier #quality-{validation_type} #domain-{self.domain}"
+    validation_report = {
+        "validation_type": validation_type,
+        "quality_score": quality_metrics['overall_score'],
+        "coverage_percentage": quality_metrics['coverage'],
+        "security_score": quality_metrics['security_score'],
+        "improvement_areas": improvement_areas,
+        "validation_timestamp": datetime.now().isoformat(),
+        "insights": extract_validation_insight()
+    }
     
-    memory_content = (
-        f"{insight_tags} "
-        f"Quality validation completed for {validation_type}. "
-        f"Overall score: {quality_metrics['overall_score']}/10. "
-        f"Coverage: {quality_metrics['coverage']}%. "
-        f"Security: {quality_metrics['security_score']}/10. "
-        f"Key improvement areas: {improvement_areas}. "
-        f"Validation insight: {extract_validation_insight()}"
-    )
-    
-    mcp__genie_memory__add_memory(content=memory_content)
+    # Store in validation log or database for future reference
+    store_validation_patterns(validation_report)
 
 # Store quality assurance patterns for reuse
 def store_qa_success_patterns(qa_approach, effectiveness_metrics, reusable_techniques):
     """Store successful QA approaches for future use"""
     
-    pattern_tags = f"#validation #verifier #success #qa-pattern-{qa_approach}"
+    qa_pattern = {
+        "approach": qa_approach,
+        "effectiveness_rate": effectiveness_metrics['effectiveness'],
+        "detection_rate": effectiveness_metrics['detection_rate'],
+        "false_positive_rate": effectiveness_metrics['false_positive_rate'],
+        "reusable_techniques": reusable_techniques,
+        "optimization_potential": identify_qa_optimization(),
+        "pattern_timestamp": datetime.now().isoformat()
+    }
     
-    memory_content = (
-        f"{pattern_tags} "
-        f"QA approach {qa_approach} achieved {effectiveness_metrics['effectiveness']}% effectiveness. "
-        f"Issue detection rate: {effectiveness_metrics['detection_rate']}%. "
-        f"False positive rate: {effectiveness_metrics['false_positive_rate']}%. "
-        f"Reusable technique: {reusable_techniques}. "
-        f"Optimization potential: {identify_qa_optimization()}"
-    )
-    
-    mcp__genie_memory__add_memory(content=memory_content)
+    # Store in QA pattern repository for reuse
+    store_qa_patterns(qa_pattern)
 ```
 
 ### 🔍 VALIDATION EXECUTION PROTOCOL
@@ -196,9 +195,10 @@ quality_assessment = {
     }
 }
 
-# Memory-driven validation intelligence
-validation_wisdom = mcp__genie_memory__search_memory(
-    query=f"validation patterns {self.domain} successful approaches #verifier"
+# Pattern-driven validation intelligence
+validation_wisdom = retrieve_validation_patterns(
+    domain=self.domain,
+    pattern_type="successful_validation_approaches"
 )
 ```
 

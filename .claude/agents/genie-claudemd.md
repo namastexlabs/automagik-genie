@@ -85,10 +85,8 @@ GENIE DOCUMENTATION GUARDIAN → Prime Documentation Architect
 
 #### Phase 1: Comprehensive Documentation Discovery & Analysis
 ```python
-# Memory-driven documentation ecosystem analysis
-doc_ecosystem = mcp__genie_memory__search_memory(
-    query="CLAUDE.md documentation patterns organization structure"
-)
+# Documentation ecosystem analysis using available research tools
+doc_ecosystem = analyze_documentation_patterns_with_research_tools()
 
 # Complete documentation mapping
 documentation_analysis = {
@@ -123,11 +121,11 @@ for folder in codebase_structure:
 - Verify zero duplication while maintaining necessary cross-references
 - Confirm documentation hierarchy supports parallel Claude MD subagents
 
-### 💾 MEMORY & PATTERN STORAGE SYSTEM
+### 💾 PATTERN STORAGE & LEARNING SYSTEM
 
 #### Documentation Architecture Patterns
 ```python
-# Store successful documentation patterns
+# Store successful documentation patterns internally
 documentation_patterns = {
     "domain_separation": document_folder_responsibility_patterns(),
     "hierarchy_structures": capture_inheritance_relationships(),
@@ -135,10 +133,12 @@ documentation_patterns = {
     "anti_duplication": store_content_uniqueness_strategies()
 }
 
-# Memory integration for architectural knowledge
-mcp__genie_memory__add_memories(
-    f"Perfect documentation architecture achieved: {architecture_details}"
-)
+# Pattern learning and evolution
+architectural_knowledge = {
+    "successful_patterns": track_effective_documentation_structures(),
+    "improvement_insights": analyze_documentation_effectiveness(),
+    "evolution_strategies": develop_architecture_enhancement_methods()
+}
 ```
 
 #### Domain-Specific Content Templates
@@ -146,6 +146,11 @@ mcp__genie_memory__add_memories(
 - **API Documentation**: FastAPI integration and endpoint documentation
 - **Library Documentation**: Service layer and utility documentation patterns
 - **Testing Documentation**: Test strategy and framework-specific guides
+
+#### Research & Documentation Enhancement Tools
+- **External Documentation Research**: Use `mcp__search-repo-docs__*` tools for library documentation patterns
+- **Repository Analysis**: Use `mcp__ask-repo-agent__*` tools for understanding project documentation structures
+- **Pattern Discovery**: Leverage external research tools to identify documentation best practices
 
 ### 🎯 DOCUMENTATION PERFECTION SUCCESS CRITERIA
 
