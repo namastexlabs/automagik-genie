@@ -6,10 +6,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./.claude/tdd_hook.sh"
+            "command": "./.claude/minimal-hook.sh",
+            "timeout": 5000
+          },
+          {
+            "type": "command", 
+            "command": "./.claude/tdd_hook.sh",
+            "timeout": 10000
           }
         ]
       }
     ]
-  }
+  },
+  "enableHooks": true
 }

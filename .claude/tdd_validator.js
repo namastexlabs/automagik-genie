@@ -83,12 +83,20 @@ class TDDValidator {
             };
         }
 
-        // If all tests pass and we're adding new functions/classes, warn about TDD
-        if (this.hasNewFunctionality(content) && !testResults.hasFailures) {
-            // For now, allow but warn - in stricter TDD this would be blocked
+        // If all tests pass and we're adding new functions/classes, this should be blocked in strict TDD
+        if (this.hasNewFunctionality(content) && !testResults.hasFailures && !fileExists) {
+            // Block new implementation files when all tests pass - strict TDD enforcement
+            return {
+                allowed: false,
+                reason: "❌ TDD VIOLATION: Creating new implementation file with functionality when all tests pass. Write failing tests first!"
+            };
+        }
+
+        // If modifying existing file with new functionality, warn but allow
+        if (this.hasNewFunctionality(content) && !testResults.hasFailures && fileExists) {
             return {
                 allowed: true,
-                reason: "⚠️ REFACTOR PHASE: All tests passing, ensure new functionality has corresponding failing tests first"
+                reason: "⚠️ REFACTOR PHASE: Adding functionality to existing file when tests pass, ensure new functionality has corresponding failing tests first"
             };
         }
 
@@ -234,30 +242,17 @@ async function main() {
         const failedValidation = validationResults.find(r => !r.allowed);
         
         if (failedValidation) {
-            console.log(JSON.stringify({
-                status: "blocked",
-                reason: failedValidation.reason
-            }));
+            // Output error message to stderr and exit with code 1 to block the operation
+            console.error(failedValidation.reason);
             process.exit(1);
         }
 
-        // All validations passed
-        const successReasons = validationResults
-            .map(r => r.reason)
-            .filter(r => r !== "Change approved");
-
-        console.log(JSON.stringify({
-            status: "allowed",
-            reason: successReasons.length > 0 ? successReasons.join("; ") : "TDD validation passed"
-        }));
+        // All validations passed - exit with code 0 to allow the operation
         process.exit(0);
 
     } catch (error) {
-        // On any error, allow the operation but log the error
-        console.log(JSON.stringify({
-            status: "allowed",
-            reason: `TDD Validator Error: ${error.message} - Operation allowed`
-        }));
+        // On any error, allow the operation but log the error to stderr
+        console.error(`TDD Validator Error: ${error.message} - Operation allowed`);
         process.exit(0);
     }
 }
