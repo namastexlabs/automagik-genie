@@ -5,6 +5,10 @@
 **Project**: {{PROJECT_NAME}}
 **Initialized**: {{TIMESTAMP}}
 **Path**: {{PROJECT_PATH}}
+{{BACKUP_PREVIOUS_SETUP_LINE}}
+{{BACKUP_PROJECT_DESCRIPTION_LINE}}
+
+{{BACKUP_RECOVERED_SECTION}}
 
 ## 🚀 Available Agents
 
