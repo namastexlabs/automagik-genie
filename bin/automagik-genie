@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 
 const { validateClaude } = require('../lib/claude-cli-check.js');
-const { init } = require('../lib/init-unified.js');
+const { init } = require('../lib/init.js');
 const path = require('path');
 const { spawn } = require('child_process');
 const readline = require('readline');
 
 // Constants - single source of truth for all repeated values
 const CONSTANTS = {
-  WISH_TEXT: '/wish analyze this codebase, understand patterns, and propose development agents to be created',
+  WISH_TEXT: `/wish Analyze this codebase including .claude-backup configurations, detect tech stack, understand patterns, and propose custom development agents based on project needs`,
   EXIT_CODE: {
     SUCCESS: 0,
     ERROR: 1
