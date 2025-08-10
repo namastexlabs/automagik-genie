@@ -213,6 +213,13 @@ const main = async () => {
     return;
   }
   
+  // Handle statusline command
+  if (args[0] === 'statusline') {
+    const { run } = require('../lib/statusline.js');
+    await run();
+    return;
+  }
+  
   // Extract command
   const command = args[0] || 'init';
   
