@@ -3,9 +3,11 @@
 const { UpdateEngine } = require('../lib/update/engine');
 const { BackupManager } = require('../lib/update/backup');
 const { MetadataManager } = require('../lib/update/metadata');
+const { createGenieVersion, fileExists } = require('../lib/init');
 const yargs = require('yargs');
 const colors = require('colors');
 const path = require('path');
+const fs = require('fs').promises;
 
 const argv = yargs
   .usage('Usage: $0 <command> [options]')
@@ -179,6 +181,13 @@ async function handleUpdate(options, projectPath) {
     console.error(colors.red('❌ This does not appear to be an initialized Genie project.'));
     console.error(colors.gray('   Run "npx automagik-genie init" first to initialize the project.'));
     process.exit(1);
+  }
+  
+  // Ensure version file exists - create if missing
+  const versionPath = path.join(claudeDir, 'genie-version.json');
+  if (!await fileExists(versionPath)) {
+    console.log(colors.yellow('📋 Creating missing version file...'));
+    await createGenieVersion(claudeDir);
   }
 
   if (options.dryRun) {
