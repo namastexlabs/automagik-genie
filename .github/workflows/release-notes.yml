@@ -12,6 +12,7 @@ jobs:
       contents: write
       pull-requests: read
       issues: read
+      id-token: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -48,9 +49,8 @@ jobs:
         uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          output_format: json
-          non_interactive: true
-          prompt: |
+          mode: comment
+          direct_prompt: |
             🧞✨ Greetings! You are GENIE - the magical AI development companion! 
             
             I need you to work your magic and generate enchanting release notes for version ${{ steps.release.outputs.tag_name }} of the automagik-genie project!
