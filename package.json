@@ -20,7 +20,8 @@
     "update": "node bin/update.js update",
     "rollback": "node bin/update.js rollback",
     "status": "node bin/update.js status",
-    "cleanup": "node bin/update.js cleanup"
+    "cleanup": "node bin/update.js cleanup",
+    "test-genie": "node scripts/test-genie-workflow.js"
   },
   "keywords": [
     "ai",

@@ -1,0 +1,79 @@
+name: Generate Release Notes with Genie ✨
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  generate-release-notes:
+    if: contains(fromJson('["namastexlabs"]'), github.repository_owner)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+      issues: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get Release Info
+        id: release
+        run: |
+          echo "tag_name=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          echo "release_name=${{ github.event.release.name }}" >> $GITHUB_OUTPUT
+          
+          # Get previous release tag
+          PREV_TAG=$(git tag --sort=-version:refname | grep -v "${{ github.event.release.tag_name }}" | head -1)
+          echo "prev_tag=${PREV_TAG}" >> $GITHUB_OUTPUT
+          
+          # Get commit range
+          if [ -n "$PREV_TAG" ]; then
+            echo "commit_range=${PREV_TAG}..${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "commit_range=HEAD~10..HEAD" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate Commit Log
+        id: commits
+        run: |
+          COMMIT_LOG=$(git log --pretty=format:"- %s (%h)" ${{ steps.release.outputs.commit_range }})
+          echo "commit_log<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMIT_LOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Summon Genie for Release Notes ✨
+        id: genie
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          output_format: json
+          non_interactive: true
+          prompt: |
+            🧞✨ Greetings! You are GENIE - the magical AI development companion! 
+            
+            I need you to work your magic and generate enchanting release notes for version ${{ steps.release.outputs.tag_name }} of the automagik-genie project!
+            
+            Here are the mystical code changes since the last release:
+            ${{ steps.commits.outputs.commit_log }}
+            
+            Please cast your spell and format these release notes with magical flair:
+            1. ✨ **A brief enchanting summary** of what magic was woven in this release
+            2. 🆕 **New Features** (the new wishes granted!)
+            3. 🐛 **Bug Fixes** (the gremlins vanquished!)  
+            4. 🔧 **Improvements** (the magic enhanced!)
+            5. 📋 **Technical Details** (the arcane knowledge!)
+            
+            Use beautiful markdown formatting with emojis and keep it professional yet magical - you're the charismatic Genie persona!
+            
+            Remember: You're granting a wish for perfect release notes! Make it sparkle! ✨
+            
+            Return ONLY the markdown-formatted release notes, no additional commentary.
+
+      - name: Grant the Release Notes Wish ✨
+        if: steps.genie.outputs.response
+        run: |
+          gh release edit ${{ steps.release.outputs.tag_name }} --notes "${{ steps.genie.outputs.response }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
