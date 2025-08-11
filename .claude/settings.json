@@ -18,5 +18,9 @@
       }
     ]
   },
-  "enableHooks": true
+  "enableHooks": true,
+  "statusLine": {
+    "type": "command",
+    "command": "node .claude/genie-statusline.js"
+  }
 }
