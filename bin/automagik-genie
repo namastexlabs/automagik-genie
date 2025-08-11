@@ -73,6 +73,10 @@ const showHelp = () => {
   console.log('  /wish "add authentication system"');
   console.log('  /wish "fix failing tests"');
   logSpacing();
+  console.log('Opus model:');
+  console.log('  Automatically prompts during init for Claude Opus usage');
+  console.log('  Provides enhanced reasoning and superior code analysis');
+  logSpacing();
   console.log('Update examples:');
   console.log('  npx automagik-genie update --dry-run    Preview updates');
   console.log('  npx automagik-genie update --agents-only Update only agents');
@@ -99,16 +103,21 @@ const showPostInitInstructions = () => {
 };
 
 /**
- * Build Claude command with conditional permissions and wish text
+ * Build Claude command with conditional permissions, model selection, and wish text
  * @param {boolean} skipPermissions - Whether to add --dangerously-skip-permissions flag
+ * @param {boolean} useOpus - Whether to use Claude Opus model
  * @param {string} wishText - The wish command text to execute
  * @returns {string} Complete Claude command string
  */
-const buildClaudeCommand = (skipPermissions, wishText) => {
+const buildClaudeCommand = (skipPermissions, useOpus, wishText) => {
   let command = 'claude';
   
   if (skipPermissions) {
     command += ' --dangerously-skip-permissions';
+  }
+  
+  if (useOpus) {
+    command += ' --model opus';
   }
   
   command += ` "${wishText}"`;
@@ -118,10 +127,11 @@ const buildClaudeCommand = (skipPermissions, wishText) => {
 /**
  * Show manual Claude command instructions with consistent formatting
  * @param {boolean} skipPermissions - Whether instructions should include skip permissions flag
+ * @param {boolean} useOpus - Whether instructions should include Opus model flag
  * @param {string} context - Context for the instructions (e.g., 'error', 'completion')
  */
-const showManualInstructions = (skipPermissions, context = 'default') => {
-  const command = buildClaudeCommand(skipPermissions, CONSTANTS.WISH_TEXT);
+const showManualInstructions = (skipPermissions, useOpus = false, context = 'default') => {
+  const command = buildClaudeCommand(skipPermissions, useOpus, CONSTANTS.WISH_TEXT);
   
   console.log(CONSTANTS.MESSAGES.MANUAL_AVAILABLE);
   console.log(`   ${command}`);
@@ -131,8 +141,9 @@ const showManualInstructions = (skipPermissions, context = 'default') => {
  * Handle Claude process errors with consistent messaging
  * @param {Error} error - The error object from Claude process
  * @param {boolean} skipPermissions - Whether skip permissions was used
+ * @param {boolean} useOpus - Whether Opus model was selected
  */
-const handleClaudeError = (error, skipPermissions) => {
+const handleClaudeError = (error, skipPermissions, useOpus) => {
   logSpacing();
   console.log(CONSTANTS.MESSAGES.AUTO_START_FAILED);
   
@@ -143,7 +154,7 @@ const handleClaudeError = (error, skipPermissions) => {
     console.log(`   ${error.message}`);
   }
   logSpacing();
-  showManualInstructions(skipPermissions, 'error');
+  showManualInstructions(skipPermissions, useOpus, 'error');
   logSpacing();
   showPostInitInstructions();
 };
@@ -152,14 +163,15 @@ const handleClaudeError = (error, skipPermissions) => {
  * Handle Claude process completion with consistent messaging
  * @param {number} code - Exit code from Claude process
  * @param {boolean} skipPermissions - Whether skip permissions was used
+ * @param {boolean} useOpus - Whether Opus model was selected
  */
-const showAnalysisCompletion = (code, skipPermissions) => {
+const showAnalysisCompletion = (code, skipPermissions, useOpus) => {
   logSpacing();
   
   if (code === CONSTANTS.EXIT_CODE.SUCCESS) {
     console.log(CONSTANTS.MESSAGES.ANALYSIS_COMPLETE);
   } else {
-    showManualInstructions(skipPermissions, 'completion');
+    showManualInstructions(skipPermissions, useOpus, 'completion');
   }
   logSpacing();
   showPostInitInstructions();
@@ -231,6 +243,42 @@ const promptForStatusline = () => {
       logSpacing();
       
       resolve(addStatusline);
+    });
+  });
+};
+
+/**
+ * Prompt user for Opus model selection
+ * @returns {Promise<boolean>} True if user wants to use Opus model
+ */
+const promptForOpus = () => {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+
+    console.log('🚀 Model Selection:');
+    logSpacing();
+    console.log('Would you like to use Claude Opus for enhanced development assistance?');
+    console.log('Opus provides superior reasoning and code analysis capabilities.');
+    logSpacing();
+    
+    rl.question('Use Claude Opus model? (Y/n): ', (answer) => {
+      rl.close();
+      // Default to 'yes' if user just hits enter
+      const useOpus = answer === '' || 
+                     answer.toLowerCase() === 'y' || 
+                     answer.toLowerCase() === 'yes';
+      
+      if (useOpus) {
+        console.log('✅ Will use Claude Opus model');
+      } else {
+        console.log('⏭️  Will use default model');
+      }
+      logSpacing();
+      
+      resolve(useOpus);
     });
   });
 };
@@ -471,6 +519,9 @@ const main = async () => {
       await configureStatusline(targetPath);
     }
     
+    // Prompt for Opus model selection
+    const useOpus = await promptForOpus();
+    
     // Prompt for permission skip option
     const skipPermissions = await promptForPermissionSkip();
     
@@ -478,7 +529,7 @@ const main = async () => {
     logSpacing();
     
     // Build claude command for immediate analysis
-    const claudeCommand = buildClaudeCommand(skipPermissions, CONSTANTS.WISH_TEXT);
+    const claudeCommand = buildClaudeCommand(skipPermissions, useOpus, CONSTANTS.WISH_TEXT);
     
     // Auto-trigger claude command for immediate analysis
     const claudeProcess = spawn(claudeCommand, {
@@ -488,11 +539,11 @@ const main = async () => {
     });
 
     claudeProcess.on('error', (error) => {
-      handleClaudeError(error, skipPermissions);
+      handleClaudeError(error, skipPermissions, useOpus);
     });
 
     claudeProcess.on('close', (code) => {
-      showAnalysisCompletion(code, skipPermissions);
+      showAnalysisCompletion(code, skipPermissions, useOpus);
     });
     
   } catch (error) {
