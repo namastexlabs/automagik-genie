@@ -44,12 +44,6 @@ process.stdin.on('end', async () => {
       // Silently ignore if ccusage is not available
     }
     
-    // Add more statusline commands here in the future
-    // try {
-    //   const otherResult = await runCommand('npx', ['-y', 'other-tool', 'statusline'], stdinData);
-    //   if (otherResult) outputs.push(otherResult);
-    // } catch (e) {}
-    
   } catch (error) {
     outputs.push('🧞 Genie statusline error: ' + error.message);
   }

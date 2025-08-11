@@ -19,13 +19,4 @@ else
     echo "$STDIN_DATA" | npx -y automagik-genie statusline 2>/dev/null || echo "🧞 Genie statusline not found"
 fi
 
-# Add a newline separator for multiple statuslines
-echo ""
-
-# Run ccusage statusline (using npx directly)
-echo "$STDIN_DATA" | npx -y ccusage statusline 2>/dev/null || true
-
-# You can add more statusline commands here in the future
-# Example:
-# echo ""
-# echo "$STDIN_DATA" | npx -y another-statusline-tool statusline 2>/dev/null || true
+# Only run automagik-genie statusline - no external tools

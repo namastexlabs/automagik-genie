@@ -30,16 +30,7 @@ if (Test-Path $localStatusline) {
     }
 }
 
-# Add empty line separator
-$outputs += ""
-
-# Run ccusage statusline if available (optional)
-try {
-    $ccusageResult = $stdinData | npx -y ccusage statusline 2>$null
-    if ($ccusageResult) { $outputs += $ccusageResult }
-} catch {
-    # Silently ignore if ccusage is not available
-}
+# Only run automagik-genie statusline - no external tools
 
 # Output all results
 $outputs -join "`n"

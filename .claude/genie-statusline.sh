@@ -24,8 +24,3 @@ echo ""
 
 # Run ccusage statusline (using npx directly)
 echo "$STDIN_DATA" | npx -y ccusage statusline 2>/dev/null || true
-
-# You can add more statusline commands here in the future
-# Example:
-# echo ""
-# echo "$STDIN_DATA" | npx -y another-statusline-tool statusline 2>/dev/null || true
