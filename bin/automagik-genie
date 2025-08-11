@@ -5,6 +5,7 @@ const { init } = require('../lib/init.js');
 const path = require('path');
 const { spawn } = require('child_process');
 const readline = require('readline');
+const fs = require('fs').promises;
 
 // Constants - single source of truth for all repeated values
 const CONSTANTS = {
@@ -181,8 +182,9 @@ const promptForPermissionSkip = () => {
     console.log('or with restricted permissions for security-conscious environments.');
     logSpacing();
     
-    rl.question('Do you want to start with "--dangerously-skip-permissions"? (y/n): ', (answer) => {
+    rl.question('Do you want to start with "--dangerously-skip-permissions"? (y/N): ', (answer) => {
       rl.close();
+      // Default to 'no' if user just hits enter or explicitly says no
       const skipPermissions = answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes';
       
       if (skipPermissions) {
@@ -195,6 +197,189 @@ const promptForPermissionSkip = () => {
       resolve(skipPermissions);
     });
   });
+};
+
+/**
+ * Prompt user for statusline setup option
+ * @returns {Promise<boolean>} True if user wants to add statusline
+ */
+const promptForStatusline = () => {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+
+    console.log('🧞 Genie Statusline Configuration:');
+    logSpacing();
+    console.log('Would you like to add Genie statusline to Claude Code?');
+    console.log('This adds a magical status bar showing Genie activity and git info.');
+    logSpacing();
+    
+    rl.question('Add Genie statusline to Claude? (Y/n): ', (answer) => {
+      rl.close();
+      // Default to 'yes' if user just hits enter
+      const addStatusline = answer === '' || 
+                           answer.toLowerCase() === 'y' || 
+                           answer.toLowerCase() === 'yes';
+      
+      if (addStatusline) {
+        console.log('✅ Will configure Genie statusline');
+      } else {
+        console.log('⏭️  Skipping statusline configuration');
+      }
+      logSpacing();
+      
+      resolve(addStatusline);
+    });
+  });
+};
+
+/**
+ * Configure statusline in Claude settings.json
+ * @param {string} targetPath - The project directory path
+ * @returns {Promise<void>}
+ */
+const configureStatusline = async (targetPath) => {
+  const settingsPath = path.join(targetPath, '.claude', 'settings.json');
+  const statuslineScriptPath = path.join(targetPath, '.claude', 'genie-statusline.js');
+  
+  try {
+    // Check if the statusline script exists
+    try {
+      await fs.access(statuslineScriptPath);
+    } catch {
+      console.log('⚠️  Statusline script not found at .claude/genie-statusline.js');
+      console.log('   Statusline configuration skipped.');
+      return;
+    }
+    
+    let settings = {};
+    
+    // Try to read existing settings
+    try {
+      const existingContent = await fs.readFile(settingsPath, 'utf8');
+      settings = JSON.parse(existingContent);
+    } catch (error) {
+      // File doesn't exist or is invalid JSON, start with empty object
+      console.log('📝 Creating new settings.json file...');
+    }
+    
+    // Configure statusline based on existing settings
+    if (settings.statusLine) {
+      // Statusline already exists
+      const existingCommand = settings.statusLine.command;
+      
+      // Check if it's already our genie statusline
+      if (existingCommand && existingCommand.includes('genie-statusline')) {
+        console.log('✨ Genie statusline already configured!');
+        return;
+      }
+      
+      // Another statusline exists - we should chain them
+      console.log('🔗 Existing statusline found, creating wrapper to chain both...');
+      
+      // Update the genie-statusline.js to chain with existing command
+      const wrapperContent = `#!/usr/bin/env node
+
+/**
+ * 🧞 Genie Statusline Wrapper with Chaining
+ * Runs both Genie statusline and existing statusline
+ */
+
+const { spawn } = require('child_process');
+const path = require('path');
+const fs = require('fs');
+
+// Get stdin data
+let stdinData = '';
+process.stdin.setEncoding('utf8');
+
+process.stdin.on('data', (chunk) => {
+  stdinData += chunk;
+});
+
+process.stdin.on('end', async () => {
+  const projectRoot = path.dirname(__dirname);
+  const localStatusline = path.join(projectRoot, 'lib', 'statusline.js');
+  const outputs = [];
+  
+  try {
+    // Run Genie statusline
+    if (fs.existsSync(localStatusline)) {
+      const result = await runCommand('node', [localStatusline], stdinData);
+      if (result) outputs.push(result);
+    } else {
+      const result = await runCommand('npx', ['-y', 'automagik-genie', 'statusline'], stdinData);
+      if (result) outputs.push(result);
+    }
+    
+    // Run existing statusline command
+    const existingCommand = ${JSON.stringify(existingCommand)};
+    if (existingCommand) {
+      try {
+        // Parse command (might be "node script.js" or just "script")
+        const parts = existingCommand.split(' ');
+        const cmd = parts[0];
+        const args = parts.slice(1);
+        const result = await runCommand(cmd, args, stdinData);
+        if (result) outputs.push(result);
+      } catch (e) {
+        // Silently ignore if existing command fails
+      }
+    }
+    
+  } catch (error) {
+    outputs.push('🧞 Genie statusline error: ' + error.message);
+  }
+  
+  console.log(outputs.filter(o => o).join('\\n'));
+});
+
+function runCommand(command, args, input) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      shell: process.platform === 'win32',
+      windowsHide: true,
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
+    
+    let stdout = '';
+    
+    child.stdout.on('data', (data) => {
+      stdout += data.toString();
+    });
+    
+    child.on('error', reject);
+    
+    child.on('close', (code) => {
+      resolve(stdout.trim());
+    });
+    
+    if (input) {
+      child.stdin.write(input);
+      child.stdin.end();
+    }
+  });
+}`;
+      
+      await fs.writeFile(statuslineScriptPath, wrapperContent, 'utf8');
+      await fs.chmod(statuslineScriptPath, 0o755);
+    }
+    
+    // Update settings with our statusline
+    settings.statusLine = {
+      type: "command",
+      command: "node .claude/genie-statusline.js"
+    };
+    
+    // Write updated settings
+    await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
+    console.log('✅ Statusline configured successfully!');
+    
+  } catch (error) {
+    console.error('❌ Failed to configure statusline:', error.message);
+  }
 };
 
 const main = async () => {
@@ -280,6 +465,12 @@ const main = async () => {
     
     logWithSpacing(CONSTANTS.MESSAGES.INIT_SUCCESS);
     
+    // Prompt for statusline configuration
+    const addStatusline = await promptForStatusline();
+    if (addStatusline) {
+      await configureStatusline(targetPath);
+    }
+    
     // Prompt for permission skip option
     const skipPermissions = await promptForPermissionSkip();
     
@@ -325,4 +516,7 @@ process.on('uncaughtException', (error) => {
   exitWithError(`${CONSTANTS.MESSAGES.FATAL_ERROR} ${error.message}`);
 });
 
-main();
+// Only run main() if this script is executed directly, not when required by tests
+if (require.main === module) {
+  main();
+}
