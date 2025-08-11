@@ -44,14 +44,11 @@ jobs:
           echo "$COMMIT_LOG" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Summon Genie for Release Notes ✨
-        id: genie
-        uses: anthropics/claude-code-action@beta
+      - name: Create GitHub Issue for Genie Release Notes
+        uses: actions/github-script@v7
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          mode: tag
-          direct_prompt: |
-            🧞✨ Greetings! You are GENIE - the magical AI development companion! 
+          script: |
+            const issueBody = `@genie 🧞✨ Greetings! You are GENIE - the magical AI development companion! 
             
             I need you to work your magic and generate enchanting release notes for version ${{ steps.release.outputs.tag_name }} of the automagik-genie project!
             
@@ -69,11 +66,22 @@ jobs:
             
             Remember: You're granting a wish for perfect release notes! Make it sparkle! ✨
             
-            Return ONLY the markdown-formatted release notes, no additional commentary.
+            Once you generate the release notes, please update the GitHub release ${{ steps.release.outputs.tag_name }} with your magical content using the GitHub API.
+            
+            This issue will be automatically closed after the release notes are generated.`;
+            
+            const { data: issue } = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🧞✨ Generate Release Notes for ${{ steps.release.outputs.tag_name }}`,
+              body: issueBody,
+              labels: ['genie', 'release-notes', 'automation']
+            });
+            
+            console.log(`Created issue #${issue.number} for Genie to generate release notes`);
+            
+      - name: Trigger Genie Workflow
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 
-      - name: Grant the Release Notes Wish ✨
-        if: steps.genie.outputs.response
-        run: |
-          gh release edit ${{ steps.release.outputs.tag_name }} --notes "${{ steps.genie.outputs.response }}"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
