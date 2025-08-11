@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./.claude/minimal-hook.sh",
+            "command": "node .claude/minimal-hook.js",
             "timeout": 5000
           },
           {
