@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { execSync } = require('child_process');
+const { getCurrentVersion } = require('./test-helpers');
 
 // Mock dependencies
 jest.mock('fs');
@@ -203,7 +204,7 @@ describe('Statusline Functionality', () => {
       expect(consoleSpy).toHaveBeenCalled();
       const output = consoleSpy.mock.calls[0][0];
       expect(output).toMatch(/🧞 Genie is/);
-      expect(output).toContain('v1.2.7'); // Version should be present
+      expect(output).toContain(`v${getCurrentVersion()}`); // Version should be present
       
       // In ideal case might show git info, in fallback shows basic statusline
       expect(output.length).toBeGreaterThan(20); // Not empty
@@ -273,7 +274,7 @@ describe('Statusline Functionality', () => {
       expect(consoleSpy).toHaveBeenCalled();
       const output = consoleSpy.mock.calls[0][0];
       expect(output).toMatch(/🧞 Genie is/);
-      expect(output).toContain('v1.2.7'); // Version should be present
+      expect(output).toContain(`v${getCurrentVersion()}`); // Version should be present
       
       // In ideal case might show change count, in fallback shows basic statusline
       expect(output.length).toBeGreaterThan(20); // Not empty
@@ -311,7 +312,7 @@ describe('Statusline Functionality', () => {
       
       // Should contain version in statusline output
       const output = consoleSpy.mock.calls[0][0];
-      expect(output).toContain('v1.2.7');
+      expect(output).toContain(`v${getCurrentVersion()}`);
       
       consoleSpy.mockRestore();
     });
@@ -346,12 +347,12 @@ describe('Statusline Functionality', () => {
       expect(consoleSpy).toHaveBeenCalled();
       const output = consoleSpy.mock.calls[0][0];
       expect(output).toMatch(/🧞 Genie is/);
-      expect(output).toContain('v1.2.7'); // Should show current version
+      expect(output).toContain(`v${getCurrentVersion()}`); // Should show current version
       
       // In successful cases, update message might appear
       // In test fallback, just the version should be present
       const hasUpdate = output.includes('npx automagik-genie update for v1.3.0');
-      const hasVersion = output.includes('v1.2.7');
+      const hasVersion = output.includes(`v${getCurrentVersion()}`);
       
       expect(hasUpdate || hasVersion).toBe(true);
       
@@ -426,7 +427,7 @@ describe('Statusline Functionality', () => {
       
       // Should produce valid statusline output (may be fallback)
       expect(output).toMatch(/🧞 Genie is/);
-      expect(output).toContain('v1.2.7'); // Version should be present
+      expect(output).toContain(`v${getCurrentVersion()}`); // Version should be present
       
       // Check that one of the expected git actions could be selected
       const gitActions = ['track your changes', 'manage git magic', 'preserve your spells', 'orchestrate branches'];
@@ -543,7 +544,7 @@ describe('Statusline Functionality', () => {
       
       // Should contain basic statusline structure
       expect(output).toMatch(/🧞 Genie is/);
-      expect(output).toContain('v1.2.7'); // Version should be present
+      expect(output).toContain(`v${getCurrentVersion()}`); // Version should be present
       
       // In ideal case, might contain git info and model name
       // In test fallback, just basic structure is enough

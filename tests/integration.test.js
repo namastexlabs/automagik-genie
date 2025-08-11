@@ -3,6 +3,7 @@ const fs = require('fs').promises;
 const readline = require('readline');
 const { spawn } = require('child_process');
 const { execSync } = require('child_process');
+const { getCurrentVersion } = require('./test-helpers');
 
 // Mock all dependencies
 jest.mock('fs', () => ({
@@ -247,7 +248,7 @@ describe('Full Integration Tests', () => {
       const branch = 'main';
       const needsPull = true;
       const gitChanges = 2;
-      const version = '1.2.7';
+      const version = getCurrentVersion();
       const updateVersion = '1.3.0';
       
       // Build the expected statusline format
@@ -285,7 +286,7 @@ describe('Full Integration Tests', () => {
       expect(expectedOutput).toContain('npx automagik-genie update for v1.3.0');
       
       // Also test that the expected output matches what we'd expect
-      expect(expectedOutput).toBe('🧞 Genie is using Claude 3.5 Sonnet to grant your wishes at project | main ⬇️ (2 changes) | v1.2.7 (run: npx automagik-genie update for v1.3.0)');
+      expect(expectedOutput).toBe(`🧞 Genie is using Claude 3.5 Sonnet to grant your wishes at project | main ⬇️ (2 changes) | v${getCurrentVersion()} (run: npx automagik-genie update for v1.3.0)`);
     });
     
     test('should handle statusline errors gracefully with fallback', async () => {

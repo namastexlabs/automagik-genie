@@ -3,6 +3,7 @@ const fs = require('fs').promises;
 const { execSync } = require('child_process');
 const os = require('os');
 const readline = require('readline');
+const { getCurrentVersion } = require('./test-helpers');
 
 // Mock all dependencies
 jest.mock('fs', () => ({
@@ -698,7 +699,7 @@ describe('Edge Cases and Boundary Conditions', () => {
         if (cacheReadCount % 2 === 0) {
           throw new Error('EBUSY: resource busy');
         }
-        return JSON.stringify({ version: '1.2.7', timestamp: Date.now() });
+        return JSON.stringify({ version: getCurrentVersion(), timestamp: Date.now() });
       });
       
       fsSync.writeFileSync.mockImplementation(() => {
