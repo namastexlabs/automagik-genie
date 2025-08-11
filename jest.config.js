@@ -13,5 +13,9 @@ module.exports = {
   // Clear mocks between tests
   clearMocks: true,
   // Restore mocks after each test  
-  restoreMocks: true
+  restoreMocks: true,
+  // Reset modules and timers between tests for better isolation
+  resetModules: true,
+  // Ensure fake timers are properly cleared
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js']
 };
