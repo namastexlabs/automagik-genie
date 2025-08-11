@@ -1,5 +1,33 @@
 # Changelog
 
+## v1.2.7 (2025-08-11)
+
+### Added
+- **Interactive Statusline System**: Beautiful, contextual status display for Claude Code
+  - Shows current AI model being used (Sonnet 4, Claude 3.5, etc.)
+  - Contextual actions that change based on time of day and git activity
+  - Project name and git branch information with change indicators
+  - Smart caching for optimal performance
+  - Cross-platform support (Windows, Mac, Linux)
+  - Example: `🧞 Genie is using Sonnet 4 to manifest commit message poetry at automagik-genie | main (3 changes) | v1.2.7`
+
+- **Enhanced Hook System**: 
+  - Added missing `minimal-hook.js` for pre-tool validation
+  - Basic system directory protection
+  - Improved error handling and logging
+
+### Fixed
+- **Documentation**: Corrected CLAUDE.md paths to reflect actual project structure instead of template references
+- **Hook Execution**: Resolved missing minimal-hook.js causing PreToolUse failures
+- **Project References**: Updated architecture treasure map with real automagik-genie directories
+
+### Technical Details
+- Intelligent statusline with time-based action selection (morning energy, afternoon productivity, late night intensity)
+- Git integration showing uncommitted changes and pull indicators  
+- Model detection from Claude Code session data
+- Cached update checking with 1-hour TTL
+- Template fixes ensure future projects get accurate documentation
+
 ## v1.2.6 (2025-08-07)
 
 ### Added

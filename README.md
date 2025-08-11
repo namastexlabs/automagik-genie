@@ -35,6 +35,7 @@ npx automagik-genie init
 
 - **Zero Configuration**: Works out of the box in any codebase
 - **Smart Agent System**: Specialized AI agents for different development tasks
+- **Interactive Statusline**: Beautiful, contextual status display for Claude Code
 - **NPX Updates**: Keep your genie updated with latest capabilities
 - **Context Preservation**: Maintains understanding across complex multi-step tasks
 
@@ -70,6 +71,29 @@ npx automagik-genie update  # Update to latest version
 /wish "spawn genie-clone to orchestrate API migration across multiple services"
 ```
 
+## 📊 Interactive Statusline
+
+The Genie provides a beautiful, contextual statusline for Claude Code that shows:
+- Current AI model being used
+- Contextual action based on time of day and git activity  
+- Project name and git branch information
+- Uncommitted changes count
+- Version information and update notifications
+
+**Example Output:**
+```
+🧞 Genie is using Sonnet 4 to manifest commit message poetry at automagik-genie | main (3 changes) | v1.2.7
+```
+
+**Statusline Features:**
+- **Contextual Actions**: Changes based on time (morning energy, afternoon productivity, late night intensity)
+- **Git Integration**: Shows branch, uncommitted changes, and pull indicators
+- **Model Detection**: Displays current Claude model being used
+- **Smart Caching**: Efficient performance with cached updates
+- **Cross-Platform**: Works on Windows, Mac, and Linux
+
+The statusline is automatically configured during `init` and integrates seamlessly with Claude Code's status display system.
+
 ## 🔧 Advanced Usage
 
 ```bash
@@ -81,6 +105,9 @@ npx automagik-genie status
 
 # Clean up old backups
 npx automagik-genie cleanup
+
+# Run statusline directly (for testing)
+npx automagik-genie statusline
 ```
 
 ## 🌟 How It Works
