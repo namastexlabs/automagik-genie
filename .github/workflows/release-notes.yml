@@ -49,7 +49,7 @@ jobs:
         uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          mode: comment
+          mode: tag
           direct_prompt: |
             🧞✨ Greetings! You are GENIE - the magical AI development companion! 
             
