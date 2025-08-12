@@ -3,7 +3,8 @@
 const { UpdateEngine } = require('../lib/update/engine');
 const { BackupManager } = require('../lib/update/backup');
 const { MetadataManager } = require('../lib/update/metadata');
-const { createGenieVersion, fileExists } = require('../lib/init');
+const { createGenieVersion } = require('../lib/init');
+const { fileExists } = require('../lib/utils/file-operations');
 const yargs = require('yargs');
 const colors = require('colors');
 const path = require('path');
