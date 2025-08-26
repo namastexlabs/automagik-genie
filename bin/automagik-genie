@@ -501,20 +501,22 @@ const main = async () => {
   const useLegacyMode = args.includes('--legacy');
   
   try {
+    // Prompt for statusline configuration BEFORE init
+    const addStatusline = await promptForStatusline();
+    
     if (useLegacyMode) {
       console.log('⚠️  Using legacy mode (destructive replacement)');
       logSpacing();
-      await init(targetPath, { mode: 'legacy' });
+      await init(targetPath, { mode: 'legacy', addStatusline });
     } else {
       console.log('🛡️  Using smart merge mode (preserves your content)');
       logSpacing();
-      await init(targetPath, { mode: 'smart' });
+      await init(targetPath, { mode: 'smart', addStatusline });
     }
     
     logWithSpacing(CONSTANTS.MESSAGES.INIT_SUCCESS);
     
-    // Prompt for statusline configuration
-    const addStatusline = await promptForStatusline();
+    // Only configure statusline if user wanted it and it wasn't already handled during init
     if (addStatusline) {
       await configureStatusline(targetPath);
     }
