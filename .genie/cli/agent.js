@@ -122,7 +122,7 @@ function main() {
     prepareDirectories(paths);
 
     switch (parsed.command) {
-      case 'chat':
+      case 'run':
         runChat(parsed, config, paths);
         break;
       case 'continue':
@@ -130,6 +130,9 @@ function main() {
         break;
       case 'agents':
         runAgentsList(parsed, config, paths);
+        break;
+      case 'runs':
+        runRuns(parsed, config, paths);
         break;
       case 'list':
         runList(config, paths);
@@ -164,7 +167,9 @@ function parseArguments(argv) {
     backgroundRunner: false,
     prefix: null,
     json: false,
-    style: 'compact'
+    style: 'compact',
+    status: null,
+    stop: null
   };
 
   const filtered = [];
@@ -210,6 +215,16 @@ function parseArguments(argv) {
     if (token === '--style') {
       if (i + 1 >= raw.length) throw new Error('Missing value for --style');
       options.style = raw[++i];
+      continue;
+    }
+    if (token === '--status') {
+      if (i + 1 >= raw.length) throw new Error('Missing value for --status');
+      options.status = raw[++i];
+      continue;
+    }
+    if (token === '--stop') {
+      if (i + 1 >= raw.length) throw new Error('Missing value for --stop');
+      options.stop = raw[++i];
       continue;
     }
     filtered.push(token);
@@ -344,7 +359,7 @@ function runChat(parsed, config, paths) {
 
   const [agentName, ...promptParts] = parsed.commandArgs;
   if (!agentName) {
-    throw new Error('Usage: agent chat <agent> "<prompt>" [--preset <name>] [--background]');
+    throw new Error('Usage: agent run <agent> "<prompt>" [--preset <name>]');
   }
   const prompt = promptParts.join(' ').trim();
   if (!prompt) {
@@ -385,9 +400,9 @@ function runChat(parsed, config, paths) {
     entry.runnerPid = runnerPid;
     entry.status = 'running';
     saveSessions(paths, store);
-    console.log(`🧞 Background conversation started with ${agentName}.`);
-    console.log(`   Runner PID: ${runnerPid}`);
-    console.log(`   Log file: ${formatPathRelative(logFile, paths.baseDir)}`);
+    console.log(`🧞 Background conversation started: ${agentName}`);
+    console.log(`   Log: ${formatPathRelative(logFile, paths.baseDir)}`);
+    console.log(`   Watch: tail -f ${formatPathRelative(logFile, paths.baseDir)}`);
     return;
   }
 
@@ -544,19 +559,30 @@ function runContinue(parsed, config, paths) {
     return;
   }
 
-  const [agentName, ...promptParts] = parsed.commandArgs;
-  if (!agentName) {
-    throw new Error('Usage: agent continue <agent> "<prompt>" [--background]');
+  const args = parsed.commandArgs;
+  if (!args.length) {
+    throw new Error('Usage: agent continue "<prompt>"');
   }
-  const prompt = promptParts.join(' ').trim();
 
   const store = loadSessions(paths);
+  // infer most recently used agent with a sessionId
+  let latest = null;
+  for (const [id, data] of Object.entries(store.agents || {})) {
+    if (!data || !data.sessionId) continue;
+    const t = Date.parse(data.lastUsed || data.created || 0) || 0;
+    if (!latest || t > latest.t) latest = { id, t };
+  }
+  if (!latest) throw new Error('❌ No active session found. Start with: agent chat <agent> "<prompt>"');
+  const agentName = latest.id;
+  const prompt = args.join(' ').trim();
+
   const session = store.agents[agentName];
   if (!session || !session.sessionId) {
     throw new Error(`❌ No active session for agent '${agentName}'`);
   }
 
-  const presetName = session.preset || parsed.options.preset || (config.defaults && config.defaults.preset) || 'default';
+  // Reuse exact preset from the originating session; ignore overrides on continue
+  const presetName = session.preset || (config.defaults && config.defaults.preset) || 'default';
   const execConfig = buildExecConfig(config, presetName);
   const resumeConfig = (config.codex && config.codex.resume) || {};
   const args = buildResumeArgs(execConfig, resumeConfig, session.sessionId, prompt);
@@ -580,9 +606,9 @@ function runContinue(parsed, config, paths) {
     session.runnerPid = runnerPid;
     session.status = 'running';
     saveSessions(paths, store);
-    console.log(`🧞 Background resume started for ${agentName}.`);
-    console.log(`   Runner PID: ${runnerPid}`);
-    console.log(`   Log file: ${formatPathRelative(logFile, paths.baseDir)}`);
+    console.log(`🧞 Background resume started: ${agentName}`);
+    console.log(`   Log: ${formatPathRelative(logFile, paths.baseDir)}`);
+    console.log(`   Watch: tail -f ${formatPathRelative(logFile, paths.baseDir)}`);
     return;
   }
 
@@ -625,7 +651,7 @@ function runList(config, paths) {
   const store = loadSessions(paths);
   const entries = Object.entries(store.agents);
   if (entries.length === 0) {
-    console.log('No active sessions. Start one with: agent chat <agent> "<prompt>"');
+    console.log('No active sessions. Start one with: agent run <agent> "<prompt>"');
     return;
   }
 
@@ -653,6 +679,58 @@ function runList(config, paths) {
       console.log(`    Log: ${formatPathRelative(data.logFile, paths.baseDir)}`);
     }
     console.log('');
+  });
+}
+
+function runRuns(parsed, config, paths) {
+  const store = loadSessions(paths);
+  let entries = Object.entries(store.agents);
+  if (parsed.options.status) {
+    const want = String(parsed.options.status).toLowerCase();
+    entries = entries.filter(([_, d]) => (resolveDisplayStatus(d) || '').toLowerCase().startsWith(want));
+  }
+  const data = entries.map(([agent, d]) => ({
+    agent,
+    status: resolveDisplayStatus(d),
+    sessionId: d.sessionId || null,
+    log: d.logFile || null,
+    lastUsed: d.lastUsed || d.created || null,
+    runnerPid: d.runnerPid || null,
+    codexPid: d.codexPid || null
+  }));
+
+  if (parsed.options.stop) {
+    const id = parsed.options.stop;
+    const entry = store.agents[id];
+    if (!entry) {
+      console.error(`❌ No session for agent '${id}'`);
+    } else {
+      let stopped = false;
+      try { if (isProcessAlive(entry.codexPid)) { process.kill(entry.codexPid, 'SIGTERM'); stopped = true; } } catch {}
+      try { if (isProcessAlive(entry.runnerPid)) { process.kill(entry.runnerPid, 'SIGTERM'); stopped = true; } } catch {}
+      if (stopped) {
+        entry.status = 'stopped';
+        saveSessions(paths, store);
+        console.log(`🛑 Stopped: ${id}`);
+      } else {
+        console.log(`ℹ️ Not running: ${id}`);
+      }
+    }
+  }
+
+  if (parsed.options.json) {
+    console.log(JSON.stringify(data, null, 2));
+    return;
+  }
+  if (!data.length) {
+    console.log('No runs found.');
+    return;
+  }
+  console.log('\nRuns:');
+  data.forEach(r => {
+    const logRel = r.log ? formatPathRelative(r.log, paths.baseDir) : 'n/a';
+    console.log(`  • ${r.agent} | ${r.status} | session:${r.sessionId || 'n/a'} | log:${logRel}`);
+    if (r.log) console.log(`    Watch: tail -f ${logRel}`);
   });
 }
 
@@ -714,47 +792,70 @@ function runClear(parsed, config, paths) {
 
 function runHelp(config, paths) {
   const agents = listAgents();
-  const presets = Object.entries(config.presets || {});
-  console.log(`
-🧞 GENIE Agent CLI — Prompt-Oriented Interface
+  const presetsEntries = Object.entries(config.presets || {});
+  const pad = (s, n) => (s + ' '.repeat(n)).slice(0, n);
+  const cmdW = 12; // command col width
+  const argW = 28; // args col width
+  const rows = [
+    { cmd: 'run', args: '<agent> "<prompt>"', desc: 'Start a run (background default)' },
+    { cmd: 'continue', args: '"<prompt>"', desc: 'Continue last active session (infer agent)' },
+    { cmd: 'agents', args: '[--prefix <p>] [--style compact|grouped] [--json]', desc: 'List agents (LLM-friendly lines)' },
+    { cmd: 'runs', args: '[--status <s>] [--json]', desc: 'List runs with status; manage background tasks' },
+    { cmd: 'list', args: '', desc: '(alias) Show active/completed sessions' },
+    { cmd: 'clear', args: '<agent>', desc: 'Clear a stopped/completed session' },
+    { cmd: 'help', args: '', desc: 'Show this help' }
+  ];
+  const presets = presetsEntries.map(([name, info]) => ({
+    name,
+    desc: (info && info.description) ? info.description : 'no description'
+  }));
 
-Background mode: ON by default. Add --no-background to run in foreground.
+  const hdr = 'GENIE Agent CLI — Helper';
+  const usage = 'Usage: agent <command> [options]';
+  const bg = 'Background: ON by default (use --no-background for foreground)';
 
-Core Commands (self-explanatory, LLM-friendly):
-  • agent chat <agent> "<prompt>" [--preset <name>] [--no-background]
-      - Use prompt skeleton: "[Discovery] … [Implementation] … [Verification] …"
-      - Include @file references to auto-load context
-  • agent continue <agent> "<prompt>" [--no-background]
-      - Continue the most recent session for <agent> with follow-up instructions
-  • agent agents [--prefix <text>] [--style compact|grouped] [--json]
-      - Lists agents with standardized line output for direct copy/paste
-  • agent list
-      - Shows active/completed sessions with logs and status
-  • agent clear <agent>
-      - Clears a stopped/completed session record
+  // Build command table
+  const commandsBlock = rows
+    .map(r => `  ${pad(r.cmd, cmdW)} ${pad(r.args, argW)} ${r.desc}`)
+    .join('\n');
 
-Prompt Skeleton (recommended for all chats):
-  "[Discovery] Load @files and context; identify objectives, constraints, and gaps.
-   [Implementation] Perform the requested work per @.genie/agents/<agent>.md; apply edits or produce artifacts.
-   [Verification] Summarize outputs, list sections changed, evidence, and open questions."
+  // Build options blocks
+  const globalOpts = [
+    { flag: '--preset <name>', desc: 'Select preset (default: default)' },
+    { flag: '-c, --config <key=value>', desc: 'Override config key (repeatable)' },
+    { flag: '--no-background', desc: 'Run in foreground (stream output)' }
+  ].map(o => `  ${pad(o.flag, cmdW + argW)} ${o.desc}`).join('\n');
 
-Config & Paths:
-  • Config file: ${CONFIG_PATH}
-  • Override keys at runtime: agent chat hello-coder "..." -c codex.exec.model='"o4"'
-  • Logs: ${formatPathRelative(paths.logsDir, paths.baseDir)}
+  const agentsOpts = [
+    { flag: '--prefix <text>', desc: 'Filter by id prefix (e.g., genie-)' },
+    { flag: '--style <style>', desc: 'compact|grouped (default: compact)' },
+    { flag: '--json', desc: 'JSON output' }
+  ].map(o => `  ${pad(o.flag, cmdW + argW)} ${o.desc}`).join('\n');
 
-Presets:
-${presets.map(([name, info]) => `  • ${name}: ${info.description || 'no description'}`).join('\n')}
+  const runsOpts = [
+    { flag: '--status <s>', desc: 'Filter: running|completed|failed|stopped' },
+    { flag: '--stop <agent>', desc: 'Attempt to stop a background run' },
+    { flag: '--json', desc: 'JSON output' }
+  ].map(o => `  ${pad(o.flag, cmdW + argW)} ${o.desc}`).join('\n');
 
-Quick Agent Catalog (ids only — see 'agent agents' for details):
-${agents.map((a) => '  • ' + a).join('\n')}
+  const presetsBlock = presets
+    .map(p => `  ${pad(p.name, 16)} ${p.desc}`)
+    .join('\n');
 
-Notes for agents:
-  - Always include [Discovery][Implementation][Verification] blocks in prompts
-  - Prefer @file references to auto-load code/docs
-  - Use numbered, concise outcomes; reference Death Testaments when applicable
-  - Background is default; use --no-background when interactive streaming is required
-`);
+  const promptSkeleton = (
+    '[Discovery] Load @files; identify objectives, constraints, gaps.\n' +
+    '[Implementation] Apply per @.genie/agents/<agent>.md; edit files or produce artifacts.\n' +
+    '[Verification] Summarize outputs, evidence, sections changed, open questions.'
+  );
+
+  const examples = [
+    'agent agents --style compact',
+    'agent run genie-planner "[Discovery] @vendors/... [Implementation] … [Verification] …"',
+    'agent continue "Follow-up: refine branch B"',
+    'agent runs --status running'
+  ].map(e => `  ${e}`).join('\n');
+
+  console.log(`${hdr}\n\n${usage}\n${bg}\n\nCommands:\n${commandsBlock}\n\nGlobal Options:\n${globalOpts}\n\nAgents Options:\n${agentsOpts}\n\nRuns Options:\n${runsOpts}\n\nConfig & Paths:\n  ${pad('Config:', cmdW + argW)} ${CONFIG_PATH}\n  ${pad('Logs:', cmdW + argW)} ${formatPathRelative(paths.logsDir, paths.baseDir)}\n\nPresets:\n${presetsBlock || '  (none)'}\n\nPrompt Skeleton:\n  ${promptSkeleton}\n\nExamples:\n${examples}\n\nQuick Agent IDs:\n  ${agents.join(', ')}`);
 }
 
 function listAgents() {
@@ -809,7 +910,7 @@ function runAgentsList(parsed, config, paths) {
     return;
     }
   const style = (parsed.options.style || 'compact').toLowerCase();
-  const promptHint = (id) => `Usage: agent chat ${id} "[Discovery] Load @files & context. [Implementation] Apply per @.genie/agents/${id}.md. [Verification] Summarize edits, evidence, open questions."`;
+  const promptHint = (id) => `Usage: agent run ${id} "[Discovery] Load @files & context. [Implementation] Apply per @.genie/agents/${id}.md. [Verification] Summarize edits, evidence, open questions."`;
   if (style === 'grouped') {
     // Previous grouped view
     const groups = { forge: [], hello: [], genie: [], other: [] };

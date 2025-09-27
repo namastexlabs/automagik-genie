@@ -26,7 +26,7 @@ Background sessions allow long-running agent tasks to execute without blocking y
 
 ```bash
 # Single background task
-./.genie/cli/agent.js chat forge-coder \
+./agent run forge-coder \
   "analyze all WebSocket implementations" \
   --background
 
@@ -40,17 +40,17 @@ Launch multiple agents simultaneously for different aspects:
 
 ```bash
 # Performance analysis
-./.genie/cli/agent.js chat forge-quality \
+./agent run forge-quality \
   "@.genie/product/metrics.md identify bottlenecks" \
   --background
 
 # Security audit
-./.genie/cli/agent.js chat forge-hooks \
+./agent run forge-hooks \
   "audit authentication patterns" \
   --background
 
 # Test coverage
-./.genie/cli/agent.js chat forge-tests \
+./agent run forge-tests \
   "measure test coverage gaps" \
   --background
 ```
@@ -60,7 +60,7 @@ Launch multiple agents simultaneously for different aspects:
 ### List Active Sessions
 
 ```bash
-./.genie/cli/agent.js list
+./agent list
 
 # Output:
 # Active sessions:
@@ -86,7 +86,7 @@ grep "ERROR" .genie/state/agents/logs/*.log
 
 ```bash
 # Detailed status (future feature)
-./.genie/cli/agent.js status forge-coder-abc123
+./agent list
 ```
 
 ## Managing Session Output
@@ -132,7 +132,7 @@ grep "RECOMMEND" .genie/state/agents/logs/forge-quality-*.log
 
 ```bash
 # 1. Start research session
-./.genie/cli/agent.js chat forge-coder \
+./agent run forge-coder \
   "research @docs/*.md for latency optimizations" \
   --background
 
@@ -151,20 +151,20 @@ tail -50 .genie/state/agents/logs/forge-coder-*.log
 ```bash
 # Launch comprehensive analysis
 for aspect in performance security testing; do
-  ./.genie/cli/agent.js chat forge-quality \
+  ./agent run forge-quality \
     "analyze $aspect across codebase" \
     --background
 done
 
 # Monitor all
-watch './.genie/cli/agent.js list'
+watch './agent list'
 ```
 
 ### Long-running Implementation Pattern
 
 ```bash
 # Start implementation
-./.genie/cli/agent.js chat forge-coder \
+./agent run forge-coder \
   "@.genie/wishes/feature-wish.md implement Group A" \
   --background
 
@@ -172,7 +172,7 @@ watch './.genie/cli/agent.js list'
 grep "PROGRESS" .genie/state/agents/logs/forge-coder-*.log
 
 # Get completion notification (future feature)
-# ./.genie/cli/agent.js notify-on-complete forge-coder-abc123
+# (notify-on-complete not implemented) Use watch 'tail -f <log>'
 ```
 
 ## Session Cleanup
@@ -181,14 +181,14 @@ grep "PROGRESS" .genie/state/agents/logs/forge-coder-*.log
 
 ```bash
 # Clear specific session
-./.genie/cli/agent.js clear forge-coder-abc123
+./agent clear forge-coder-abc123
 
 # Clear all completed sessions
-./.genie/cli/agent.js clear --completed
+./agent clear --completed
 
 # Archive logs before clearing
 tar -czf agent-logs-$(date +%Y%m%d).tar.gz .genie/state/agents/logs/
-./.genie/cli/agent.js clear --all
+./agent clear --all
 ```
 
 ### Log Rotation
@@ -238,7 +238,7 @@ presets:
 User: We need to optimize WebSocket performance
 Agent: I'll start background analysis while we plan.
 
-*Launches: ./.genie/cli/agent.js chat forge-coder "analyze WebSocket performance" --background*
+*Launches: ./agent run forge-coder "analyze WebSocket performance"*
 
 Let's continue planning while that runs...
 ```
@@ -291,7 +291,7 @@ ps aux | grep "agent.js.*forge-coder"
 tail -f .genie/state/agents/logs/forge-coder-abc123.log
 
 # Force terminate if needed
-./.genie/cli/agent.js kill forge-coder-abc123
+# (kill not implemented) Manually stop process if needed
 ```
 
 ### Missing Log Files
@@ -314,7 +314,7 @@ du -sh .genie/state/agents/logs/*
 gzip .genie/state/agents/logs/*.log
 
 # Clear old sessions
-./.genie/cli/agent.js clear --older-than 7d
+./agent clear --older-than 7d
 ```
 
 ## Future Enhancements

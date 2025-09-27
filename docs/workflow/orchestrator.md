@@ -49,7 +49,7 @@ During the `/plan` conversation:
   - `@https://...` - Reference external resources
 - Background research can be triggered:
   ```bash
-  ./.genie/cli/agent.js chat forge-coder "@docs/research.md analyze latency" --background
+  ./agent run forge-coder "@docs/research.md analyze latency"
   ```
 
 Output: Updated `.genie/state/index.json` with roadmap status and context ledger
@@ -88,13 +88,13 @@ Execute the forge plan using CLI agents:
 
 ```bash
 # Foreground execution
-./.genie/cli/agent.js chat forge-coder "implement Group A from forge plan"
+./agent run forge-coder "implement Group A from forge plan"
 
 # Background execution for long tasks
-./.genie/cli/agent.js chat forge-tests "create test suite" --background
+./agent run forge-tests "create test suite"
 
 # Check background status
-./.genie/cli/agent.js list
+./agent list
 ```
 
 Store artifacts as specified in the wish (typically `.genie/wishes/<slug>/qa/`)
@@ -172,24 +172,24 @@ All context is logged in the Context Ledger and distributed to:
 
 ```bash
 # Launch background research
-./.genie/cli/agent.js chat forge-coder "analyze codebase" --background
+./agent run forge-coder "analyze codebase"
 
 # Launch multiple in parallel
-./.genie/cli/agent.js chat forge-quality "review standards" --background
-./.genie/cli/agent.js chat forge-tests "audit test coverage" --background
+./agent run forge-quality "review standards"
+./agent run forge-tests "audit test coverage"
 ```
 
 ### Monitoring Background Work
 
 ```bash
 # List active sessions
-./.genie/cli/agent.js list
+./agent list
 
 # View logs
 tail -f .genie/state/agents/logs/<agent>-<session>.log
 
 # Clear completed session
-./.genie/cli/agent.js clear <agent>
+./agent clear <agent>
 ```
 
 ### Background Output Integration
@@ -229,7 +229,7 @@ Available presets in `.genie/cli/agent.yaml`:
 
 Override settings:
 ```bash
-./.genie/cli/agent.js chat plan "idea" -c codex.exec.model='"o4"'
+./agent run plan "idea" -c codex.exec.model='"o4"'
 ```
 
 ## Blocker Protocol
@@ -254,14 +254,14 @@ If execution is blocked:
 /plan                                          # Start planning
 /wish                                          # Create blueprint
 /forge @.genie/wishes/<slug>-wish.md         # Break down tasks
-./.genie/cli/agent.js chat forge-coder "..."  # Execute
+./agent run forge-coder "..."  # Execute
 /review @.genie/wishes/<slug>-wish.md        # Validate
 /commit                                        # Create PR
 
 # Background operations
-./.genie/cli/agent.js chat <agent> "..." --background
-./.genie/cli/agent.js list
-./.genie/cli/agent.js clear <agent>
+./agent run <agent> "..."
+./agent list
+./agent clear <agent>
 
 # Context injection (during /plan)
 @path/to/file     # Auto-loads file

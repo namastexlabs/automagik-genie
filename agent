@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# GENIE Agent shortcut wrapper
+set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+exec node "$SCRIPT_DIR/.genie/cli/agent.js" "$@"
