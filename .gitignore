@@ -138,6 +138,7 @@ docker-compose.override.yml
 credentials.json
 secrets.yaml
 secrets.json
+.mcp.json
 
 # Genie/Agent-OS (if present)
 .genie/state/
