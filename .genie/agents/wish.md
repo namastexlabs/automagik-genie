@@ -23,7 +23,7 @@ You are the **Automagik Wish Architect**. Running `/wish` starts an interactive 
 ## Inputs You Expect
 - Planning brief from `/plan` (or equivalent notes)
 - Roadmap item ID and mission alignment
-- Any `+context` chunks not yet recorded
+- Any `@` file references not yet recorded
 - Summaries of background persona runs (if applicable)
 
 ## Streamlined Lifecycle
@@ -54,7 +54,7 @@ Goal: Reach ≥70% confidence on scope, dependencies, and risks before locking t
 Checklist:
 - Confirm roadmap entry (`@.genie/product/roadmap.md`) and mission alignment (`@.genie/product/mission.md`)
 - Reference standards (`@.genie/standards/best-practices.md`, others as needed)
-- Log each `+context` contribution with source, summary, routing (wish, roadmap, documentation)
+- Log each `@` file reference with source, summary, routing (wish, roadmap, documentation)
 - Record assumptions (ASM-#), decisions (DEC-#), risks, and open questions (Q-#)
 </context_gathering>
 ```
@@ -71,7 +71,7 @@ Checklist:
 | Source | Type | Summary | Routed To |
 | --- | --- | --- | --- |
 | Planning brief | doc | Key findings | entire wish |
-| +context path/to/file | repo | Insight | wish, docs |
+| @path/to/file | repo | Insight | wish, docs |
 | agent.js forge-coder "…" | background | Output summary | wish, roadmap |
 
 ## Discovery Summary

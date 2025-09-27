@@ -83,11 +83,11 @@ This is the single source of truth for all environment variables. Define them be
 - WS_HEARTBEAT_MS [optional]: default `15000`
 - WS_RECONNECT_BACKOFF_MS [optional]: default `500`
 
-## Experiments & Artifacts
-- EXPERIMENT_ID [optional]: e.g., `AH-001`
+## Wishes & Artifacts
+- WISH_ID [optional]: e.g., `baseline-voice`
 - STRATEGY_NAME [optional]: e.g., `overlap_aware`
 - A_B_BUCKET [optional]: `A|B` (default unset)
-- ARTIFACTS_DIR [optional]: default `experiments/${EXPERIMENT_ID}/qa`
+- ARTIFACTS_DIR [optional]: default `.genie/wishes/${WISH_ID}/qa`
 - RECORD_AUDIO [optional]: `0|1` (default `0`) — consider storage/PII
 
 ## Limits & Safety
@@ -147,8 +147,8 @@ CANCEL_TAIL_FADE_MS=60
 BACKCHANNEL_MIN_INTERVAL_MS=2000
 BACKCHANNEL_MAX_INTERVAL_MS=4000
 
-EXPERIMENT_ID=AH-001
-ARTIFACTS_DIR=experiments/AH-001/qa
+WISH_ID=baseline-voice
+ARTIFACTS_DIR=.genie/wishes/baseline-voice/qa
 
 # Region
 REGION=sa-east-1
@@ -170,7 +170,7 @@ TOOL_CONCURRENT_MAX=3
 ## Notes
 - Keep defaults conservative; prefer opt‑in for experimental features.
 - Pin regions for latency; colocate infra with speech providers.
-- Revisit values per experiment and document deviations in `experiments/AH-XXX/README.md`.
+- Revisit values per wish and document deviations in `.genie/wishes/<wish-slug>/README.md`.
 
 ### Evidence (provider docs excerpts)
 - WebSockets not available for `eleven_v3`; prefer `eleven_flash_v2_5` for latency; keepalive “ ”, flush to force buffered text:

@@ -9,7 +9,7 @@ The Automagik framework provides a unified workflow for product development from
 ```
 /plan     → Universal product orchestrator
   ├── Auto-reviews: mission, roadmap, standards
-  ├── Context gathering via +context
+  ├── Context gathering via @ references
   ├── Background persona orchestration
   └── Outputs: Updated roadmap, context ledger, ready for wish
 
@@ -43,10 +43,10 @@ Start with the `/plan` command to initiate product-mode conversation:
 
 During the `/plan` conversation:
 - The agent auto-reviews mission, roadmap, and standards
-- You can inject context using `+context`:
-  - `+context path/to/file` - Load file content
-  - `+context paste <<EOF ... EOF` - Add inline content
-  - `+context link https://...` - Reference external resource
+- You can inject context using `@` references:
+  - `@path/to/file` - Load file content automatically
+  - Inline content - paste directly in conversation
+  - `@https://...` - Reference external resources
 - Background research can be triggered:
   ```bash
   ./.genie/cli/agent.js chat forge-coder "@docs/research.md analyze latency" --background
@@ -141,25 +141,24 @@ For tiny updates tracked in wish status and commit advisory.
 
 ## Context Injection Protocol
 
-During `/plan` conversations, use `+context` to add information:
+During `/plan` conversations, use `@` to reference files and resources:
 
 ### File Loading
 ```
-+context @.genie/product/roadmap.md
+@.genie/product/roadmap.md  # Auto-loads the file
 ```
 
 ### Inline Content
 ```
-+context paste <<EOF
+# Just paste directly in the conversation:
 Performance metrics from production:
 - TTFB: 1200ms avg
 - ASR confidence: 0.85
-EOF
 ```
 
 ### External References
 ```
-+context link https://docs.elevenlabs.io/api-reference
+@https://docs.elevenlabs.io/api-reference  # Reference external docs
 ```
 
 All context is logged in the Context Ledger and distributed to:
@@ -265,9 +264,9 @@ If execution is blocked:
 ./.genie/cli/agent.js clear <agent>
 
 # Context injection (during /plan)
-+context @path/to/file
-+context paste <<EOF ... EOF
-+context link https://...
+@context @path/to/file
+@context paste <<EOF ... EOF
+@context link https://...
 ```
 
 ## Next Steps

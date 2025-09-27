@@ -73,3 +73,4 @@ Use after a wish in `.genie/wishes/` reaches `APPROVED`. `/forge` translates the
 4. Provide plan path: `Forge Plan: @.genie/state/reports/forge-plan-...md`
 
 Keep the plan pragmatic, parallel-friendly, and easy for implementers to follow.
+

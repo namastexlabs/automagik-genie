@@ -25,7 +25,7 @@
 - **Risks:** Breaking downstream automations when retiring commands; duplicating context if wrappers misconfigured; missing branch strategy guidance.
 
 ## Executive Summary
-Unify Genie, Claude templates, and Agent OS into one Automagik framework by dedicating `/plan` (as an agent) to orchestrate product-mode work. `/plan` talks with the human, pulls mission/roadmap/standards, accepts quick `+context` inputs, requests deep research via `agent.js`, and determines when to spawn a wish. `/wish` remains the blueprint contract with embedded `<spec_contract>`, `/review` (formerly wish-review) handles validation, and `/forge` plans execution. All commands become thin wrappers that reference the shared agents to avoid duplication.
+Unify Genie, Claude templates, and Agent OS into one Automagik framework by dedicating `/plan` (as an agent) to orchestrate product-mode work. `/plan` talks with the human, pulls mission/roadmap/standards, accepts quick `@context` inputs, requests deep research via `agent.js`, and determines when to spawn a wish. `/wish` remains the blueprint contract with embedded `<spec_contract>`, `/review` (formerly wish-review) handles validation, and `/forge` plans execution. All commands become thin wrappers that reference the shared agents to avoid duplication.
 
 ## Current State
 - `.genie/` contains wishes, CLI, evaluator prompt, and state logs.
@@ -57,7 +57,7 @@ Unify Genie, Claude templates, and Agent OS into one Automagik framework by dedi
 - **Goal:** Implement `/plan` agent and replace legacy commands with thin wrappers.
 - **Surfaces:** `.genie/agents/plan.md`, `.claude/commands/plan.md`, `.claude/commands/wish.md`, `.claude/commands/review.md`, `.genie/cli/agent.js`.
 - **Deliverables:**
-  - `/plan` prompt covering discovery, roadmap sync, `+context`, background persona usage, branch decision capture, wish hand-off.
+  - `/plan` prompt covering discovery, roadmap sync, `@context`, background persona usage, branch decision capture, wish hand-off.
   - Updated `/wish` and `/review` prompts referencing the consolidated patterns.
   - CLI doc explaining how to trigger agents via `agent.js` (foreground/background).
 - **Evidence:** Sample transcript demonstrating `/plan` → `/wish` flow; search proving legacy commands removed.
@@ -76,7 +76,7 @@ Unify Genie, Claude templates, and Agent OS into one Automagik framework by dedi
 - **External task hook:** forge/tasks.json → {placeholder}
 
 ## Verification Plan
-- Run `/plan` on a sample idea to ensure it auto-reads mission/roadmap/standards, records `+context`, queues background personas, and marks roadmap readiness.
+- Run `/plan` on a sample idea to ensure it auto-reads mission/roadmap/standards, records `@context`, queues background personas, and marks roadmap readiness.
 - Execute `/wish` afterward to confirm inline `<spec_contract>` and branch/PR guidance populate correctly.
 - Trigger `/forge` to verify it consumes the spec contract without generating extra files and logs external tasks when provided.
 - Confirm `.claude/commands/` now only wrap the shared agents and contain no PSAP or experiments references.

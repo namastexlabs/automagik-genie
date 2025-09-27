@@ -1,1 +1,1 @@
-@.genie/agents/forge.md
+@.genie/agents/forge-master.md

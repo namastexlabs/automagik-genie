@@ -143,7 +143,7 @@ grep "RECOMMEND" .genie/state/agents/logs/forge-quality-*.log
 tail -50 .genie/state/agents/logs/forge-coder-*.log
 
 # 4. Incorporate findings
-+context file:.genie/state/agents/logs/forge-coder-abc123.log
+@context file:.genie/state/agents/logs/forge-coder-abc123.log
 ```
 
 ### Parallel Analysis Pattern

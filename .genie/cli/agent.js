@@ -707,8 +707,8 @@ Usage:
 
 Configuration:
   • Config file: ${CONFIG_PATH}
-  • Override any key at runtime: agent chat forge-coder "prompt" -c codex.exec.model='"o4"'
-  • Background runs: agent chat forge-coder "prompt" --background
+  • Override any key at runtime: agent chat hello-coder "prompt" -c codex.exec.model='"o4"'
+  • Background runs: agent chat hello-coder "prompt" --background
   • Logs live in: ${formatPathRelative(paths.logsDir, paths.baseDir)}
 
 Presets:
@@ -731,7 +731,8 @@ function listAgents() {
 }
 
 function loadAgent(name) {
-  const agentPath = path.join('.genie', 'agents', `${name}.md`);
+  const base = name.endsWith('.md') ? name.slice(0, -3) : name;
+  const agentPath = path.join('.genie', 'agents', `${base}.md`);
   if (!fs.existsSync(agentPath)) {
     throw new Error(`❌ Agent '${name}' not found in .genie/agents`);
   }
