@@ -26,6 +26,208 @@ I also generated two diagrams you can download (we’ll iterate them as we refin
 
 if you want, next I’ll scaffold the Rust repo layout from the document (Axum WS handler, ElevenLabs TTS WS client with `flush`, Groq STT client stub, VAD gate, metrics) so you can run a minimal “speak back” demo that achieves sub-second **time-to-first-audio**.
 
+## Quick Navigation
+- [Blueprint Overview](#real-time-voice-agent--rust-backend-blueprint)
+- [Mission & Constraints](#0-mission--constraints)
+- [Runtime Architecture](#2-runtime-architecture-rust-first)
+- [Protocol Compatibility](#3-protocol-compatibility-elevenlabs-agents-ws)
+- [Turn-Taking & Endpointing](#4-turn-taking--endpointing)
+- [Latency Budget](#9-latency-budget-per-turn)
+- [LiveKit POC Benchmark](#livekit-poc-side-by-side-benchmark)
+- [Operational Guidance](#operational-guidance-brazil-focus)
+
+## Real-Time Voice Agent — Rust Backend Blueprint
+
+Living document. We’ll keep expanding this as we go.
+
+### 0) Mission & Constraints
+- Goal: Backend-only service that mimics the ElevenLabs Agents WebSocket schema for real-time voice (drop-in replacement) while running our own GPT agent.
+- Primary providers: Groq Whisper-large-v3-turbo for STT; ElevenLabs TTS (Flash v2.5/Turbo v2.5) for outbound speech.
+- Secondary/local fallbacks: whisper.cpp (via whisper-rs) plus VibeVoice or ResembleAI Chatterbox for TTS.
+- LLM stack: Groq (primary) → Cerebras (secondary) → local vLLM (GPT-OSS-120B).
+- Latency target: TTFA < 200 ms at P50 and < 300 ms at P99, measured from end-of-speech to first agent audio (grounded in production data goals).
+- Reminder: ElevenLabs v3 alpha is not intended for real-time Agents; reserve for offline/high-fidelity content.
+
+### 1) External APIs & Decision: SDK vs Direct Socket
+- ElevenLabs TTS: use `stream-input` WebSocket for single-context streaming; graduate to multi-context WS when we need overlapping streams.
+- ElevenLabs Agents WS: we do not call their agent brain; we replicate the schema so existing clients connect unchanged.
+- Groq Whisper large v3 turbo: prefer streamed chunking with warm sessions; acknowledge 10 s billable minimum.
+- Fallback STT: local whisper.cpp (preloaded) to avoid cold starts.
+- Rationale: raw WebSocket control enables chunk scheduling, `flush`, reconnect/backoff, and per-packet timing; SDKs remain for management APIs only.
+
+### 2) Runtime Architecture (Rust-first)
+- Client ↔ Axum/Tokio gateway handling WS upgrade and schema mirroring.
+- Ingress pipeline: decode/resample audio (16 kHz mono), run VAD/endpointing, dispatch to STT workers.
+- Session actors: ingress/VAD, STT, agent/LLM, and TTS/egress tasks communicating over bounded `mpsc` channels with `spawn_blocking` for CPU-heavy work.
+- STT/LTMs: Groq streaming primary, Cerebras fallback, local vLLM for resilience.
+- TTS out: persistent ElevenLabs WS connections, streaming partial text and chunked audio back per schema.
+- Barge-in: detect live speech, emit interruption events, cancel current TTS context.
+- Observability: Prometheus metrics (`ttfa_ms`, `tail_cancel_ms`, `asr_confidence`, queue depths) and OpenTelemetry traces.
+
+### 3) Protocol Compatibility (ElevenLabs Agents WS)
+- Mirror headers/params during handshake; emit `conversation_initiation_metadata` on connect.
+- Inbound events: `user_audio_chunk`, control messages, pings.
+- Outbound events: `audio` (base64 PCM/Opus), `agent_response`, `agent_response_correction`, `ping`, errors, and interruption notifications.
+- Ensure sequential `event_id` ordering and `is_final` markers so clients can reuse UI components.
+
+### 4) Turn-Taking & Endpointing
+- Default policy: VAD + heuristics (300–500 ms silence window) complemented by prosody cues (pitch fall, energy drop, long vowels).
+- Candidate models: WebRTC VAD (fast baseline), pyannote VAD/diarization (high fidelity), pipecat-ai/smart-turn-v3, or a lightweight ONNX classifier.
+- Early-speak rule: allow partial responses when LLM confidence ≥ 0.6; otherwise wait for final transcripts.
+
+### 5) Model Selection & Fallbacks (TTS)
+- Real-time primary: ElevenLabs Flash v2.5 for lowest TTFB, Turbo v2.5 when fidelity matters.
+- Local fallback: VibeVoice (1.5B/7B, quantizable) or ResembleAI Chatterbox for multilingual coverage.
+- Edge cache: pre-synthesize system prompts/responses to shave RTT on frequent phrases.
+
+### 6) Fast-Path Details (WS over SDK)
+- Maintain a single persistent `stream-input` socket per session with warm heartbeat.
+- Send initial clause as soon as LLM yields tokens; stream subsequent text to keep TTS ahead of playback.
+- Issue `{ "flush": true }` at turn end; on barge-in, close/flush and drop buffered audio before resuming.
+- Use SDKs for CRUD/list operations only.
+
+### 7) Whisper (Groq) Strategy
+- Groq Whisper-large-v3-turbo: streaming mode preferred; keep session alive to amortize 10 s minimum.
+- Batch fallback: short per-utterance HTTP requests if streaming unavailable; accept billing overhead.
+- Local fallback: whisper-rs with quantized models; keep weights resident to avoid warmup lag.
+
+### 8) LLM Strategy
+- Primary LLM: Groq via OpenAI-compatible endpoint with streaming tokens.
+- Secondary: Cerebras API; tertiary: local vLLM serving GPT-OSS-120B with trimmed context windows and KV-cache pinning.
+- Prompting guidelines: concise system prompt, tool schemas, aggressive stop sequences, stream deltas early.
+
+### 9) Latency Budget (Per Turn)
+- VAD end detection: 40–80 ms
+- STT processing: 90–140 ms
+- LLM first token: 60–100 ms
+- TTS first audio: 80–140 ms
+- Aggregate TTFA: ~190–280 ms (P50 ~200 ms, P99 < 300 ms)
+
+### 10) Project Layout (Rust)
+```
+/voice-agent
+  /crates
+    gateway     # Axum WS handlers, auth, schema mirroring
+    audio       # Decode/resample, VAD, jitter buffers
+    stt         # Groq client + whisper-rs fallback
+    agent       # Orchestration, state, tools, memory
+    llm         # Groq/Cerebras/local vLLM clients
+    tts_eleven  # ElevenLabs TTS WS client (stream-input)
+    schema      # Shared message types (serde)
+    metrics     # Prometheus + OpenTelemetry
+  /bin
+    server.rs   # Compose services, config, tracing startup
+```
+
+### 11) Milestones
+- P0 skeleton: WS echo server that connects to ElevenLabs TTS and streams dummy text; capture TTFA metric.
+- Add VAD + STT path; log stage timings.
+- Add LLM streaming and initiate TTS early.
+- Implement barge-in (detect speech, interrupt TTS, resume correctly).
+- Wire fallback STT/TTS stacks.
+- Run QA/load tests (50–100 simulated sessions) to tune chunking and flush policies.
+
+### 12) Open Questions / To Decide
+- Confirm Groq’s preferred streaming interface vs per-utterance HTTP and implement accordingly.
+- Evaluate turn-taking models (pyannote vs WebRTC vs ONNX classifier) and choose default thresholds.
+- Select local TTS model (VibeVoice 1.5B vs 7B) based on VRAM budgets.
+- Prioritize which ElevenLabs Agents control events to ship in MVP vs defer.
+- Continue to append findings, metrics, and code snippets as experiments land.
+
+### Appendix — Diagrams
+- A1) End-to-End Architecture (update when new modules land).
+- A2) Turn Sequence (Streaming & Overlap) illustrating partial flush and barge-in cancellation.
+
+## LiveKit POC (Side-by-Side Benchmark)
+
+Objective: Build a minimal LiveKit Agents proof-of-concept using the same providers (Groq Whisper-large-v3-turbo STT, ElevenLabs Flash/Turbo TTS, chosen LLM) and benchmark TTFA, cancel-tail latency, and stage timings to compare against our Rust stack.
+
+### A) Environment
+- Run LiveKit Server locally (Docker) or in the cloud; create API key/secret.
+- Configure `GROQ_API_KEY`, `ELEVENLABS_API_KEY`, `OPENAI_API_KEY` (or Groq OpenAI-compatible endpoint) and optional `CEREBRAS_API_KEY`.
+- Python ≥ 3.10 with `livekit-agents`, `livekit-agents[groq]`, `livekit-agents[elevenlabs]`, and `openai` installed.
+
+### B) Minimal Agent (Python)
+
+```python
+# file: poc_livekit_agent.py
+import asyncio, time, os
+from livekit.agents import WorkerOptions, JobContext, cli
+from livekit.agents.pipeline import VoicePipelineAgent
+from livekit.agents.tts import elevenlabs as lk_eleven
+from livekit.agents.stt import groq as lk_groq
+from livekit.agents.llm import openai as lk_openai
+
+VOICE_ID = os.getenv("ELEVEN_VOICE", "elevenlabs/aria")
+TTS_MODEL = os.getenv("ELEVEN_TTS_MODEL", "eleven_flash_v2_5")
+STT_MODEL = os.getenv("GROQ_STT_MODEL", "whisper-large-v3-turbo")
+LLM_BASE_URL = os.getenv("LLM_BASE_URL")
+LLM_API_KEY = os.getenv("LLM_API_KEY", os.getenv("OPENAI_API_KEY"))
+
+async def entry(ctx: JobContext):
+    stt = lk_groq.STT(api_key=os.environ["GROQ_API_KEY"], model=STT_MODEL)
+    tts = lk_eleven.TTS(
+        api_key=os.environ["ELEVENLABS_API_KEY"],
+        voice=VOICE_ID,
+        model=TTS_MODEL,
+        output_format="mp3_22050_32",
+        auto_mode=True,
+    )
+    llm = lk_openai.LLM(api_key=LLM_API_KEY, base_url=LLM_BASE_URL)
+
+    agent = VoicePipelineAgent(
+        stt=stt,
+        tts=tts,
+        llm=llm,
+        allow_interruptions=True,
+        min_interruption_duration=0.5,
+        min_interruption_words=2,
+        vad="webrtc",
+        vad_silence_ms=350,
+    )
+
+    t_last_eos = 0.0
+    t_first_audio = 0.0
+
+    @agent.on("user_turn_ended")
+    async def _on_eos(_):
+        nonlocal t_last_eos
+        t_last_eos = time.perf_counter()
+
+    @agent.on("agent_audio_chunk")
+    async def _on_audio(_chunk):
+        nonlocal t_first_audio
+        if t_first_audio == 0.0:
+            t_first_audio = time.perf_counter()
+            ttfa = (t_first_audio - t_last_eos) * 1000
+            print(f"TTFA: {ttfa:.1f} ms")
+
+    @agent.on("interruption")
+    async def _on_interrupt(_):
+        print("INTERRUPT: barge-in detected; agent paused")
+
+    await agent.run(ctx.room)
+
+if __name__ == "__main__":
+    cli.run_app(entry, WorkerOptions())
+```
+
+Run with environment variables set for LiveKit, Groq, ElevenLabs, and optional Groq LLM endpoint. Join via LiveKit web client to observe TTFA and interruption logs.
+
+### C) Benchmark Plan
+- Scenarios: single Q&A, rapid back-and-forth, long monologue, barge-in during long agent response, EN↔PT-BR code-switch.
+- Metrics: TTFA, STT duration (audio length vs processing), LLM first-token latency, TTS first-byte latency, barge-in stop time, false interruption rate.
+- Targets: TTFA < 1.0 s (stretch < 0.6 s), barge-in stop < 100 ms.
+
+### D) What “Good” Looks Like
+- Natural turn-taking with 300–500 ms pauses and minimal double-talk.
+- Interruptions halt agent audio within ~100 ms and resume gracefully.
+- Content parity with Rust pipeline and comparable audio quality.
+
+### E) Compare vs Rust
+- Run identical scenarios against the Rust backend; capture metrics for side-by-side comparison.
+- If LiveKit meets targets faster, adopt select patterns; otherwise proceed with Rust plan for tighter latency and operational simplicity.
+
 [1]: https://elevenlabs.io/docs/api-reference/text-to-speech/v-1-text-to-speech-voice-id-stream-input?utm_source=chatgpt.com "WebSocket | ElevenLabs Documentation"
 [2]: https://elevenlabs.io/docs/agents-platform/api-reference/agents-platform/websocket?utm_source=chatgpt.com "Agent WebSockets | ElevenLabs Documentation"
 [3]: https://elevenlabs.io/docs/best-practices/latency-optimization?utm_source=chatgpt.com "Latency optimization | ElevenLabs Documentation"

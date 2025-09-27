@@ -35,8 +35,10 @@ Build the fastest, most natural voice conversation stack by learning from 150+ p
 - [Technical Stack](.agent-os/product/tech-stack.md) - Technology choices
 - [Roadmap](.agent-os/product/roadmap.md) - Development phases
 - [Environment Config](.agent-os/product/environment.md) - All configuration options
+- [Getting Started](.agent-os/guides/getting-started.md) - Local setup & provider checks
 - [Production Insights](docs/elevenlabs/production-insights.md) - Learnings from real data
-- [Research Notes](research.md) - Architecture decisions and evidence
+- [@docs/research.md](docs/research.md) - Architecture decisions and evidence
+- [API Overview](docs/api-overview.md) - Real-time WS + planned REST surfaces
 
 ## Current Status
 

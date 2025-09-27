@@ -98,9 +98,9 @@ Automagik Hello is a Rust-based real-time voice conversation system designed for
 |-------|--------|-------------------|
 | VAD Detection | < 20ms | 30ms |
 | STT Processing | < 150ms | 300ms |
-| TTS First Byte | < 300ms | 500ms |
+| TTS First Byte | < 200ms | 300ms |
 | Interruption Response | < 80ms | 120ms |
-| Turn Transition | < 350ms | 500ms |
+| Turn Transition | < 300ms | 450ms |
 
 ## Connection Lifecycle
 

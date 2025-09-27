@@ -341,7 +341,7 @@ Response to tool call request.
 ### Timing Constraints
 - Pong response: < 5 seconds
 - Tool execution: < 5 seconds (configurable)
-- First audio chunk: < 900ms after transcript
+- First audio chunk: < 300ms after transcript (P99 target)
 - Interruption response: < 80ms
 
 ### State Tracking

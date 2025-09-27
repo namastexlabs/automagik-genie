@@ -364,7 +364,7 @@ Total Per Connection: < 150KB
 
 ### Latency Tests
 1. **End-to-end**: Mic → ASR → TTS → Speaker
-2. **Target**: < 900ms (p50), < 1200ms (p95)
+2. **Target**: < 200ms (P50), < 300ms (P99)
 3. **Measurement**: Using loopback with timestamps
 
 ### Stress Tests

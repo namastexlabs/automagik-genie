@@ -3,16 +3,16 @@
 ## Gating Criteria (Decision: LEARN_FROM LiveKit)
 Reference: @.agent-os/product/decisions/2025-09-learn-from-livekit.md
 
-- Gate 1 – Baseline pipeline: End-to-end round trip with sub-~1.5s first audio; no crashes
-- Gate 2 – Latency & overlap: TTFB ~1s; interruption tail < 100ms; smooth resume after false alarms
+- Gate 1 – Baseline pipeline: End-to-end round trip with < 400ms time-to-first-audio; no crashes
+- Gate 2 – Latency & overlap: TTFB < 200ms (P50) / < 300ms (P99); interruption tail < 100ms; smooth resume after false alarms
 - Gate 3 – Protocol fidelity: ElevenLabs Agents WS compatibility; clients work unchanged
 - Gate 4 – Conversation quality: Natural flow; evaluator ≥ 8/10; ASR confidence > 0.8
 - Gate 5 – Scalability & stability: Expected concurrency; no leaks; stable under load
 
-## 🚀 Phase 0: Proof of Concept (Week 1-2)
+## 🚀 Phase 0: Proof of Concept (Milestone: First latency validation)
 
 **Goal:** Validate core technical feasibility and baseline performance.
-**Success Criteria:** Working end-to-end pipeline with < 1s TTFB.
+**Success Criteria:** Working end-to-end pipeline with < 300ms TTFB at P99.
 **Public Milestone:** "Day 1: First successful voice conversation"
 
 ### Features
@@ -29,7 +29,7 @@ Reference: @.agent-os/product/decisions/2025-09-learn-from-livekit.md
 - [ ] GitHub repo public from day 1
 - [ ] Daily progress videos showing latency improvements
 
-## 🔎 Parallel Track: LiveKit Agents Recon (Weeks 1-3)
+## 🔎 Parallel Track: LiveKit Agents Recon (Milestone: Playbook captured)
 
 Goal: Learn from LiveKit Agents to accelerate our design while keeping a Rust-first runtime.
 
@@ -52,10 +52,10 @@ Risk & Lock-in Notes
 - Treat Agents as a reference protocol/abstractions; mirror where compatible (WS semantics, events)
 - Ensure local/offline fallbacks (WhisperX/faster-whisper, local TTS) remain first-class
 
-## 🎯 Phase 1: Minimal Viable Product (Week 3-6)
+## 🎯 Phase 1: Minimal Viable Product (Milestone: Beta-ready stack)
 
 **Goal:** Achieve production-ready latency and basic ElevenLabs compatibility.
-**Success Criteria:** < 200ms TTS TTFB, < 300ms ASR latency, stable WebSocket protocol.
+**Success Criteria:** TTS TTFB < 200ms (P50) / < 300ms (P99), ASR latency < 300ms (P95), stable WebSocket protocol.
 **Public Milestone:** "Open-source ElevenLabs-compatible voice server"
 
 ### Core Pipeline
@@ -79,7 +79,7 @@ Risk & Lock-in Notes
 - [ ] YouTube demo: Real-time conversation with metrics overlay
 - [ ] Hacker News launch: "Show HN: Open-source voice agent with sub-200ms latency"
 
-## 🔬 Phase 2: AG-UI Experimentation (Week 7-10)
+## 🔬 Phase 2: AG-UI Experimentation (Milestone: Experiment harness live)
 
 **Goal:** Leverage AG-UI for human-like conversational experiences.
 **Success Criteria:** Extract and analyze 100+ conversation sessions, identify optimization patterns.
@@ -114,7 +114,7 @@ Risk & Lock-in Notes
 - [ ] Community challenge: "Beat our latency benchmark"
 - [ ] Technical deep-dive: "AG-UI protocol for voice agents"
 
-## 🎨 Phase 3: Management Plane (Week 11-14)
+## 🎨 Phase 3: Management Plane (Milestone: Enterprise interfaces shipped)
 
 **Goal:** Full ElevenLabs API compatibility for enterprise adoption.
 **Success Criteria:** 100% API coverage, multi-tenant support, production stability.
@@ -142,7 +142,7 @@ Risk & Lock-in Notes
 - [ ] API documentation site launch
 - [ ] Community SDK contributions
 
-## 🌍 Phase 4: Public Launch (Week 15-18)
+## 🌍 Phase 4: Public Launch (Milestone: GA launch readiness)
 
 **Goal:** General availability with cloud offering and self-host options.
 **Success Criteria:** 1000+ developers, 10k+ daily conversations, < 100ms P50 latency.
@@ -175,7 +175,7 @@ Risk & Lock-in Notes
 - [ ] Conference talks and demos
 - [ ] "Voice Agent Cookbook" publication
 
-## 🚀 Phase 5: Beyond Human Parity (Month 6+)
+## 🚀 Phase 5: Beyond Human Parity (Milestone: Research frontier)
 
 **Goal:** Push boundaries of voice interaction technology.
 **Success Criteria:** Evaluator score ≥ 9/10, indistinguishable from human conversation.
@@ -224,12 +224,12 @@ Risk & Lock-in Notes
 - User testimonials
 
 ### Key Milestones Timeline
-- Week 2: First voice conversation
-- Week 6: MVP with < 200ms latency
-- Week 10: 100 conversations dataset
-- Week 14: Enterprise API launch
-- Week 18: Public cloud offering
-- Month 6: Human parity achieved
+- Milestone 1: First voice conversation recorded and shared
+- Milestone 2: MVP demonstrating < 300ms P99 latency
+- Milestone 3: 100-conversation dataset released for community review
+- Milestone 4: Enterprise API launch announcement
+- Milestone 5: Public cloud offering opened to early adopters
+- Milestone 6: Human-parity evaluator score ≥ 9/10
 
 ## ☎️ Phase 6: Telephony (SIP) Integration (Post-GA)
 

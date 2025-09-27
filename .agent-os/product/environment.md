@@ -62,7 +62,7 @@ This is the single source of truth for all environment variables. Define them be
 - LOCAL_WHISPER_MODEL [optional]: default `base` — for whisper.cpp fallback
 
 ## Turn‑Taking & Overlap
-- VAD_STRATEGY [optional]: `webrtc|pyannote|silero` (default `webrtc`) — NEEDS RESEARCH for optimal model
+- VAD_STRATEGY [optional]: `webrtc|pyannote|silero|heuristics` (default `webrtc`) — `heuristics` keeps simple energy/threshold gating without external models
 - VAD_AGGRESSIVENESS [optional]: `0|1|2|3` (default `2`) — WebRTC VAD aggressiveness
 - VAD_FRAME_SIZE_MS [optional]: `10|20|30` (default `20`) — WebRTC constraint
 - VAD_SILENCE_MS_MIN [optional]: default `300`

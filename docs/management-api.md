@@ -2,7 +2,7 @@
 
 ## Overview
 
-Complete API reference for managing ElevenLabs Agents, including agent lifecycle, conversations, knowledge bases, tools, and testing. These APIs complement the WebSocket real-time protocol documented in `websocket-protocol.md`.
+Complete API reference for managing ElevenLabs Agents, including agent lifecycle, conversations, knowledge bases, tools, and testing. These APIs complement the WebSocket real-time protocol documented in `websocket-protocol.md`. For a high-level summary of the surfaces we plan to expose in Automagik Hello, see [API Overview](api-overview.md).
 
 ## Base Configuration
 

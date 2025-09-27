@@ -10,7 +10,7 @@ Precise definitions for all metrics used in Automagik Hello, compatible with Ele
 - **Definition**: Time from end of user speech to first byte of agent audio
 - **Measurement Point**: VAD speech-end event → TTS first audio chunk
 - **Unit**: Milliseconds (ms)
-- **Target**: < 300ms (P50), < 500ms (P99)
+- **Target**: < 200ms (P50), < 300ms (P99)
 - **Calculation**: `ttfb_ms = timestamp(first_tts_byte) - timestamp(vad_speech_end)`
 
 ### ASR Latency

@@ -98,9 +98,9 @@
 
 ## Performance Targets
 
-Based on ElevenLabs capabilities:
-- **TTFB Target**: < 900ms (achievable with Flash + US region)
-- **P99 Latency**: < 1200ms
+Based on ElevenLabs capabilities and production benchmarks:
+- **TTFB Target**: < 200ms (P50), < 300ms (P99) using Flash v2.5 with warmed connections
+- **P99 Latency**: < 300ms end-to-end TTFA
 - **Barge-in Response**: < 80ms
 - **Connection Warm-up**: Saves 50-100ms on first response
 

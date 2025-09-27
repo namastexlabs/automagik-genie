@@ -2,6 +2,8 @@
 
 ## Core Runtime
 - application_framework: Rust (Tokio 1.x, Axum 0.7)
+- rust_version_min: 1.80 (MSRV locked for `async fn` in traits)
+- cargo_tools: `clippy`, `fmt`, `deny` (CI gate)
 - database_system: SQLite (dev) → PostgreSQL (prod) for metrics/experiments
 - javascript_framework: None (thin HTML + htmx 1.9 for demos)
 - import_strategy: importmaps
@@ -16,6 +18,10 @@
 - STT primary: Groq Whisper‑large‑v3‑turbo (real‑time, low latency)
 - STT fallback: WhisperX or faster‑whisper (local, quantized options)
 - Turn‑taking: VAD + heuristics baseline; ASD/diarization via pyannote/other HF models
+- realtime_deps:
+  - `tokio-tungstenite` ≥ 0.21 for WS clients
+  - `webrtc-vad-sys` ≥ 0.1 (heuristics mode uses internal energy gate)
+  - `rubato` / `cpal` optional for resampling
 
 ## Hosting + Deployment
 - application_hosting: Fly.io or AWS ECS/Fargate (Rust friendly, regional pinning)
@@ -37,4 +43,3 @@
 ## Notes
 - ElevenLabs v3 alpha paths are used only when `EXPERIMENTAL_TTS_V3=1` is set to explicitly opt‑in.
 - Local STT fallbacks are optional and can run quantized for edge devices.
-
