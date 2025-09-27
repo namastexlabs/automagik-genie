@@ -41,8 +41,8 @@ VAD_STRATEGY=webrtc
 OVERLAP_POLICY=overlap_aware
 CANCEL_TAIL_TIMEOUT_MS=80
 
-EXPERIMENT_ID=AH-001
-ARTIFACTS_DIR=experiments/AH-001/qa
+WISH_ID=baseline-voice
+ARTIFACTS_DIR=.genie/wishes/baseline-voice/qa
 ```
 
 Load the variables into your shell when working locally:
@@ -75,18 +75,18 @@ curl -sS \
 
 If the request fails due to networking restrictions, stop and resolve the issue before moving on—low-latency goals depend on stable provider RTT.
 
-## 5. Prep Experiment Artifacts (AH-001 Baseline)
+## 5. Prep Wish Artifacts (Baseline Voice)
 
-We track evaluation data in `experiments/AH-001/qa/`. Populate the folder using the workflow described in [AGENTS.md](../../AGENTS.md) once you have a conversation ID from ElevenLabs:
+We track evaluation data in `.genie/wishes/<wish-slug>/qa/`. Populate the folder using the workflow described in [AGENTS.md](../../AGENTS.md) once you have a conversation ID from ElevenLabs:
 
 ```bash
-mkdir -p experiments/AH-001/qa
+mkdir -p .genie/wishes/baseline-voice/qa
 curl -sS "https://api.elevenlabs.io/v1/convai/conversations/<CONV_ID>" \
   -H "xi-api-key: $ELEVENLABS_API_KEY" \
-  -o experiments/AH-001/qa/conversation.json
+  -o .genie/wishes/baseline-voice/qa/conversation.json
 
-jq -r '.transcript' experiments/AH-001/qa/conversation.json \
-  > experiments/AH-001/qa/transcript_raw.txt
+jq -r '.transcript' .genie/wishes/baseline-voice/qa/conversation.json \
+  > .genie/wishes/baseline-voice/qa/transcript_raw.txt
 ```
 
 Run the quick metrics checks (TTFB averages, ASR confidence counts) to ensure the transcript matches expectations.
@@ -105,7 +105,7 @@ As the Rust server crates are checked in, the typical workflow will be:
 
 1. `cargo run -p server` — start the WebSocket gateway locally.
 2. Point a local client or the LiveKit POC at `ws://localhost:8080/v1/convai/conversation`.
-3. Record metrics to `experiments/AH-XXX/qa/metrics.json` using the shared schema.
+3. Record metrics to `.genie/wishes/<wish-slug>/qa/metrics.json` using the shared schema.
 
 Those commands will be documented in `server/README.md` once the crate is published. Until then, focus on environment readiness and artifact handling.
 
