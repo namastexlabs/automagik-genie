@@ -2,7 +2,7 @@
 
 ## Repository Self‑Awareness
 - Purpose: Build and evaluate Automagik Hello — a Rust‑first, real‑time voice application framework focused on ultra‑low latency and human‑likeness. The goal is to become the fastest, most natural voice conversation stack, with an experimentation loop to reach human‑level dialog.
-- Current source of truth: `.agent-os/product/mission.md`, `.agent-os/product/mission-lite.md`, `.agent-os/product/tech-stack.md`, `.agent-os/product/roadmap.md`, and `research.md`.
+- Current source of truth: `.agent-os/product/mission.md`, `.agent-os/product/mission-lite.md`, `.agent-os/product/tech-stack.md`, `.agent-os/product/roadmap.md`, and `docs/research.md`.
 - External dependencies: ElevenLabs TTS (Flash v2.5; v3 alpha optional), Groq Whisper‑large‑v3‑turbo STT, local WhisperX/faster‑whisper fallback. Set `ELEVENLABS_API_KEY` and `GROQ_API_KEY`.
 - Optional orchestration: Genie CLI integration if present (`.genie/`), otherwise use shell scripts and Rust binaries.
  - Environment variables: documented in `.agent-os/product/environment.md`.
@@ -15,13 +15,13 @@
 
 ## Project Structure & Module Organization
 - `.agent-os/product/` — Product docs (mission, tech‑stack, roadmap)
-- `research.md` — Architecture notes and links (WS control, latency, models)
+- `docs/research.md` — Architecture notes and links (WS control, latency, models)
 - `experiments/AH-XXX/qa/` — Experiment tasks (Automagik Hello), each with QA artifacts
 - `tools/` — Helper utilities (planned: metrics extractors, ElevenLabs helpers)
 - `agents/` — Optional examples or prototypes (TBD)
 - `templates/` — Templates for experiment/evaluator context (TBD)
 
-Examples: `.agent-os/product/mission.md`, `research.md`.
+Examples: `.agent-os/product/mission.md`, `docs/research.md`.
 
 ## QA Review Tasks
 - Naming: `experiments/AH-<ID>/qa/` (e.g., `experiments/AH-001/qa/`)
@@ -168,7 +168,7 @@ Notes:
   - Iterate with additional guidance:
     - `node .genie/cli/agent.js continue evaluator "Tighten penalties for TTS artifacting; include numeric deltas."`
   - Analyze strategy gaps:
-    - `node .genie/cli/agent.js chat evaluator "Audit overlap timing vs transcript using @research.md; list missing clarifying turns." --preset debug`
+    - `node .genie/cli/agent.js chat evaluator "Audit overlap timing vs transcript using @docs/research.md; list missing clarifying turns." --preset debug`
 - Configuration
   - File: `.genie/cli/agent.yaml` (workspace‑local; safe in read‑only contexts)
   - Defaults: `defaults.preset=careful`, preset `voice-eval` may be added
@@ -255,7 +255,7 @@ Use @ symbols to automatically trigger file reading (when using Genie):
 @.genie/agents/evaluator.md
 
 [CONTEXT] Strategy tuning needed
-@research.md - Current real‑time architecture notes
+@docs/research.md - Current real‑time architecture notes
 @.agent-os/product/tech-stack.md - Stack choices
 @experiments/AH-001/qa/metrics.json - Performance baseline
 ```
@@ -356,7 +356,7 @@ jq '.transcript[] | select(.type=="user") | .asr_confidence' experiments/AH-001/
 **Template for Strategy Optimization:**
 ```
 Analyze the overlap_aware strategy for issues:
-@research.md
+@docs/research.md
 
 Context: Human‑likeness score 6/10 in AH-001
 Problem: Interruptions feel abrupt and prosody is flat
@@ -393,7 +393,7 @@ grep "deductions" experiments/AH-001/qa/report.md | awk '{print $2}' > issues.tx
 
 # 3. Generate fixes
 node .genie/cli/agent.js chat evaluator \
-  "Tune overlap_aware strategy using @issues.txt for @research.md"
+  "Tune overlap_aware strategy using @issues.txt for @docs/research.md"
 
 # 4. Test and iterate
 ```
@@ -405,7 +405,7 @@ Structure for human‑likeness strategies used by Automagik Hello:
 <identity_awareness>
 # Role: Automagik Hello real‑time voice stack
 # Context files to auto-load (when using Genie):
-@research.md - Architecture notes
+@docs/research.md - Architecture notes
 @experiments/AH-*/qa/metrics*.json - Performance baselines
 
 # Voice optimization settings:

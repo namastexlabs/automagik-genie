@@ -21,7 +21,7 @@ Objective: showcase our WebSocket (ElevenLabs Agents WS‑compatible) without re
 
 Approach (plan):
 - Add a simple Agents WS client in Swift that connects directly to our server’s WS (no third‑party keys needed).
-- Use the documented event types in `research.md` (conversation_initiation_metadata, audio, agent_response, agent_response_correction, user_transcript; and client events contextual_update, user_message, user_activity).
+- Use the documented event types in `docs/research.md` (conversation_initiation_metadata, audio, agent_response, agent_response_correction, user_transcript; and client events contextual_update, user_message, user_activity).
 
 Proposed environment variable (read by the UI):
 - `NEXT_PUBLIC_VOICE_WS_URL` — e.g., `ws://localhost:8080/ws/agents` (to be provided by our Rust server)
@@ -59,5 +59,4 @@ Audio playback: use an AudioWorklet/ScriptProcessor to decode base64 PCM or mp3 
 
 Notes
 - We will not modify the submodule directly on `main`; integration changes should be kept in a local branch or documented patches.
-- See `research.md` for the event schema details and llms.txt evidence lines.
-
+- See `docs/research.md` for the event schema details and llms.txt evidence lines.
