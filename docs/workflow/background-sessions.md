@@ -26,7 +26,7 @@ Background sessions allow long-running agent tasks to execute without blocking y
 
 ```bash
 # Single background task
-./agent run forge-coder \
+./genie run forge-coder \
   "analyze all WebSocket implementations" \
   --background
 
@@ -40,17 +40,17 @@ Launch multiple agents simultaneously for different aspects:
 
 ```bash
 # Performance analysis
-./agent run forge-quality \
+./genie run forge-quality \
   "@.genie/product/metrics.md identify bottlenecks" \
   --background
 
 # Security audit
-./agent run forge-hooks \
+./genie run forge-hooks \
   "audit authentication patterns" \
   --background
 
 # Test coverage
-./agent run forge-tests \
+./genie run forge-tests \
   "measure test coverage gaps" \
   --background
 ```
@@ -60,7 +60,7 @@ Launch multiple agents simultaneously for different aspects:
 ### List Active Sessions
 
 ```bash
-./agent list
+./genie list
 
 # Output:
 # Active sessions:
@@ -86,7 +86,7 @@ grep "ERROR" .genie/state/agents/logs/*.log
 
 ```bash
 # Detailed status (future feature)
-./agent list
+./genie list
 ```
 
 ## Managing Session Output
@@ -132,7 +132,7 @@ grep "RECOMMEND" .genie/state/agents/logs/forge-quality-*.log
 
 ```bash
 # 1. Start research session
-./agent run forge-coder \
+./genie run forge-coder \
   "research @docs/*.md for latency optimizations" \
   --background
 
@@ -151,20 +151,20 @@ tail -50 .genie/state/agents/logs/forge-coder-*.log
 ```bash
 # Launch comprehensive analysis
 for aspect in performance security testing; do
-  ./agent run forge-quality \
+  ./genie run forge-quality \
     "analyze $aspect across codebase" \
     --background
 done
 
 # Monitor all
-watch './agent list'
+watch './genie list'
 ```
 
 ### Long-running Implementation Pattern
 
 ```bash
 # Start implementation
-./agent run forge-coder \
+./genie run forge-coder \
   "@.genie/wishes/feature-wish.md implement Group A" \
   --background
 
@@ -181,14 +181,14 @@ grep "PROGRESS" .genie/state/agents/logs/forge-coder-*.log
 
 ```bash
 # Clear specific session
-./agent clear forge-coder-abc123
+./genie clear forge-coder-abc123
 
 # Clear all completed sessions
-./agent clear --completed
+./genie clear --completed
 
 # Archive logs before clearing
 tar -czf agent-logs-$(date +%Y%m%d).tar.gz .genie/state/agents/logs/
-./agent clear --all
+./genie clear --all
 ```
 
 ### Log Rotation
@@ -238,7 +238,7 @@ presets:
 User: We need to optimize WebSocket performance
 Agent: I'll start background analysis while we plan.
 
-*Launches: ./agent run forge-coder "analyze WebSocket performance"*
+*Launches: ./genie run forge-coder "analyze WebSocket performance"*
 
 Let's continue planning while that runs...
 ```
@@ -314,7 +314,7 @@ du -sh .genie/state/agents/logs/*
 gzip .genie/state/agents/logs/*.log
 
 # Clear old sessions
-./agent clear --older-than 7d
+./genie clear --older-than 7d
 ```
 
 ## Future Enhancements

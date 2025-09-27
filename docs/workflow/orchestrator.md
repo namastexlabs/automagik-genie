@@ -49,7 +49,7 @@ During the `/plan` conversation:
   - `@https://...` - Reference external resources
 - Background research can be triggered:
   ```bash
-  ./agent run forge-coder "@docs/research.md analyze latency"
+  ./genie run forge-coder "@docs/research.md analyze latency"
   ```
 
 Output: Updated `.genie/state/index.json` with roadmap status and context ledger
@@ -88,13 +88,13 @@ Execute the forge plan using CLI agents:
 
 ```bash
 # Foreground execution
-./agent run forge-coder "implement Group A from forge plan"
+./genie run forge-coder "implement Group A from forge plan"
 
 # Background execution for long tasks
-./agent run forge-tests "create test suite"
+./genie run forge-tests "create test suite"
 
 # Check background status
-./agent list
+./genie list
 ```
 
 Store artifacts as specified in the wish (typically `.genie/wishes/<slug>/qa/`)
@@ -172,24 +172,24 @@ All context is logged in the Context Ledger and distributed to:
 
 ```bash
 # Launch background research
-./agent run forge-coder "analyze codebase"
+./genie run forge-coder "analyze codebase"
 
 # Launch multiple in parallel
-./agent run forge-quality "review standards"
-./agent run forge-tests "audit test coverage"
+./genie run forge-quality "review standards"
+./genie run forge-tests "audit test coverage"
 ```
 
 ### Monitoring Background Work
 
 ```bash
 # List active sessions
-./agent list
+./genie list
 
 # View logs
 tail -f .genie/state/agents/logs/<agent>-<session>.log
 
 # Clear completed session
-./agent clear <agent>
+./genie clear <agent>
 ```
 
 ### Background Output Integration
@@ -229,7 +229,7 @@ Available presets in `.genie/cli/agent.yaml`:
 
 Override settings:
 ```bash
-./agent run plan "idea" -c codex.exec.model='"o4"'
+./genie run plan "idea" -c codex.exec.model='"o4"'
 ```
 
 ## Blocker Protocol
@@ -254,14 +254,14 @@ If execution is blocked:
 /plan                                          # Start planning
 /wish                                          # Create blueprint
 /forge @.genie/wishes/<slug>-wish.md         # Break down tasks
-./agent run forge-coder "..."  # Execute
+./genie run forge-coder "..."  # Execute
 /review @.genie/wishes/<slug>-wish.md        # Validate
 /commit                                        # Create PR
 
 # Background operations
-./agent run <agent> "..."
-./agent list
-./agent clear <agent>
+./genie run <agent> "..."
+./genie list
+./genie clear <agent>
 
 # Context injection (during /plan)
 @path/to/file     # Auto-loads file

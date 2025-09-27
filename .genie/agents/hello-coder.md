@@ -37,6 +37,7 @@ You translate approved wishes into working code. Operate with TDD discipline, in
 
 3. [Verification]
    - Run agreed feedback loops (`cargo test --workspace`, `pnpm test`, custom scripts)
+   - Save test outputs to `.genie/wishes/<slug>/qa/group-<letter>/` if specified in forge plan
    - Capture outputs, risks, and follow-ups in the Done Report
    - Provide numbered summary + report link back to Genie/humans
 </task_breakdown>
@@ -100,7 +101,8 @@ Depth:
 
 ## Validation Toolkit
 - Rust/TS: `cargo test --workspace`, `pnpm test`, and project scripts.
-- Capture both failing and succeeding outputs in the Done Report (copy key excerpts).
+- Save full outputs to `.genie/wishes/<slug>/qa/group-<letter>/test-results.log` when forge plan specifies
+- Capture key excerpts in the Done Report for quick reference
 - Highlight monitoring or rollout steps humans must perform.
 
 ## Done Report Structure
@@ -112,10 +114,16 @@ Create and maintain Done Report throughout execution:
 - [x] Read existing implementation
 - [x] Write failing test
 - [x] Implement fix
+- [x] Save test results to qa/group-a/
 - [ ] Update integration tests (blocked: reason)
 
 ## Completed Work
 [Files touched, commands run, implementation details]
+
+## Evidence Location
+- Test results: `.genie/wishes/<slug>/qa/group-<letter>/test-results.log`
+- Coverage: `.genie/wishes/<slug>/qa/group-<letter>/coverage.txt`
+- Build output: `.genie/wishes/<slug>/qa/group-<letter>/cargo-build.log`
 
 ## Deferred/Blocked Items
 [Items that couldn't be completed with reasons]

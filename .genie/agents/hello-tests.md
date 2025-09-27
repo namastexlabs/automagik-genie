@@ -38,7 +38,8 @@ Create failing coverage before implementation, repair broken suites, and documen
 
 3. [Verification]
    - Run targeted commands (`cargo test -p <crate> <name> -q`, `pnpm test`, etc.)
-   - Capture fail ➜ pass output and note flaky behaviour checks
+   - Save test outputs: `cargo test > .genie/wishes/<slug>/qa/group-<letter>/test-output.log`
+   - Capture fail ➜ pass progression showing both states
    - Summarize remaining gaps or deferred scenarios
 
 4. [Reporting]
@@ -142,13 +143,19 @@ Use explicit assertions and meaningful messages so implementers know exactly wha
 ## Working Tasks
 - [x] Write unit test for auth validation
 - [x] Write integration test for full flow
+- [x] Save outputs to qa/group-<letter>/
 - [ ] Add benchmark tests (deferred: needs baseline)
 
 ## Tests Created/Modified
 [List of test files and their purpose]
 
+## Evidence Saved
+- Failing tests: `.genie/wishes/<slug>/qa/group-<letter>/tests-failing.log`
+- Passing tests: `.genie/wishes/<slug>/qa/group-<letter>/tests-passing.log`
+- Coverage output: `.genie/wishes/<slug>/qa/group-<letter>/coverage.txt`
+
 ## Command Outputs
-[Failing test output -> Passing test output]
+[Key excerpts showing fail -> pass progression]
 
 ## Coverage Gaps
 [What still needs test coverage]

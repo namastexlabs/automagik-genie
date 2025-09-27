@@ -36,7 +36,7 @@ All commands in `.claude/commands/` simply `@include` the corresponding `.genie/
 1. **/plan** – single-entry agent for product mode. Loads mission/roadmap/standards, gathers context via `@` references, requests background personas via CLI, and decides if item is wish-ready.
 2. **/wish** – creates `.genie/wishes/<slug>-wish.md`, embedding context ledger, execution groups, inline `<spec_contract>`, branch/tracker strategy, and blocker protocol.
 3. **/forge** – generates `.genie/state/reports/forge-plan-<slug>-<timestamp>.md` with execution groups, evidence expectations, validation hooks, and external tracker placeholders (`forge/tasks.json`).
-4. **Implementation** – humans/agents follow forge plan, storing evidence where the wish specifies (e.g., `.genie/wishes/<slug>/qa/`). Specialist agents run via `./agent run <implementor-agent> "..."` (background by default). Replace `<implementor-agent>` using the Local Agent Map.
+4. **Implementation** – humans/agents follow forge plan, storing evidence where the wish specifies (e.g., `.genie/wishes/<slug>/qa/`). Specialist agents run via `./genie run <implementor-agent> "..."` (background by default). Replace `<implementor-agent>` using the Local Agent Map.
 5. **/review** (optional) – aggregates QA artefacts, replays validation commands, and writes `.genie/wishes/<slug>/qa/review-<timestamp>.md` with verdict/recommendations.
 6. **/commit** – groups diffs, recommends commit message/checklist, saves advisory in `.genie/state/reports/`.
 7. **Git workflow** – Branch names typically `feat/<wish-slug>`; alternatives logged in the wish. PRs reference the wish and forge plan, plus any tracker IDs stored in `forge/tasks.json`. Update roadmap status after merge.
@@ -72,23 +72,23 @@ All commands in `.claude/commands/` simply `@include` the corresponding `.genie/
 ## CLI Quick Reference
 ```bash
 # List agents & presets
-./agent help
+./genie help
 
 # Run planner
-./agent run plan "New idea" --preset default
+./genie run plan "New idea" --preset default
 
 # Launch background research
-./agent run forge-coder "Audit @docs/research.md"
+./genie run forge-coder "Audit @docs/research.md"
 
 # Inspect background runs
-./agent list
+./genie list
 ```
 
 ## Subagents & Twin via CLI
-- Start subagent: `./agent run <agent> "<prompt>" [--preset <name>]`
-- Continue session: `./agent continue "<prompt>"` (infers last active agent)
-- List sessions: `./agent list`
-- Clear session: `./agent clear <agent>`
+- Start subagent: `./genie run <agent> "<prompt>" [--preset <name>]`
+- Continue session: `./genie continue <sessionId> "<prompt>"`
+- List sessions: `./genie list`
+- Clear session: `./genie clear <agent>`
 
 Twin prompt patterns (run through any agent, typically `plan`):
 - Twin Planning: "Act as an independent architect. Pressure-test this plan. Deliver 3 risks, 3 missing validations, 3 refinements. Finish with Twin Verdict + confidence."
@@ -307,8 +307,8 @@ Keep this document synced when introducing new agents, changing folder layouts, 
 - Retrospective: extract wins/misses/lessons for future work.
 
 ### How To Run (CLI)
-- Start: `./agent run genie-twin "Mode: planning. Objective: pressure-test @.genie/wishes/<slug>-wish.md. Deliver 3 risks, 3 missing validations, 3 refinements. Finish with Twin Verdict + confidence."`
-- Continue: `./agent continue "Follow-up: address risk #2 with options + trade-offs."`
+- Start: `./genie mode twin "Mode: planning. Objective: pressure-test @.genie/wishes/<slug>-wish.md. Deliver 3 risks, 3 missing validations, 3 refinements. Finish with Twin Verdict + confidence."`
+- Continue: `./genie continue <sessionId> "Follow-up: address risk #2 with options + trade-offs."`
 - Sessions: reuse the same agent name; the CLI persists session id automatically in `.genie/state/agents/sessions.json`.
 - Logs: check `.genie/state/agents/logs/genie-twin-<timestamp>.log` for the full transcript.
 

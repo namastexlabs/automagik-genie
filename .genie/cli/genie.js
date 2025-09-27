@@ -125,11 +125,11 @@ function main() {
       case 'run':
         runChat(parsed, config, paths);
         break;
+      case 'mode':
+        runMode(parsed, config, paths);
+        break;
       case 'continue':
         runContinue(parsed, config, paths);
-        break;
-      case 'agents':
-        runAgentsList(parsed, config, paths);
         break;
       case 'runs':
         runRuns(parsed, config, paths);
@@ -359,7 +359,10 @@ function runChat(parsed, config, paths) {
 
   const [agentName, ...promptParts] = parsed.commandArgs;
   if (!agentName) {
-    throw new Error('Usage: agent run <agent> "<prompt>" [--preset <name>]');
+    throw new Error('Usage: genie run <agent> "<prompt>" [--preset <name>]');
+  }
+  if (agentName.startsWith('genie-')) {
+    throw new Error(`Genie Modes must be invoked via: genie mode ${agentName.replace(/^genie-/, '')} "<prompt>"`);
   }
   const prompt = promptParts.join(' ').trim();
   if (!prompt) {
@@ -559,22 +562,19 @@ function runContinue(parsed, config, paths) {
     return;
   }
 
-  const args = parsed.commandArgs;
-  if (!args.length) {
-    throw new Error('Usage: agent continue "<prompt>"');
+  const cmdArgs = parsed.commandArgs;
+  if (cmdArgs.length < 2) {
+    throw new Error('Usage: genie continue <sessionId> "<prompt>"');
   }
 
   const store = loadSessions(paths);
-  // infer most recently used agent with a sessionId
-  let latest = null;
+  const sessionIdArg = cmdArgs[0];
+  const prompt = cmdArgs.slice(1).join(' ').trim();
+  let agentName = null;
   for (const [id, data] of Object.entries(store.agents || {})) {
-    if (!data || !data.sessionId) continue;
-    const t = Date.parse(data.lastUsed || data.created || 0) || 0;
-    if (!latest || t > latest.t) latest = { id, t };
+    if (data && data.sessionId === sessionIdArg) { agentName = id; break; }
   }
-  if (!latest) throw new Error('❌ No active session found. Start with: agent chat <agent> "<prompt>"');
-  const agentName = latest.id;
-  const prompt = args.join(' ').trim();
+  if (!agentName) throw new Error(`❌ No run found with session id '${sessionIdArg}'`);
 
   const session = store.agents[agentName];
   if (!session || !session.sessionId) {
@@ -585,7 +585,7 @@ function runContinue(parsed, config, paths) {
   const presetName = session.preset || (config.defaults && config.defaults.preset) || 'default';
   const execConfig = buildExecConfig(config, presetName);
   const resumeConfig = (config.codex && config.codex.resume) || {};
-  const args = buildResumeArgs(execConfig, resumeConfig, session.sessionId, prompt);
+  const resumeArgs = buildResumeArgs(execConfig, resumeConfig, session.sessionId, prompt);
 
   const startTime = deriveStartTime();
   const logFile = deriveLogFile(agentName, startTime, paths);
@@ -613,7 +613,7 @@ function runContinue(parsed, config, paths) {
   }
 
   executeCodexRun({
-    args,
+    args: resumeArgs,
     agentName,
     prompt,
     store,
@@ -648,38 +648,8 @@ function buildResumeArgs(execConfig, resumeConfig, sessionId, prompt) {
 }
 
 function runList(config, paths) {
-  const store = loadSessions(paths);
-  const entries = Object.entries(store.agents);
-  if (entries.length === 0) {
-    console.log('No active sessions. Start one with: agent run <agent> "<prompt>"');
-    return;
-  }
-
-  console.log('\n🧞 Active Agent Sessions:\n');
-  entries.forEach(([agent, data]) => {
-    const status = resolveDisplayStatus(data);
-    const lastUsed = data.lastUsed ? new Date(data.lastUsed).toLocaleString() : 'unknown';
-    console.log(`  ${agent}:`);
-    console.log(`    Status: ${status}`);
-    if (data.sessionId) {
-      console.log(`    Session ID: ${data.sessionId}`);
-    }
-    if (data.runnerPid) {
-      console.log(`    Runner PID: ${data.runnerPid}`);
-    }
-    if (data.codexPid) {
-      console.log(`    Codex PID: ${data.codexPid}`);
-    }
-    if (typeof data.exitCode === 'number') {
-      console.log(`    Exit code: ${data.exitCode}`);
-    }
-    console.log(`    Last prompt: "${formatPromptPreview(data.lastPrompt)}"`);
-    console.log(`    Last used: ${lastUsed}`);
-    if (data.logFile) {
-      console.log(`    Log: ${formatPathRelative(data.logFile, paths.baseDir)}`);
-    }
-    console.log('');
-  });
+  // Alias to runs (full view)
+  runRuns({ options: {} }, config, paths);
 }
 
 function runRuns(parsed, config, paths) {
@@ -718,19 +688,26 @@ function runRuns(parsed, config, paths) {
     }
   }
 
-  if (parsed.options.json) {
+  if (parsed.options && parsed.options.json) {
     console.log(JSON.stringify(data, null, 2));
     return;
   }
+  const pad = (s, n) => (String(s || '') + ' '.repeat(n)).slice(0, n);
   if (!data.length) {
-    console.log('No runs found.');
+    console.log('No runs found. Start one with: genie run <agent> "<prompt>" or genie mode <mode> "<prompt>"');
     return;
   }
-  console.log('\nRuns:');
+  const header = `\nRuns:\n  ${pad('ID', 18)} ${pad('Status', 12)} ${pad('Session ID', 36)} ${pad('Last Used', 22)} Log`;
+  console.log(header);
   data.forEach(r => {
+    const id = r.agent;
+    const status = r.status || 'unknown';
+    const sid = r.sessionId || 'n/a';
+    const when = r.lastUsed ? new Date(r.lastUsed).toLocaleString() : 'n/a';
     const logRel = r.log ? formatPathRelative(r.log, paths.baseDir) : 'n/a';
-    console.log(`  • ${r.agent} | ${r.status} | session:${r.sessionId || 'n/a'} | log:${logRel}`);
-    if (r.log) console.log(`    Watch: tail -f ${logRel}`);
+    console.log(`  ${pad(id, 18)} ${pad(status, 12)} ${pad(sid, 36)} ${pad(when, 22)} ${logRel}`);
+    if (r.log) console.log(`    View:   tail -f ${logRel}`);
+    if (r.sessionId) console.log(`    Resume: genie continue ${r.sessionId} "<follow-up prompt>"`);
   });
 }
 
@@ -798,10 +775,10 @@ function runHelp(config, paths) {
   const argW = 28; // args col width
   const rows = [
     { cmd: 'run', args: '<agent> "<prompt>"', desc: 'Start a run (background default)' },
-    { cmd: 'continue', args: '"<prompt>"', desc: 'Continue last active session (infer agent)' },
-    { cmd: 'agents', args: '[--prefix <p>] [--style compact|grouped] [--json]', desc: 'List agents (LLM-friendly lines)' },
+    { cmd: 'mode', args: '<genie-mode> "<prompt>"', desc: 'Run a Genie Mode (maps to genie-<mode>)' },
+    { cmd: 'continue', args: '<sessionId> "<prompt>"', desc: 'Continue run by session id' },
     { cmd: 'runs', args: '[--status <s>] [--json]', desc: 'List runs with status; manage background tasks' },
-    { cmd: 'list', args: '', desc: '(alias) Show active/completed sessions' },
+    { cmd: 'list', args: '', desc: 'Show active/completed sessions' },
     { cmd: 'clear', args: '<agent>', desc: 'Clear a stopped/completed session' },
     { cmd: 'help', args: '', desc: 'Show this help' }
   ];
@@ -810,8 +787,8 @@ function runHelp(config, paths) {
     desc: (info && info.description) ? info.description : 'no description'
   }));
 
-  const hdr = 'GENIE Agent CLI — Helper';
-  const usage = 'Usage: agent <command> [options]';
+  const hdr = 'GENIE CLI — Helper';
+  const usage = 'Usage: genie <command> [options]';
   const bg = 'Background: ON by default (use --no-background for foreground)';
 
   // Build command table
@@ -826,11 +803,7 @@ function runHelp(config, paths) {
     { flag: '--no-background', desc: 'Run in foreground (stream output)' }
   ].map(o => `  ${pad(o.flag, cmdW + argW)} ${o.desc}`).join('\n');
 
-  const agentsOpts = [
-    { flag: '--prefix <text>', desc: 'Filter by id prefix (e.g., genie-)' },
-    { flag: '--style <style>', desc: 'compact|grouped (default: compact)' },
-    { flag: '--json', desc: 'JSON output' }
-  ].map(o => `  ${pad(o.flag, cmdW + argW)} ${o.desc}`).join('\n');
+  // Agents Options removed
 
   const runsOpts = [
     { flag: '--status <s>', desc: 'Filter: running|completed|failed|stopped' },
@@ -849,13 +822,13 @@ function runHelp(config, paths) {
   );
 
   const examples = [
-    'agent agents --style compact',
-    'agent run genie-planner "[Discovery] @vendors/... [Implementation] … [Verification] …"',
-    'agent continue "Follow-up: refine branch B"',
-    'agent runs --status running'
+    'genie mode planner "[Discovery] @vendors/... [Implementation] … [Verification] …"',
+    'genie run forge-coder "[Discovery] @files … [Implementation] … [Verification] …"',
+    'genie continue <sessionId> "Follow-up: refine branch B"',
+    'genie runs --status running'
   ].map(e => `  ${e}`).join('\n');
 
-  console.log(`${hdr}\n\n${usage}\n${bg}\n\nCommands:\n${commandsBlock}\n\nGlobal Options:\n${globalOpts}\n\nAgents Options:\n${agentsOpts}\n\nRuns Options:\n${runsOpts}\n\nConfig & Paths:\n  ${pad('Config:', cmdW + argW)} ${CONFIG_PATH}\n  ${pad('Logs:', cmdW + argW)} ${formatPathRelative(paths.logsDir, paths.baseDir)}\n\nPresets:\n${presetsBlock || '  (none)'}\n\nPrompt Skeleton:\n  ${promptSkeleton}\n\nExamples:\n${examples}\n\nQuick Agent IDs:\n  ${agents.join(', ')}`);
+  console.log(`${hdr}\n\n${usage}\n${bg}\n\nCommands:\n${commandsBlock}\n\nGlobal Options:\n${globalOpts}\n\nRuns Options:\n${runsOpts}\n\nConfig & Paths:\n  ${pad('Config:', cmdW + argW)} ${CONFIG_PATH}\n  ${pad('Logs:', cmdW + argW)} ${formatPathRelative(paths.logsDir, paths.baseDir)}\n\nPresets:\n${presetsBlock || '  (none)'}\n\nPrompt Skeleton:\n  ${promptSkeleton}\n\nExamples:\n${examples}`);
 }
 
 function listAgents() {
@@ -910,7 +883,7 @@ function runAgentsList(parsed, config, paths) {
     return;
     }
   const style = (parsed.options.style || 'compact').toLowerCase();
-  const promptHint = (id) => `Usage: agent run ${id} "[Discovery] Load @files & context. [Implementation] Apply per @.genie/agents/${id}.md. [Verification] Summarize edits, evidence, open questions."`;
+  const promptHint = (id) => `Usage: genie run ${id} "[Discovery] Load @files & context. [Implementation] Apply per @.genie/agents/${id}.md. [Verification] Summarize edits, evidence, open questions."`;
   if (style === 'grouped') {
     // Previous grouped view
     const groups = { forge: [], hello: [], genie: [], other: [] };
@@ -956,6 +929,17 @@ function loadAgent(name) {
     throw new Error(`❌ Agent '${name}' not found in .genie/agents`);
   }
   return fs.readFileSync(agentPath, 'utf8');
+}
+
+function runMode(parsed, config, paths) {
+  const [modeName, ...promptParts] = parsed.commandArgs;
+  if (!modeName) {
+    throw new Error('Usage: genie mode <genie-mode> "<prompt>"');
+  }
+  const id = modeName.startsWith('genie-') ? modeName : `genie-${modeName}`;
+  const prompt = promptParts.join(' ').trim();
+  const cloned = { ...parsed, commandArgs: [id, prompt] };
+  runChat(cloned, config, paths);
 }
 
 function loadSessions(paths) {

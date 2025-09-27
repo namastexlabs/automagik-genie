@@ -77,13 +77,19 @@ Escalate once:
 - [x] Run type checks
 - [x] Fix type errors
 - [x] Run linters
+- [x] Save reports to qa/group-<letter>/
 - [ ] Fix complex lint issue (needs refactor)
 
 ## Quality Metrics
-| Check | Before | After |
-|-------|--------|-------|
-| Type errors | 12 | 0 |
-| Lint warnings | 5 | 1 |
+| Check | Before | After | Report Location |
+|-------|--------|-------|----------------|
+| Type errors | 12 | 0 | qa/group-a/type-check.log |
+| Lint warnings | 5 | 1 | qa/group-a/lint-report.json |
+
+## Evidence Saved
+- Type check results: `.genie/wishes/<slug>/qa/group-<letter>/type-check.log`
+- Lint report: `.genie/wishes/<slug>/qa/group-<letter>/lint-report.json`
+- Format diff: `.genie/wishes/<slug>/qa/group-<letter>/format-changes.diff`
 
 ## Suppressions Added
 [Justified suppressions with reasons]
@@ -93,8 +99,12 @@ Escalate once:
 ```
 
 ## Validation & Reporting
-- Record command outputs (before/after violation counts) in the Done Report.
-- Track remaining debt in the Done Report's working tasks section.
-- Chat response must include numbered highlights and `Done Report: @.genie/reports/done-hello-quality-<slug>-<YYYYMMDDHHmm>.md`.
+- Save full command outputs to `.genie/wishes/<slug>/qa/group-<letter>/`:
+  - `type-check-before.log` and `type-check-after.log`
+  - `lint-report.json` with all violations
+  - `format-changes.diff` showing formatting updates
+- Record summary metrics (before/after counts) in the Done Report
+- Track remaining debt in the Done Report's working tasks section
+- Chat response must include numbered highlights and `Done Report: @.genie/reports/done-hello-quality-<slug>-<YYYYMMDDHHmm>.md`
 
 Quality work unlocks confident shipping—tighten types, polish style, and prove it with evidence.
