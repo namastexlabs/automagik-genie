@@ -20,6 +20,28 @@
 - [ ] GitHub repo public from day 1
 - [ ] Daily progress videos showing latency improvements
 
+## 🔎 Parallel Track: LiveKit Agents Recon (Weeks 1-3)
+
+Goal: Learn from LiveKit Agents to accelerate our design while keeping a Rust-first runtime.
+
+Success Criteria:
+- Run LiveKit voice quickstart end-to-end and document timing (TTFB, barge-in cancel latency, overlap cadence)
+- Identify 3–5 concrete patterns to port (turn detection, interruption handling, pipeline orchestration, worker/job model)
+- Produce a migration note outlining how to mirror Agents WS semantics in our Axum/Tokio stack
+
+Tasks
+- [x] Add submodule: `vendors/livekit-agents`
+- [x] Add submodule: `vendors/hume-evi-next-js-starter`
+- [ ] Read: Agents Worker lifecycle, Voice AI quickstart, examples/voice_agents/*
+- [ ] Benchmark: TTFB and cancel-tail latency using provided examples
+- [ ] Compare: LiveKit turn model vs our VAD+heuristics; draft overlap_aware policy deltas
+- [ ] Draft: "Rust parity plan" mapping Agents abstractions → Tokio/Axum components
+
+Risk & Lock-in Notes
+- Keep our hot path in Rust; do not depend on Python workers for production
+- Treat Agents as a reference protocol/abstractions; mirror where compatible (WS semantics, events)
+- Ensure local/offline fallbacks (WhisperX/faster-whisper, local TTS) remain first-class
+
 ## 🎯 Phase 1: Minimal Viable Product (Week 3-6)
 
 **Goal:** Achieve production-ready latency and basic ElevenLabs compatibility.
@@ -198,6 +220,38 @@
 - Week 14: Enterprise API launch
 - Week 18: Public cloud offering
 - Month 6: Human parity achieved
+
+## ☎️ Phase 6: Telephony (SIP) Integration (Post-GA)
+
+Goal: Add reliable PSTN connectivity via SIP with agent handoff while preserving low-latency agent behavior.
+
+Success Criteria:
+- Inbound calls route to rooms via SIP dispatch rules; agent auto-dispatch joins within < 150 ms.
+- DTMF support for IVR-like navigation; event mapping to our WS/strategy layer.
+- Warm/cold transfer flows working end-to-end with contextual summaries.
+
+Scope (informed by LiveKit docs)
+- SIP trunking: inbound/outbound trunks; secure trunking; HD voice.
+- Dispatch rules: map DID → room naming + explicit agent dispatch metadata.
+- SIP participant: bridge PSTN audio to room; surface DTMF events.
+- Transfers: agent-assisted warm transfer; cold transfer; return-to-agent on failure.
+
+Tasks
+- [ ] Evaluate using LiveKit SIP service vs. building minimal bridge `[M]`
+- [ ] Implement dispatch rule mapping → room + agent dispatch `[S]`
+- [ ] Inbound trunk quickstart (provider: Twilio/Telnyx) `[S]`
+- [ ] Outbound dialing from agent tools (click-to-call) `[S]`
+- [ ] DTMF → tool events; IVR policy scaffolding `[S]`
+- [ ] Warm transfer workflow: supervisor consult + merge `[M]`
+- [ ] Cold transfer workflow `[S]`
+- [ ] Monitoring and retries (carrier errors) `[S]`
+
+References (local archive)
+- docs/livekit/all/sip/dispatch-rule.md
+- docs/livekit/all/sip/trunk-inbound.md, trunk-outbound.md, secure-trunking.md
+- docs/livekit/all/sip/dtmf.md, sip-participant.md
+- docs/livekit/all/sip/transfer-warm.md, transfer-cold.md
+- docs/livekit/all/sip/accepting-calls.md, making-calls.md, outbound-calls.md
 
 ## Technical Effort Scale
 - **XS**: < 1 day

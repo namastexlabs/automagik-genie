@@ -1,4 +1,13 @@
-[submodule "examples/swift"]
-	path = examples/swift
+[submodule "vendors/livekit-agents"]
+	path = vendors/livekit-agents
+	url = https://github.com/livekit/agents
+[submodule "vendors/hume-evi-next-js-starter"]
+	path = vendors/hume-evi-next-js-starter
+	url = https://github.com/humeai/hume-evi-next-js-starter
+[submodule "vendors/swift"]
+	path = vendors/swift
 	url = https://github.com/ai-ng/swift
 	branch = main
+[submodule "vendors/livekit-examples"]
+	path = vendors/livekit-examples
+	url = https://github.com/livekit-examples/python-agents-examples

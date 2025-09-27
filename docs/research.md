@@ -37,6 +37,25 @@ if you want, next I’ll scaffold the Rust repo layout from the document (Axum W
 
 ---
 
+LiveKit Agents: What to learn and port
+
+References
+- Repo: vendors/livekit-agents (submodule)
+- Docs: https://docs.livekit.io/agents.md and Voice AI quickstart
+- Worker lifecycle: workers receive dispatch and spawn jobs that join rooms
+- Example agents: examples/voice_agents/basic_agent.py, background_audio.py
+
+Focus Areas to Study
+- Turn detection and interruption handling (cancel-tail timing, resume rules)
+- Realtime STT→LLM→TTS orchestration and partial flush strategy
+- WebRTC plumbing vs our WS-only stack; map mirroring points at protocol level
+- Tool calls and multi-agent handoff abstractions we can reflect via WS
+
+Porting Plan (Rust-first)
+- Mirror Agents WS semantics where beneficial for interop in Axum/Tokio
+- Keep hot path in Rust with precise scheduling for partials and chunking
+- Reuse the worker/job orchestration ideas in a Rust management plane
+
 Region, Duplex/Overlap, Tail‑Cancel, and Strict Agents WS Mirroring
 
 Overview

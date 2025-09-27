@@ -4,7 +4,7 @@ This folder tracks demo frontends and integrations used to showcase the Automagi
 
 ## Swift (Next.js) — Submodule
 
-We vend the excellent Swift UI as a git submodule under `examples/swift`:
+Swift UI submodule has moved to `vendors/swift`:
 
 ```
 git submodule update --init --recursive
@@ -13,8 +13,8 @@ git submodule update --init --recursive
 Swift is a Next.js app with VAD and a streaming audio path. By default it uses Groq (ASR/LLM) and Cartesia (TTS).
 
 ### Run Swift standalone (baseline)
-- Copy `examples/swift/.env.example` to `examples/swift/.env.local` and set `GROQ_API_KEY` and `CARTESIA_API_KEY`.
-- From `examples/swift/`: `pnpm install && pnpm dev`
+- Copy `vendors/swift/.env.example` to `vendors/swift/.env.local` and set `GROQ_API_KEY` and `CARTESIA_API_KEY`.
+- From `vendors/swift/`: `pnpm install && pnpm dev`
 
 ### Integrate with Automagik Hello (Agents WS clone)
 Objective: showcase our WebSocket (ElevenLabs Agents WS‑compatible) without requiring Cartesia/Groq keys.
