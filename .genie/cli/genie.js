@@ -12,11 +12,19 @@ let YAML = null;
 try {
   YAML = require('yaml');
 } catch (_) {
-  // YAML module not available; we'll ignore agent.yaml or try JSON as fallback.
+  // YAML module not available; we'll ignore genie.yaml or try JSON as fallback.
 }
 
+const codexExecutor = require('./executors/codex');
+const sessionStore = require('./session-store');
+const { loadSessions, saveSessions } = sessionStore;
+
+const EXECUTORS = {
+  codex: codexExecutor
+};
+
 const SCRIPT_DIR = path.dirname(__filename);
-const CONFIG_PATH = path.join(SCRIPT_DIR, 'agent.yaml');
+const CONFIG_PATH = path.join(SCRIPT_DIR, 'config.yaml');
 
 const INTERNAL_BACKGROUND_ENV = 'GENIE_AGENT_BACKGROUND_RUNNER';
 const INTERNAL_START_TIME_ENV = 'GENIE_AGENT_START_TIME';
@@ -25,43 +33,23 @@ const INTERNAL_LOG_PATH_ENV = 'GENIE_AGENT_LOG_FILE';
 const DEFAULT_CONFIG = {
   defaults: {
     preset: 'default',
-    background: true
+    background: true,
+    executor: 'codex'
   },
   paths: {
     baseDir: '.',
     sessionsFile: '.genie/state/agents/sessions.json',
     legacySessionsFile: '~/.genie-sessions.json',
     logsDir: '.genie/state/agents/logs',
-    backgroundDir: '.genie/state/agents/background',
-    codexSessionsDir: '~/.codex/sessions'
+    backgroundDir: '.genie/state/agents/background'
   },
-  codex: {
-    exec: {
-      fullAuto: true,
-      model: 'gpt-5-codex',
-      sandbox: 'workspace-write',
-      profile: null,
-      includePlanTool: false,
-      search: false,
-      skipGitRepoCheck: false,
-      json: true,
-      color: 'auto',
-      cd: null,
-      outputSchema: null,
-      outputLastMessage: null,
-      additionalArgs: [],
-      images: []
-    },
-    resume: {
-      includePlanTool: false,
-      search: false,
-      last: false,
-      additionalArgs: []
-    }
+  executors: {
+    codex: codexExecutor.defaults
   },
   presets: {
     default: {
       description: 'Workspace-write automation with GPT-5 Codex.',
+      executor: 'codex',
       overrides: {
         exec: {
           model: 'gpt-5-codex',
@@ -169,6 +157,7 @@ function parseArguments(argv) {
     backgroundExplicit: false,
     backgroundRunner: false,
     prefix: null,
+    executor: null,
     json: false,
     style: 'compact',
     status: null,
@@ -195,6 +184,11 @@ function parseArguments(argv) {
     if (token === '--no-background') {
       options.background = false;
       options.backgroundExplicit = true;
+      continue;
+    }
+    if (token === '--executor') {
+      if (i + 1 >= raw.length) throw new Error('Missing value for --executor');
+      options.executor = raw[++i];
       continue;
     }
     if (token === '-c' || token === '--config') {
@@ -272,13 +266,20 @@ function applyDefaults(options, defaults) {
   if (!options.preset && defaults && defaults.preset) {
     options.preset = defaults.preset;
   }
+  if (!options.executor && defaults && defaults.executor) {
+    options.executor = defaults.executor;
+  }
 }
 
 function loadConfig(overrides) {
   let config = deepClone(DEFAULT_CONFIG);
+  let configFilePath = null;
   if (fs.existsSync(CONFIG_PATH)) {
+    configFilePath = CONFIG_PATH;
+  }
+  if (configFilePath) {
     try {
-      const file = fs.readFileSync(CONFIG_PATH, 'utf8');
+      const file = fs.readFileSync(configFilePath, 'utf8');
       if (file.trim().length) {
         let parsed = {};
         if (YAML) {
@@ -286,13 +287,21 @@ function loadConfig(overrides) {
         } else if (file.trim().startsWith('{')) {
           try { parsed = JSON.parse(file); } catch (_) { parsed = {}; }
         } else {
-          console.warn('[genie] YAML module not found; skipping agent.yaml parsing');
+          try {
+            parsed = parseSimpleYaml(file);
+          } catch (fallbackError) {
+            console.warn(`[genie] Failed to parse ${path.basename(configFilePath)} without yaml module:`, fallbackError.message);
+            parsed = {};
+          }
         }
         config = mergeDeep(config, parsed);
       }
     } catch (error) {
-      throw new Error(`Failed to parse ${CONFIG_PATH}: ${error.message}`);
+      throw new Error(`Failed to parse ${configFilePath}: ${error.message}`);
     }
+    config.__configPath = configFilePath;
+  } else {
+    config.__configPath = CONFIG_PATH;
   }
 
   overrides.forEach((override) => applyConfigOverride(config, override));
@@ -346,16 +355,147 @@ function applyConfigOverride(config, override) {
   cursor[segments[segments.length - 1]] = value;
 }
 
+function parseSimpleYaml(text) {
+  const lines = String(text || '').split(/\r?\n/);
+  const root = {};
+  const stack = [{ indent: -1, value: root }];
+
+  for (let i = 0; i < lines.length; i += 1) {
+    let line = lines[i];
+    if (!line || !line.trim()) continue;
+    const hash = line.indexOf('#');
+    if (hash !== -1) {
+      line = line.slice(0, hash);
+    }
+    if (!line.trim()) continue;
+
+    const indentMatch = line.match(/^ */);
+    const indent = indentMatch ? indentMatch[0].length : 0;
+    const level = Math.floor(indent / 2);
+    const trimmed = line.trim();
+
+    while (stack.length && stack[stack.length - 1].indent >= level) {
+      stack.pop();
+    }
+
+    const parentContainer = stack[stack.length - 1].value;
+
+    if (trimmed.startsWith('- ')) {
+      if (!Array.isArray(parentContainer)) {
+        throw new Error('Invalid YAML structure: list item outside of an array.');
+      }
+      const itemValue = parseYamlScalar(trimmed.slice(2).trim());
+      parentContainer.push(itemValue);
+      if (itemValue && typeof itemValue === 'object' && !Array.isArray(itemValue)) {
+        stack.push({ indent: level, value: itemValue });
+      }
+      continue;
+    }
+
+    const colonIdx = trimmed.indexOf(':');
+    if (colonIdx === -1) {
+      continue;
+    }
+
+    const key = trimmed.slice(0, colonIdx).trim();
+    let valueRaw = trimmed.slice(colonIdx + 1).trim();
+    let value;
+    if (!valueRaw.length) {
+      const lookAhead = findNextMeaningfulYamlLine(lines, i + 1);
+      const expectArray = lookAhead && lookAhead.indent > indent && lookAhead.trimmed.startsWith('- ');
+      value = expectArray ? [] : {};
+    } else {
+      value = parseYamlScalar(valueRaw);
+    }
+
+    if (Array.isArray(parentContainer)) {
+      const obj = {};
+      obj[key] = value;
+      parentContainer.push(obj);
+      if (value && typeof value === 'object') {
+        stack.push({ indent: level, value });
+      }
+    } else {
+      parentContainer[key] = value;
+      if (value && typeof value === 'object') {
+        stack.push({ indent: level, value });
+      }
+    }
+  }
+
+  return root;
+}
+
+function findNextMeaningfulYamlLine(lines, startIndex) {
+  for (let i = startIndex; i < lines.length; i += 1) {
+    let candidate = lines[i];
+    if (!candidate) continue;
+    const hash = candidate.indexOf('#');
+    if (hash !== -1) {
+      candidate = candidate.slice(0, hash);
+    }
+    if (!candidate.trim()) continue;
+    const indentMatch = candidate.match(/^ */);
+    return {
+      indent: indentMatch ? indentMatch[0].length : 0,
+      trimmed: candidate.trim()
+    };
+  }
+  return null;
+}
+
+function parseYamlScalar(raw) {
+  const valueRaw = raw.trim();
+  if (!valueRaw.length) return '';
+  if (valueRaw === 'null' || valueRaw === '~' || valueRaw.toLowerCase() === 'null') return null;
+  if (valueRaw === '[]') return [];
+  if (valueRaw === '{}') return {};
+  if (valueRaw.toLowerCase() === 'true') return true;
+  if (valueRaw.toLowerCase() === 'false') return false;
+  if ((valueRaw.startsWith('"') && valueRaw.endsWith('"')) || (valueRaw.startsWith("'") && valueRaw.endsWith("'"))) {
+    return valueRaw.slice(1, -1);
+  }
+  if (valueRaw.startsWith('[') && valueRaw.endsWith(']')) {
+    const inner = valueRaw.slice(1, -1).trim();
+    if (!inner.length) return [];
+    return inner.split(',').map((part) => parseYamlScalar(part));
+  }
+  const potentialNumber = Number(valueRaw);
+  if (!Number.isNaN(potentialNumber) && String(potentialNumber) === valueRaw) {
+    return potentialNumber;
+  }
+  return valueRaw;
+}
+
 function resolvePaths(pathsConfig) {
-  const baseDir = resolvePath(pathsConfig.baseDir || '.', process.cwd());
-  return {
+  const config = pathsConfig || {};
+  const baseDir = resolvePath(config.baseDir || '.', process.cwd());
+  const resolved = {
     baseDir,
-    sessionsFile: resolvePath(pathsConfig.sessionsFile, baseDir),
-    legacySessionsFile: resolvePath(pathsConfig.legacySessionsFile, baseDir),
-    logsDir: resolvePath(pathsConfig.logsDir, baseDir),
-    backgroundDir: resolvePath(pathsConfig.backgroundDir, baseDir),
-    codexSessionsDir: resolvePath(pathsConfig.codexSessionsDir, baseDir)
+    sessionsFile: resolvePath(config.sessionsFile, baseDir),
+    legacySessionsFile: resolvePath(config.legacySessionsFile, baseDir),
+    logsDir: resolvePath(config.logsDir, baseDir),
+    backgroundDir: resolvePath(config.backgroundDir, baseDir),
+    executors: {}
   };
+
+  const executorPathsConfig = (config.executors && typeof config.executors === 'object') ? config.executors : {};
+  Object.entries(EXECUTORS).forEach(([key, executor]) => {
+    const perExecutor = { ...(executorPathsConfig[key] || {}) };
+    const legacyKey = `${key}SessionsDir`;
+    if (!perExecutor.sessionsDir && config[legacyKey]) {
+      perExecutor.sessionsDir = config[legacyKey];
+    }
+    if (executor.resolvePaths) {
+      resolved.executors[key] = executor.resolvePaths({ config: perExecutor, baseDir, resolvePath });
+    } else {
+      resolved.executors[key] = {
+        sessionsDir: resolvePath(perExecutor.sessionsDir, baseDir)
+      };
+    }
+  });
+
+  return resolved;
 }
 
 function resolvePath(value, baseDir) {
@@ -371,7 +511,9 @@ function resolvePath(value, baseDir) {
 }
 
 function prepareDirectories(paths) {
-  ensureDirectory(path.dirname(paths.sessionsFile));
+  if (paths.sessionsFile) {
+    ensureDirectory(path.dirname(paths.sessionsFile));
+  }
   ensureDirectory(paths.logsDir);
   ensureDirectory(paths.backgroundDir);
 }
@@ -404,8 +546,11 @@ function runChat(parsed, config, paths) {
   const presetName = parsed.options.preset || 'default';
   const instructions = loadAgent(agentName);
 
-  const execConfig = buildExecConfig(config, presetName);
-  const store = loadSessions(paths);
+  const executorKey = resolveExecutorKey(parsed.options, config, presetName);
+  const executor = requireExecutor(executorKey);
+  const executorConfig = buildExecutorConfig(config, presetName, executorKey);
+  const executorPaths = resolveExecutorPaths(paths, executorKey);
+  const store = loadSessions(paths, config, DEFAULT_CONFIG);
 
   const startTime = deriveStartTime();
   const logFile = deriveLogFile(agentName, startTime, paths);
@@ -422,6 +567,8 @@ function runChat(parsed, config, paths) {
     status: 'starting',
     background: parsed.options.background,
     runnerPid: parsed.options.backgroundRunner ? process.pid : null,
+    executor: executorKey,
+    executorPid: null,
     codexPid: null,
     exitCode: null,
     signal: null,
@@ -441,9 +588,19 @@ function runChat(parsed, config, paths) {
     return;
   }
 
-  executeCodexRun({
-    args: buildExecArgs(execConfig, instructions, prompt),
+  const command = executor.buildRunCommand({
+    config: executorConfig,
+    instructions,
+    prompt
+  });
+
+  executeRun({
     agentName,
+    command,
+    executorKey,
+    executor,
+    executorConfig,
+    executorPaths,
     prompt,
     store,
     entry,
@@ -477,70 +634,90 @@ function spawnBackgroundProcess(rawArgs, startTime, logFile, config) {
   return child.pid;
 }
 
-function buildExecConfig(config, presetName) {
-  const baseExec = config.codex && config.codex.exec ? config.codex.exec : {};
+function resolveExecutorKey(options, config, presetName) {
+  if (options.executor) return options.executor;
+  const preset = config.presets && config.presets[presetName];
+  if (preset && preset.executor) return preset.executor;
+  if (config.defaults && config.defaults.executor) return config.defaults.executor;
+  return 'codex';
+}
+
+function requireExecutor(key) {
+  const executor = EXECUTORS[key];
+  if (!executor) {
+    const available = Object.keys(EXECUTORS).join(', ') || 'none';
+    throw new Error(`Executor '${key}' not found. Available executors: ${available}`);
+  }
+  return executor;
+}
+
+function buildExecutorConfig(config, presetName, executorKey) {
+  const base = deepClone((config.executors && config.executors[executorKey]) || {});
   const preset = config.presets && config.presets[presetName];
   if (!preset && presetName && presetName !== 'default') {
     const available = Object.keys(config.presets || {}).join(', ') || 'default';
     throw new Error(`Preset '${presetName}' not found. Available presets: ${available}`);
   }
-  const overrides = (preset && preset.overrides && preset.overrides.exec) || {};
-  return mergeDeep(baseExec, overrides);
+  const overrides = getExecutorOverrides(preset, executorKey);
+  return mergeDeep(base, overrides);
 }
 
-function buildExecArgs(execConfig, instructions, prompt) {
-  const args = ['exec', ...collectExecOptions(execConfig)];
-  args.push('-c', `base-instructions=${JSON.stringify(instructions)}`);
-  if (prompt) {
-    args.push(prompt);
+function getExecutorOverrides(preset, executorKey) {
+  if (!preset || !preset.overrides) return {};
+  const { overrides } = preset;
+  if (overrides.executors && overrides.executors[executorKey]) {
+    return overrides.executors[executorKey];
   }
-  return args;
+  if (overrides[executorKey]) {
+    return overrides[executorKey];
+  }
+  return overrides;
 }
 
-function collectExecOptions(execConfig) {
-  const options = [];
-  if (execConfig.fullAuto) options.push('--full-auto');
-  if (execConfig.model) options.push('-m', String(execConfig.model));
-  if (execConfig.sandbox) options.push('-s', String(execConfig.sandbox));
-  if (execConfig.profile) options.push('-p', String(execConfig.profile));
-  if (execConfig.includePlanTool) options.push('--include-plan-tool');
-  if (execConfig.search) options.push('--search');
-  if (execConfig.skipGitRepoCheck) options.push('--skip-git-repo-check');
-  if (execConfig.json) options.push('--json');
-  if (execConfig.color && execConfig.color !== 'auto') options.push('--color', String(execConfig.color));
-  if (execConfig.cd) options.push('-C', String(execConfig.cd));
-  if (execConfig.outputSchema) options.push('--output-schema', String(execConfig.outputSchema));
-  if (execConfig.outputLastMessage) options.push('--output-last-message', String(execConfig.outputLastMessage));
-  if (Array.isArray(execConfig.images)) {
-    execConfig.images.forEach((imagePath) => {
-      if (typeof imagePath === 'string' && imagePath.length) {
-        options.push('-i', imagePath);
-      }
-    });
-  }
-  if (Array.isArray(execConfig.additionalArgs)) {
-    execConfig.additionalArgs.forEach((arg) => {
-      if (typeof arg === 'string') options.push(arg);
-    });
-  }
-  return options;
+function resolveExecutorPaths(paths, executorKey) {
+  if (!paths || !paths.executors) return {};
+  return paths.executors[executorKey] || {};
 }
 
-function executeCodexRun({ args, agentName, prompt, store, entry, paths, config, startTime, logFile, background, runnerPid }) {
+function executeRun({
+  agentName,
+  command,
+  executorKey,
+  executor,
+  executorConfig,
+  executorPaths,
+  store,
+  entry,
+  paths,
+  config,
+  startTime,
+  logFile,
+  background,
+  runnerPid
+}) {
+  if (!command || typeof command.command !== 'string' || !Array.isArray(command.args)) {
+    throw new Error(`Executor '${executorKey}' returned an invalid command configuration.`);
+  }
+
   const logStream = fs.createWriteStream(logFile, { flags: 'a' });
-  const proc = spawn('codex', args, { stdio: ['ignore', 'pipe', 'pipe'] });
+  const spawnOptions = {
+    stdio: ['ignore', 'pipe', 'pipe'],
+    ...(command.spawnOptions || {})
+  };
+  const proc = spawn(command.command, command.args, spawnOptions);
 
   entry.status = 'running';
-  entry.codexPid = proc.pid || null;
+  entry.executorPid = proc.pid || null;
+  entry.codexPid = entry.executorPid; // for compatibility with existing session files
   if (runnerPid) entry.runnerPid = runnerPid;
   saveSessions(paths, store);
 
-  proc.stdout.pipe(logStream);
-  proc.stderr.pipe(logStream);
+  if (proc.stdout) proc.stdout.pipe(logStream);
+  if (proc.stderr) proc.stderr.pipe(logStream);
 
   if (!background) {
-    proc.stdout.pipe(process.stdout);
-    proc.stderr.pipe(process.stderr);
+    if (proc.stdout) proc.stdout.pipe(process.stdout);
+    if (proc.stderr) proc.stderr.pipe(process.stderr);
   }
 
   proc.on('error', (error) => {
@@ -550,7 +727,7 @@ function executeCodexRun({ args, agentName, prompt, store, entry, paths, config,
     saveSessions(paths, store);
     logStream.end();
     if (!background) {
-      console.error(`\n❌ Failed to launch Codex for ${agentName}: ${error.message}`);
+      console.error(`\n❌ Failed to launch ${executorKey} for ${agentName}: ${error.message}`);
     }
   });
 
@@ -564,7 +741,7 @@ function executeCodexRun({ args, agentName, prompt, store, entry, paths, config,
     logStream.end();
 
     if (!background) {
-      const outcome = code === 0 ? '✅ Codex run completed' : `⚠️ Codex exited with code ${code}`;
+      const outcome = code === 0 ? `✅ ${executorKey} run completed` : `⚠️ ${executorKey} exited with code ${code}`;
       console.log(`\n${outcome} (${agentName})`);
       if (entry.sessionId) {
         console.log(`Session ID: ${entry.sessionId}`);
@@ -573,19 +750,29 @@ function executeCodexRun({ args, agentName, prompt, store, entry, paths, config,
     }
   });
 
-  const delay = (config.background && config.background.sessionExtractionDelayMs) || 2000;
-  setTimeout(() => {
-    if (entry.sessionId) return;
-    const sessionId = extractSessionId(startTime, paths.codexSessionsDir);
-    if (sessionId) {
-      entry.sessionId = sessionId;
-      entry.lastUsed = new Date().toISOString();
-      saveSessions(paths, store);
-      if (!background) {
-        console.log(`\n✅ Session saved for ${agentName} (${sessionId})`);
+  const defaultDelay = (config.background && config.background.sessionExtractionDelayMs) || 2000;
+  const sessionDelay = executor.getSessionExtractionDelay
+    ? executor.getSessionExtractionDelay({ config: executorConfig, defaultDelay })
+    : defaultDelay;
+
+  if (executor.extractSessionId) {
+    setTimeout(() => {
+      if (entry.sessionId) return;
+      const sessionId = executor.extractSessionId({
+        startTime,
+        config: executorConfig,
+        paths: executorPaths
+      });
+      if (sessionId) {
+        entry.sessionId = sessionId;
+        entry.lastUsed = new Date().toISOString();
+        saveSessions(paths, store);
+        if (!background) {
+          console.log(`\n✅ Session saved for ${agentName} (${sessionId})`);
+        }
       }
-    }
-  }, delay);
+    }, sessionDelay);
+  }
 }
 
 function runContinue(parsed, config, paths) {
@@ -599,7 +786,7 @@ function runContinue(parsed, config, paths) {
     throw new Error('Usage: genie continue <sessionId> "<prompt>"');
   }
 
-  const store = loadSessions(paths);
+  const store = loadSessions(paths, config, DEFAULT_CONFIG);
   const sessionIdArg = cmdArgs[0];
   const prompt = cmdArgs.slice(1).join(' ').trim();
   let agentName = null;
@@ -615,9 +802,15 @@ function runContinue(parsed, config, paths) {
 
   // Reuse exact preset from the originating session; ignore overrides on continue
   const presetName = session.preset || (config.defaults && config.defaults.preset) || 'default';
-  const execConfig = buildExecConfig(config, presetName);
-  const resumeConfig = (config.codex && config.codex.resume) || {};
-  const resumeArgs = buildResumeArgs(execConfig, resumeConfig, session.sessionId, prompt);
+  const executorKey = session.executor || resolveExecutorKey(parsed.options, config, presetName);
+  const executor = requireExecutor(executorKey);
+  const executorConfig = buildExecutorConfig(config, presetName, executorKey);
+  const executorPaths = resolveExecutorPaths(paths, executorKey);
+  const command = executor.buildResumeCommand({
+    config: executorConfig,
+    sessionId: session.sessionId,
+    prompt
+  });
 
   const startTime = deriveStartTime();
   const logFile = deriveLogFile(agentName, startTime, paths);
@@ -628,6 +821,8 @@ function runContinue(parsed, config, paths) {
   session.status = 'starting';
   session.background = parsed.options.background;
   session.runnerPid = parsed.options.backgroundRunner ? process.pid : null;
+  session.executor = executorKey;
+  session.executorPid = null;
   session.codexPid = null;
   session.exitCode = null;
   session.signal = null;
@@ -644,9 +839,13 @@ function runContinue(parsed, config, paths) {
     return;
   }
 
-  executeCodexRun({
-    args: resumeArgs,
+  executeRun({
     agentName,
+    command,
+    executorKey,
+    executor,
+    executorConfig,
+    executorPaths,
     prompt,
     store,
     entry: session,
@@ -659,33 +858,13 @@ function runContinue(parsed, config, paths) {
   });
 }
 
-function buildResumeArgs(execConfig, resumeConfig, sessionId, prompt) {
-  const args = ['exec', 'resume', ...collectExecOptions(execConfig)];
-  if (resumeConfig.includePlanTool) args.push('--include-plan-tool');
-  if (resumeConfig.search) args.push('--search');
-  if (Array.isArray(resumeConfig.additionalArgs)) {
-    resumeConfig.additionalArgs.forEach((arg) => {
-      if (typeof arg === 'string') args.push(arg);
-    });
-  }
-  if (sessionId) {
-    args.push(sessionId);
-  } else if (resumeConfig.last) {
-    args.push('--last');
-  }
-  if (prompt) {
-    args.push(prompt);
-  }
-  return args;
-}
-
 function runList(config, paths) {
   // Alias to runs (full view)
   runRuns({ options: {} }, config, paths);
 }
 
 function runRuns(parsed, config, paths) {
-  const store = loadSessions(paths);
+  const store = loadSessions(paths, config, DEFAULT_CONFIG);
   const entries = Object.entries(store.agents);
   const dataAll = entries.map(([agent, d]) => ({
     agent,
@@ -694,7 +873,8 @@ function runRuns(parsed, config, paths) {
     log: d.logFile || null,
     lastUsed: d.lastUsed || d.created || null,
     runnerPid: d.runnerPid || null,
-    codexPid: d.codexPid || null
+    executor: d.executor || (config.defaults && config.defaults.executor) || 'codex',
+    executorPid: d.executorPid || d.codexPid || null
   }));
 
   if (parsed.options.stop) {
@@ -704,7 +884,8 @@ function runRuns(parsed, config, paths) {
       console.error(`❌ No session for agent '${id}'`);
     } else {
       let stopped = false;
-      try { if (isProcessAlive(entry.codexPid)) { process.kill(entry.codexPid, 'SIGTERM'); stopped = true; } } catch {}
+      const executorPid = entry.executorPid || entry.codexPid;
+      try { if (isProcessAlive(executorPid)) { process.kill(executorPid, 'SIGTERM'); stopped = true; } } catch {}
       try { if (isProcessAlive(entry.runnerPid)) { process.kill(entry.runnerPid, 'SIGTERM'); stopped = true; } } catch {}
       if (stopped) {
         entry.status = 'stopped';
@@ -765,7 +946,7 @@ function runView(parsed, config, paths) {
     console.log('Usage: genie view <id|sessionId> [--follow] [--lines N]');
     return;
   }
-  const store = loadSessions(paths);
+  const store = loadSessions(paths, config, DEFAULT_CONFIG);
   const entry = resolveEntryByIdOrSession(store, target);
   if (!entry) {
     console.error(`❌ No run found matching '${target}'`);
@@ -937,12 +1118,12 @@ function resolveEntryByIdOrSession(store, target) {
 
 function resolveDisplayStatus(entry) {
   const baseStatus = entry.status || 'unknown';
-  const codexRunning = isProcessAlive(entry.codexPid);
+  const executorRunning = isProcessAlive(entry.executorPid || entry.codexPid);
   const runnerRunning = isProcessAlive(entry.runnerPid);
 
   if (baseStatus === 'running') {
-    if (codexRunning) return 'running';
-    if (!codexRunning && runnerRunning) return 'pending-completion';
+    if (executorRunning) return 'running';
+    if (!executorRunning && runnerRunning) return 'pending-completion';
     if (entry.exitCode === 0) return 'completed';
     if (typeof entry.exitCode === 'number' && entry.exitCode !== 0) {
       return `failed (${entry.exitCode})`;
@@ -954,7 +1135,7 @@ function resolveDisplayStatus(entry) {
     return baseStatus;
   }
 
-  if (runnerRunning || codexRunning) {
+  if (runnerRunning || executorRunning) {
     return 'running';
   }
   return baseStatus;
@@ -976,13 +1157,13 @@ function runClear(parsed, config, paths) {
   if (!agentName) {
     throw new Error('Usage: agent clear <agent>');
   }
-  const store = loadSessions(paths);
+  const store = loadSessions(paths, config, DEFAULT_CONFIG);
   const entry = store.agents[agentName];
   if (!entry) {
     console.log(`No session found for ${agentName}`);
     return;
   }
-  if (isProcessAlive(entry.codexPid) || isProcessAlive(entry.runnerPid)) {
+  if (isProcessAlive(entry.executorPid || entry.codexPid) || isProcessAlive(entry.runnerPid)) {
     console.error(`⚠️ Session for ${agentName} is still running. Stop the process before clearing.`);
     return;
   }
@@ -997,8 +1178,10 @@ function runHelp(config, paths) {
   const pad = (s, n) => (s + ' '.repeat(n)).slice(0, n);
   const cmdW = 12; // command col width
   const argW = 28; // args col width
+  const backgroundDefault = Boolean(config.defaults && config.defaults.background);
+  const runDesc = backgroundDefault ? 'Start a run (background default)' : 'Start a run (foreground default)';
   const rows = [
-    { cmd: 'run', args: '<agent> "<prompt>"', desc: 'Start a run (background default)' },
+    { cmd: 'run', args: '<agent> "<prompt>"', desc: runDesc },
     { cmd: 'mode', args: '<genie-mode> "<prompt>"', desc: 'Run a Genie Mode (maps to genie-<mode>)' },
     { cmd: 'continue', args: '<sessionId> "<prompt>"', desc: 'Continue run by session id' },
     { cmd: 'view', args: '<id|sessionId> [--follow] [--lines N]', desc: 'View run output (friendly); live follow with --follow' },
@@ -1014,7 +1197,9 @@ function runHelp(config, paths) {
 
   const hdr = 'GENIE CLI — Helper';
   const usage = 'Usage: genie <command> [options]';
-  const bg = 'Background: ON by default (use --no-background for foreground)';
+  const bg = backgroundDefault
+    ? 'Background: ON by default (use --no-background for foreground)'
+    : 'Background: OFF by default (use --background to detach)';
 
   // Build command table
   const commandsBlock = rows
@@ -1054,7 +1239,8 @@ function runHelp(config, paths) {
     'genie view <id|sessionId> --follow'
   ].map(e => `  ${e}`).join('\n');
 
-  console.log(`${hdr}\n\n${usage}\n${bg}\n\nCommands:\n${commandsBlock}\n\nGlobal Options:\n${globalOpts}\n\nRuns Options:\n${runsOpts}\n\nConfig & Paths:\n  ${pad('Config:', cmdW + argW)} ${CONFIG_PATH}\n  ${pad('Logs:', cmdW + argW)} ${formatPathRelative(paths.logsDir, paths.baseDir)}\n\nPresets:\n${presetsBlock || '  (none)'}\n\nPrompt Skeleton:\n  ${promptSkeleton}\n\nExamples:\n${examples}`);
+  const configPathDisplay = config.__configPath || CONFIG_PATH;
+  console.log(`${hdr}\n\n${usage}\n${bg}\n\nCommands:\n${commandsBlock}\n\nGlobal Options:\n${globalOpts}\n\nRuns Options:\n${runsOpts}\n\nConfig & Paths:\n  ${pad('Config:', cmdW + argW)} ${configPathDisplay}\n  ${pad('Logs:', cmdW + argW)} ${formatPathRelative(paths.logsDir, paths.baseDir)}\n\nPresets:\n${presetsBlock || '  (none)'}\n\nPrompt Skeleton:\n  ${promptSkeleton}\n\nExamples:\n${examples}`);
 }
 
 function listAgents() {
@@ -1166,94 +1352,6 @@ function runMode(parsed, config, paths) {
   const prompt = promptParts.join(' ').trim();
   const cloned = { ...parsed, commandArgs: [id, prompt] };
   runChat(cloned, config, paths);
-}
-
-function loadSessions(paths) {
-  const storePath = paths.sessionsFile;
-  if (storePath && fs.existsSync(storePath)) {
-    return normalizeSessionStore(readJson(storePath));
-  }
-  if (paths.legacySessionsFile && fs.existsSync(paths.legacySessionsFile)) {
-    const legacy = readJson(paths.legacySessionsFile);
-    return convertLegacySessions(legacy);
-  }
-  return { version: 1, agents: {} };
-}
-
-function saveSessions(paths, store) {
-  const payload = JSON.stringify(store, null, 2);
-  fs.writeFileSync(paths.sessionsFile, payload);
-}
-
-function readJson(filePath) {
-  const content = fs.readFileSync(filePath, 'utf8');
-  if (!content.trim().length) return {};
-  try {
-    return JSON.parse(content);
-  } catch (error) {
-    console.error(`⚠️ Could not parse JSON from ${filePath}: ${error.message}`);
-    return {};
-  }
-}
-
-function normalizeSessionStore(data) {
-  if (!data || typeof data !== 'object') {
-    return { version: 1, agents: {} };
-  }
-  if (data.agents) {
-    return {
-      version: data.version || 1,
-      agents: data.agents
-    };
-  }
-  return {
-    version: 1,
-    agents: data
-  };
-}
-
-function convertLegacySessions(legacy) {
-  const store = { version: 1, agents: {} };
-  if (!legacy || typeof legacy !== 'object') {
-    return store;
-  }
-  Object.entries(legacy).forEach(([agent, data]) => {
-    store.agents[agent] = {
-      ...data,
-      status: data && data.sessionId ? 'completed' : 'unknown',
-      background: false
-    };
-  });
-  return store;
-}
-
-function extractSessionId(startTime, codexSessionsDir) {
-  if (!codexSessionsDir) return null;
-  const date = new Date(startTime);
-  if (Number.isNaN(date.getTime())) return null;
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const dayDir = path.join(codexSessionsDir, String(year), month, day);
-  if (!fs.existsSync(dayDir)) return null;
-
-  const files = fs
-    .readdirSync(dayDir)
-    .filter((file) => file.startsWith('rollout-') && file.endsWith('.jsonl'))
-    .map((file) => {
-      const fullPath = path.join(dayDir, file);
-      const stat = fs.statSync(fullPath);
-      return { name: file, path: fullPath, mtime: stat.mtimeMs };
-    })
-    .sort((a, b) => b.mtime - a.mtime);
-
-  for (const file of files) {
-    if (Math.abs(file.mtime - startTime) < 60000) {
-      const match = file.name.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
-      if (match) return match[1];
-    }
-  }
-  return null;
 }
 
 function deriveStartTime() {

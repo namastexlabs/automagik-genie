@@ -1,0 +1,83 @@
+# Genie CLI configuration. Update values here to change defaults across all commands.
+# Anything you can tweak via CLI flags or presets should live in this file for easy auditing.
+
+defaults:
+  executor: codex        # default executor used for run/mode/continue when none is specified
+  preset: careful        # preset to load when --preset is not provided
+  background: true       # run commands in the background by default (set false to stream in foreground)
+
+paths:
+  baseDir: .                                 # base directory used to resolve relative paths below
+  sessionsFile: .genie/state/agents/sessions.json   # JSON store tracking recent runs
+  logsDir: .genie/state/agents/logs           # location where executor logs are written
+  backgroundDir: .genie/state/agents/background  # temp dir for detached child processes
+  executors:
+    codex:
+      sessionsDir: ~/.codex/sessions         # Codex session archive used to discover rollout ids
+
+executors:
+  codex:
+    binary: codex                            # binary or absolute path used to launch the executor
+    sessionExtractionDelayMs: null           # override delay (ms) before reading sessions; null -> use background.sessionExtractionDelayMs
+    exec:
+      fullAuto: true
+      model: gpt-5-codex
+      sandbox: workspace-write
+      profile: null
+      includePlanTool: false
+      search: false
+      skipGitRepoCheck: false
+      json: true
+      color: auto
+      cd: null
+      outputSchema: null
+      outputLastMessage: null
+      additionalArgs: []                     # extra CLI flags forwarded to `codex exec`
+      images: []                             # image paths forwarded via repeated -i flags
+    resume:
+      includePlanTool: false
+      search: false
+      last: false
+      additionalArgs: []                     # extra CLI flags forwarded to `codex exec resume`
+
+presets:
+  default:
+    description: Workspace-write automation with GPT-5 Codex.
+    executor: codex
+    overrides:
+      exec:
+        model: gpt-5-codex
+        sandbox: workspace-write
+        fullAuto: true
+  careful:
+    description: Read-only approval-aware agent run.
+    overrides:
+      exec:
+        sandbox: read-only
+  danger:
+    description: Full access execution for externally sandboxed environments only.
+    overrides:
+      exec:
+        sandbox: danger-full-access
+        fullAuto: false
+        additionalArgs:
+          - --dangerously-bypass-approvals-and-sandbox
+  debug:
+    description: Enable plan tool and web search for architecture/deep analysis sessions.
+    overrides:
+      exec:
+        includePlanTool: true
+        search: true
+  voice-eval:
+    description: Evaluation sessions over transcripts and prompts. Read-only, plan tool enabled.
+    overrides:
+      exec:
+        model: gpt-5-codex
+        sandbox: read-only
+        includePlanTool: true
+
+background:
+  enabled: true
+  detach: true
+  pollIntervalMs: 1500
+  sessionExtractionDelayMs: 2000            # fallback used by all executors when their override is null
