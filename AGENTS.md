@@ -71,17 +71,25 @@ All commands in `.claude/commands/` simply `@include` the corresponding `.genie/
 
 ## CLI Quick Reference
 ```bash
-# List agents & presets
+# Helper
 ./genie help
 
-# Run planner
-./genie run plan "New idea" --preset default
+# Start a Genie Mode (preferred for built-in flows)
+./genie mode planner "[Discovery] … [Implementation] … [Verification] …"
 
-# Launch background research
-./genie run forge-coder "Audit @docs/research.md"
+# Start an Agent (hello-*, forge-*, custom)
+./genie run forge-coder "[Discovery] … [Implementation] … [Verification] …"
 
-# Inspect background runs
-./genie list
+# Inspect runs and view logs (friendly or live)
+./genie runs --status running
+./genie view <id|sessionId> [--follow] [--lines 120]
+
+# Continue a specific run by session id
+./genie continue <sessionId> "Follow-up …"
+
+# Stop and clear
+./genie runs --stop <id>
+./genie clear <id>
 ```
 
 ## Subagents & Twin via CLI

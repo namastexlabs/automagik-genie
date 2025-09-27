@@ -174,7 +174,9 @@ function parseArguments(argv) {
     status: null,
     stop: null,
     follow: false,
-    lines: 60
+    lines: 60,
+    page: 1,
+    per: 1
   };
 
   const filtered = [];
@@ -241,6 +243,20 @@ function parseArguments(argv) {
       const n = parseInt(raw[++i], 10);
       if (!Number.isFinite(n) || n <= 0) throw new Error('Invalid --lines value');
       options.lines = n;
+      continue;
+    }
+    if (token === '--page') {
+      if (i + 1 >= raw.length) throw new Error('Missing value for --page');
+      const n = parseInt(raw[++i], 10);
+      if (!Number.isFinite(n) || n <= 0) throw new Error('Invalid --page value');
+      options.page = n;
+      continue;
+    }
+    if (token === '--per') {
+      if (i + 1 >= raw.length) throw new Error('Missing value for --per');
+      const n = parseInt(raw[++i], 10);
+      if (!Number.isFinite(n) || n <= 0) throw new Error('Invalid --per value');
+      options.per = n;
       continue;
     }
     filtered.push(token);
@@ -670,12 +686,8 @@ function runList(config, paths) {
 
 function runRuns(parsed, config, paths) {
   const store = loadSessions(paths);
-  let entries = Object.entries(store.agents);
-  if (parsed.options.status) {
-    const want = String(parsed.options.status).toLowerCase();
-    entries = entries.filter(([_, d]) => (resolveDisplayStatus(d) || '').toLowerCase().startsWith(want));
-  }
-  const data = entries.map(([agent, d]) => ({
+  const entries = Object.entries(store.agents);
+  const dataAll = entries.map(([agent, d]) => ({
     agent,
     status: resolveDisplayStatus(d),
     sessionId: d.sessionId || null,
@@ -704,26 +716,47 @@ function runRuns(parsed, config, paths) {
     }
   }
 
-  if (parsed.options && parsed.options.json) {
-    console.log(JSON.stringify(data, null, 2));
-    return;
-  }
   const pad = (s, n) => (String(s || '') + ' '.repeat(n)).slice(0, n);
-  if (!data.length) {
-    console.log('No runs found. Start one with: genie run <agent> "<prompt>" or genie mode <mode> "<prompt>"');
+  const want = parsed.options.status && String(parsed.options.status).toLowerCase();
+  const byStatus = (s) => dataAll.filter(r => (r.status || '').toLowerCase().startsWith(s));
+  const sortByTimeDesc = (arr) => arr.sort((a,b)=> new Date(b.lastUsed||0)-new Date(a.lastUsed||0));
+  const page = parsed.options.page || 1;
+  const per = parsed.options.per || 1;
+  const paginate = (arr) => { const start=(page-1)*per; return arr.slice(start, start+per); };
+  const fmt = (rows) => {
+    const header = `  ${pad('ID', 18)} ${pad('Status', 12)} ${pad('Session ID', 36)} ${pad('Last Used', 20)} Log`;
+    console.log(header);
+    rows.forEach(r => {
+      const when = r.lastUsed ? new Date(r.lastUsed).toLocaleString() : 'n/a';
+      const logRel = r.log ? formatPathRelative(r.log, paths.baseDir) : 'n/a';
+      console.log(`  ${pad(r.agent, 18)} ${pad(r.status || 'unknown', 12)} ${pad(r.sessionId || 'n/a', 36)} ${pad(when, 20)} ${logRel}`);
+    });
+  };
+
+  if (want && want !== 'default') {
+    let pool;
+    if (want === 'all') pool = sortByTimeDesc([...dataAll]);
+    else if (want === 'running') pool = sortByTimeDesc([...byStatus('running'), ...byStatus('pending-completion')]);
+    else pool = sortByTimeDesc(dataAll.filter(r => (r.status||'').toLowerCase().startsWith(want)));
+    const pageRows = paginate(pool);
+    if (parsed.options.json) { console.log(JSON.stringify(pageRows, null, 2)); return; }
+    console.log('\nRuns:');
+    if (!pageRows.length) console.log('  (none)'); else fmt(pageRows);
+    console.log(`\nPage ${page} • per ${per} • Next: genie runs --status ${want} --page ${page+1} --per ${per}`);
+    console.log(`Use: genie view <id|sessionId> [--follow]   •   Resume: genie continue <sessionId> "<prompt>"`);
     return;
   }
-  const header = `\nRuns:\n  ${pad('ID', 18)} ${pad('Status', 12)} ${pad('Session ID', 36)} ${pad('Last Used', 20)} Log`;
-  console.log(header);
-  data.forEach(r => {
-    const id = r.agent;
-    const status = r.status || 'unknown';
-    const sid = r.sessionId || 'n/a';
-    const when = r.lastUsed ? new Date(r.lastUsed).toLocaleString() : 'n/a';
-    const logRel = r.log ? formatPathRelative(r.log, paths.baseDir) : 'n/a';
-    console.log(`  ${pad(id, 18)} ${pad(status, 12)} ${pad(sid, 36)} ${pad(when, 20)} ${logRel}`);
-  });
-  console.log(`\nUse: genie view <id|sessionId> [--follow]   •   Resume: genie continue <sessionId> "<prompt>"`);
+
+  // Default: active + recent
+  const activePool = sortByTimeDesc([...byStatus('running'), ...byStatus('pending-completion')]);
+  const recentPool = sortByTimeDesc(dataAll.filter(r => !['running','pending-completion'].includes((r.status||'').toLowerCase())));
+  const activeRows = paginate(activePool);
+  const recentRows = paginate(recentPool);
+  if (parsed.options.json) { console.log(JSON.stringify({ active: activeRows, recent: recentRows }, null, 2)); return; }
+  console.log('\nActive:'); if (!activeRows.length) console.log('  (none)'); else fmt(activeRows);
+  console.log('\nRecent:'); if (!recentRows.length) console.log('  (none)'); else fmt(recentRows);
+  console.log(`\nPage ${page} • per ${per} • Next: genie runs --page ${page+1} --per ${per} • Focus: genie runs --status completed`);
+  console.log(`Use: genie view <id|sessionId> [--follow]   •   Resume: genie continue <sessionId> "<prompt>"`);
 }
 
 function runView(parsed, config, paths) {
@@ -747,6 +780,12 @@ function runView(parsed, config, paths) {
     // Fallback to tail -f for live view
     const tail = spawn('tail', ['-n', String(parsed.options.lines || 60), '-f', logFile], { stdio: 'inherit' });
     tail.on('error', (e) => console.error('❌ Failed to tail log:', e.message));
+    return;
+  }
+  if (parsed.options.json) {
+    // Raw output for debugging parser
+    const raw = fs.readFileSync(logFile, 'utf8');
+    process.stdout.write(raw);
     return;
   }
   // Friendly parse
@@ -777,6 +816,8 @@ function renderJsonlView(src, parsed, paths) {
   const mcp = [];
   const patches = { add: 0, update: 0, move: 0, delete: 0 };
   const errs = [];
+  let tokenInfo = null;
+  let rateLimits = null;
 
   jsonl.forEach((ev) => {
     const m = ev.msg || {};
@@ -803,6 +844,10 @@ function renderJsonlView(src, parsed, paths) {
           if (chg.update) { patches.update += 1; if (chg.update.move_path) patches.move += 1; }
           if (chg.delete) patches.delete += 1;
         });
+        break; }
+      case 'token_count': {
+        if (ev.info && ev.info.total_token_usage) tokenInfo = ev.info.total_token_usage;
+        if (ev.rate_limits) rateLimits = ev.rate_limits;
         break; }
       default: {
         const s = JSON.stringify(m);
@@ -841,6 +886,20 @@ function renderJsonlView(src, parsed, paths) {
       console.log('  ' + s + (s.length >= 160 ? '…' : ''));
     });
   }
+  // Footer stats table
+  const okCount = execs.filter(e => e.exit === 0).length;
+  const errCount = execs.filter(e => e.exit !== 0 && e.exit != null).length;
+  console.log('\nStats:');
+  const pad = (s, n) => (String(s || '') + ' '.repeat(n)).slice(0, n);
+  console.log('  ' + pad('MCP', 16) + ` ${mcp.length}`);
+  console.log('  ' + pad('Execs', 16) + ` total:${execs.length} ok:${okCount} err:${errCount}`);
+  console.log('  ' + pad('Patches', 16) + ` add:${patches.add} update:${patches.update} move:${patches.move} delete:${patches.delete}`);
+  if (tokenInfo) {
+    console.log('  ' + pad('Tokens', 16) + ` in:${tokenInfo.input_tokens||0} out:${tokenInfo.output_tokens||0} total:${tokenInfo.total_tokens||0}`);
+  }
+  if (rateLimits && rateLimits.primary) {
+    console.log('  ' + pad('RateLimit', 16) + ` used:${rateLimits.primary.used_percent||0}% reset:${rateLimits.primary.resets_in_seconds||0}s`);
+  }
   console.log(`\nRaw Tail (${lastN} lines):`);
   raw.split(/\r?\n/).slice(-lastN).forEach((l) => console.log('  ' + l));
 }
@@ -861,6 +920,9 @@ function renderTextView(src, parsed, paths) {
   console.log(`\nView: ${entry.agent} | session:${entry.sessionId || 'n/a'} | log:${formatPathRelative(entry.logFile, paths.baseDir)}`);
   if (instructions.length) { console.log('\nLast Instructions:'); instructions.forEach(l => console.log('  ' + l)); }
   if (errorLines.length) { console.log('\nRecent Errors:'); errorLines.forEach(l => console.log('  ' + l)); }
+  console.log('\nStats:');
+  console.log('  Errors           ' + errorLines.length);
+  console.log('  Lines            ' + lines.length);
   console.log(`\nTail (${lastN} lines):`);
   lines.slice(-lastN).forEach(l => console.log('  ' + l));
 }
