@@ -12,6 +12,7 @@
 - [ ] Groq Whisper STT integration `[S]`
 - [ ] Simple VAD with WebRTC `[XS]`
 - [ ] Raw session logging for analysis `[XS]`
+- [ ] Metrics collection (TTFB, ASR confidence per ElevenLabs schema) `[XS]`
 - [ ] CLI test harness `[XS]`
 
 ### Build-in-Public
@@ -33,6 +34,7 @@
 - [ ] Session serialization and replay `[S]`
 - [ ] Interrupt-aware lifecycle (barge-in) `[M]`
 - [ ] Basic metrics collection (TTFB, latency, confidence) `[S]`
+- [ ] Fallback response system (prevent "None" cascades observed in production) `[S]`
 
 ### Developer Experience
 - [ ] Docker compose setup `[S]`
@@ -60,12 +62,13 @@
 
 ### Human-Likeness Experiments
 - [ ] Overlap strategies (repair-first vs continuity-first) `[M]`
-- [ ] Micro-backchannel injection `[S]`
+- [ ] Micro-backchannel injection ("mm-hmm", "certo" for pt-BR) `[S]`
 - [ ] Prosody shaping with pause patterns `[S]`
 - [ ] **UltraVAD integration** for natural turn-taking `[M]` 🔥
 - [ ] **Ultravox exploration** for end-to-end speech LLM `[L]` 🔥
 - [ ] VAD model comparison (WebRTC vs UltraVAD vs pyannote) `[M]`
 - [ ] Hybrid approach: UltraVAD + Ultravox pipeline `[L]`
+- [ ] Connection quality perception monitoring (production insight) `[S]`
 
 ### Analytics Pipeline
 - [ ] Session recording with timing data `[S]`
