@@ -1,0 +1,919 @@
+# Repository Guidelines
+
+## Repository Self‑Awareness
+- Purpose: Build and evaluate a Portuguese voice agent for PagBank Conta Digital.
+- Production agent: alias to ElevenLabs `agents/elevenlabs/digital-account-dale/` (prompt.md + config).
+- Evaluator prompt (QA rubric): `.genie/agents/evaluator.md`.
+- Orchestrator: `.genie/cli/agent.js` (multi‑turn “chat” / “continue”).
+- Single active QA task detected: `tasks/PSAP-990/` with artifacts under `tasks/PSAP-990/qa/`.
+- External dependency: ElevenLabs ConvAI API (`ELEVENLABS_API_KEY` required).
+
+## Project Structure & Module Organization
+- `agents/` – Voice agents and the QA evaluator
+  - `elevenlabs/<slug>/` – Imported from ElevenLabs; only:
+    - `prompt.md`
+    - `config/` (split JSONs: tts, asr, turn, conversation, vad, agent, overrides, call_limits, privacy, workspace_overrides, testing, safety, data_collection)
+    - `knowledge_base/` (per-doc folders with `metadata.json` + `content.html`)
+  - `.genie/agents/evaluator.md` – Evaluation rubric and output format
+  - `*/versions.json` – Version tracking metadata
+  - `elevenlabs/<slug>/` – Agents importados da ElevenLabs (prompt.md, config/*.json, workflow.json)
+- `.claude/prompt.md` – Advanced prompting framework patterns and techniques
+- `tasks/PSAP-XXX/` – Task folders (e.g., `tasks/PSAP-990/`) with `qa/` for artifacts
+- `tools/` – Helper utilities (optional scripts)
+
+Example: `.genie/agents/evaluator.md`, `tasks/PSAP-990/qa/transcript_raw.txt`.
+
+## QA Review Task (Current)
+- Only task present: `PSAP-990`.
+- Artifacts contract under `tasks/PSAP-990/qa/`:
+  - `conversation.json` (raw 11Labs JSON)
+  - `transcript_raw.txt` and/or `transcript_raw.json` (canonical transcript)
+  - `metrics.json` (aggregates such as TTFB, ASR confidence)
+  - `report_*.md` (evaluator report) and `summary_*.json` (metadata)
+- Status: report not yet generated; run the workflow below to create it.
+
+## Workflow Quickstart (CLI)
+- One‑shot end‑to‑end (download → extract → evaluate → report):
+  - ``tools/eval.sh <CONV_ID> [--task PSAP-XXX] [--context FILE] [--profile NAME] [--evaluator NAME]``
+    - Produces `tasks/PSAP-<timestamp>/qa/{conversation.json,transcript_raw.txt,metrics.json,report_<profile>_*.md}`
+    - Uses `eleven_convai.sh extract` + Genie evaluator agent
+
+See also: `EVALUATION.md` for the full evaluation runbook and outputs.
+
+- Manual control with ElevenLabs helper:
+  - List: ``tools/eleven_convai.sh list tasks/PSAP-990/qa``
+  - Download: ``tools/eleven_convai.sh get <CONV_ID> tasks/PSAP-990/qa``
+  - Extract all: ``tools/eleven_convai.sh extract <CONV_ID> tasks/PSAP-990/qa``
+
+- Run the evaluator in multi‑turn mode (talk to the evaluator, iterate):
+  - ``node .genie/cli/agent.js chat evaluator "Score @tasks/PSAP-990/qa/transcript_raw.txt using @.genie/agents/evaluator.md @tasks/PSAP-990/qa/eval_objectives.md; save to @tasks/PSAP-990/qa/report_onboarding.md" --preset voice-eval``
+  - ``node .genie/cli/agent.js continue evaluator "Drill into voice concision; add examples and numeric deltas."``
+
+Notes:
+- Use the `@` pattern to auto‑load artifacts, prompts, and rubrics.
+- Prefer `--preset voice-eval` (read‑only); switch to `default` for editing prompts.
+- Set `ELEVENLABS_API_KEY` in your environment or `.env`.
+
+
+
+## Build, Test, and Development Commands
+- Fetch conversation (requires `ELEVENLABS_API_KEY`):
+  - `curl -sS https://api.elevenlabs.io/v1/convai/conversations/<CONV_ID> -H "xi-api-key: $ELEVENLABS_API_KEY" -o tasks/PSAP-990/qa/conversation.json`
+- Extract raw transcript array:
+  - `jq -r '.transcript' tasks/PSAP-990/qa/conversation.json > tasks/PSAP-990/qa/transcript_raw.txt`
+- Quick metrics (TTFB, ASR, TTS) preview:
+  - Place analysis scripts in `tools/` and write results to `tasks/PSAP-XXX/qa/`.
+
+For evaluation outputs, CSV schema, and analytics examples, see `data/evaluations/README.md`.
+
+## Coding Style & Naming Conventions
+- Prompts: Portuguese, structured sections (`<identity_awareness>`, `<discovery>`, `<implementation>`, `<verification>`), concise and directive.
+- Files: kebab‑case for docs, versioned directories (`v1`, `v2`).
+- Task folders: `tasks/PSAP-<ID>/qa/` for input/output artifacts. Avoid committing secrets.
+- Use @ pattern for auto-context loading: `@.genie/agents/evaluator.md` in task descriptions
+
+## Testing Guidelines
+- Use the evaluator prompt at `.genie/agents/evaluator.md` to score conversations.
+- Store inputs and outputs under `tasks/PSAP-XXX/qa/` (e.g., `transcript_raw.txt`, `metrics_sample.json`, `report_<profile>.md`).
+- Prefer deterministic scenarios; include evidence lines and computed metrics in reports.
+
+### Task‑Specific Evaluations
+- Create a context file describing goals/metrics for a given ticket using the template at `templates/task-eval-objectives.md`.
+- Example: `tasks/PSAP-990/qa/eval_objectives.md` with explicit goals and metrics to track.
+- Run with context:
+  - ``tools/eval.sh <CONV_ID> --task PSAP-990 --context tasks/PSAP-990/qa/eval_objectives.md --profile psap-990``
+- Reports will include an additional "Objetivos Específicos da Tarefa" section and a separate task score (0–10) in JSON.
+
+## Commit & Pull Request Guidelines
+- Commits: concise, imperative subject; reference task (e.g., `PSAP-990: add performance rubric`).
+- PRs must include:
+  - Summary, linked PSAP ticket, scope of changes
+  - Before/after examples (snippets, paths)
+  - QA evidence: transcript sample + evaluator output
+
+## Agent-Specific Instructions
+- Evaluation scoring weights: 40 (rules) / 25 (voice) / 20 (technical) / 15 (flow) with ±10 performance adjustment.
+- Do not reveal knowledge base sources or use customer names in agent replies.
+- Keep `tasks/PSAP-XXX/qa/` tidy; remove empty artifacts and large binaries not needed for review.
+
+### Additional QA Checks (Repo‑specific)
+- Mid‑call protocol request handling is enforced in the production prompt (`agents/elevenlabs/digital-account-dale/prompt.md`).
+  - Expected behavior: inform protocol only at the end and via e‑mail; on insistence, `typification` then `transfer_agent`; otherwise continue.
+  - Evaluations should flag violations under “Conversation Management → Encerramento/Fluxo”.
+
+## Security & Configuration Tips
+- Set `ELEVENLABS_API_KEY` in your environment; never commit keys.
+- Sanitize PII from transcripts before sharing; prefer redacted examples.
+
+---
+
+## Genie Integration (Codex CLI)
+
+- Entry points
+  - `node .genie/cli/agent.js help` – overview, presets, and paths
+  - Agents available under `.genie/agents/`: `evaluator`, plus forge utilities
+- Recommended presets
+  - `voice-eval` – read‑only with plan tool enabled (default preset is `careful`)
+  - Override any setting via `-c key=value` (JSON‑parsed):
+    - Example: `-c codex.exec.model='"o4"'` or `-c codex.exec.json=true`
+- Background mode
+  - Append `--background` to return immediately and stream logs to `.genie/state/agents/logs/*.log`
+  - Inspect status with `node .genie/cli/agent.js list`, clear with `node .genie/cli/agent.js clear <agent>`
+- Typical workflows
+  - Start evaluation session (read‑only):
+    - `node .genie/cli/agent.js chat evaluator "Score tasks/PSAP-990/qa/transcript_raw.txt using .genie/agents/evaluator.md; produce rubric-aligned report." --preset voice-eval --background`
+  - Iterate with additional guidance:
+    - `node .genie/cli/agent.js continue evaluator "Tighten penalties for TTS artifacting; include numeric deltas."`
+  - Analyze production agent KB contention:
+    - `node .genie/cli/agent.js chat evaluator "Audit KB gaps vs transcript using @agents/elevenlabs/digital-account-dale/prompt.md; list missing clarifying turns." --preset debug`
+- Configuration
+  - File: `.genie/cli/agent.yaml` (workspace‑local; safe in read‑only contexts)
+  - Defaults adapted for this repo: `defaults.preset=careful`, preset `voice-eval` added
+  - YAML module optional; if not installed, the CLI uses built‑in defaults (set overrides with `-c`)
+- Safety & sandboxing
+  - This repository is mostly prompts + artifacts; prefer `read-only` (`careful`, `voice-eval`)
+  - For edits (e.g., updating `agents/*/v1/prompt.md`), run with `--preset default` or add `-c codex.exec.sandbox='"workspace-write"'`
+
+
+## Advanced Prompting Framework
+
+This framework provides powerful patterns for maximizing agent performance in voice agent development, evaluation, and PSAP task execution. For the complete guide, see `.claude/prompt.md`.
+
+### Task Decomposition Pattern
+Break complex tasks into trackable subtasks for clarity and progress monitoring. Essential for voice agent development and PSAP task execution.
+
+```
+<task_breakdown>
+1. [Discovery] What to investigate
+   - Identify affected components (agents, prompts, evaluations)
+   - Map dependencies (KB sections, rubrics, transcripts)
+   - Document current state (version tracking, metrics)
+
+2. [Implementation] What to change
+   - Specific modifications (prompt sections, KB entries)
+   - Order of operations (update prompt → test → evaluate)
+   - Rollback points (version history, git commits)
+
+3. [Verification] What to validate
+   - Success criteria (evaluation scores, TTFB metrics)
+   - Test coverage (transcript scenarios, edge cases)
+   - Performance metrics (ASR accuracy, TTS quality)
+</task_breakdown>
+```
+
+**Voice Agent Example:**
+```
+<task_breakdown>
+1. [Discovery] Analyze PSAP-990 transcript issues
+   - Review @tasks/PSAP-990/qa/transcript_raw.txt
+   - Check @agents/elevenlabs/digital-account-dale/prompt.md KB gaps
+   - Identify missing clarifying turns
+
+2. [Implementation] Update agent prompt
+   - Add missing KB entries for common queries
+   - Enhance <discovery> section for better context
+   - Improve error handling patterns
+
+3. [Verification] Validate improvements
+   - Run evaluator on updated transcript
+   - Check scores: rules(40), voice(25), technical(20)
+   - Verify TTFB < 1500ms, ASR confidence > 0.8
+</task_breakdown>
+```
+
+### Auto-Context Loading with @ Pattern
+Use @ symbols to automatically trigger file reading, eliminating manual context gathering:
+
+**Repository-Specific Examples:**
+```
+[TASK] Evaluate conversation quality
+@tasks/PSAP-990/qa/transcript_raw.txt
+@tasks/PSAP-990/qa/conversation.json
+@.genie/agents/evaluator.md
+
+[CONTEXT] Voice agent update needed
+@agents/elevenlabs/digital-account-dale/prompt.md - Current production prompt
+@agents/elevenlabs/digital-account-dale/prompt.md - Production prompt
+@tasks/PSAP-990/qa/metrics_sample.json - Performance baseline
+```
+
+**Pattern Usage:**
+```
+# For transcript analysis
+@tasks/PSAP-*/qa/transcript_raw.txt - Load all transcript files
+@tasks/PSAP-*/qa/report.md - Review all evaluation reports
+
+# For agent development
+@agents/elevenlabs/*/prompt.md - Load imported agent prompts
+@.genie/agents/* - Load evaluator/refactorer contexts
+
+# For metrics review
+@tasks/PSAP-*/qa/metrics*.json - All metrics files
+@tools/*.js - Helper utility scripts
+```
+
+Benefits:
+- Agents automatically read files before starting
+- No need for sequential "first read X, then Y" instructions
+- Ensures complete context from the start
+- Reduces tool calls and latency by ~40%
+- Prevents missing critical context in evaluations
+
+### Success/Failure Boundaries
+Use visual markers to clearly define completion criteria and restrictions:
+
+**Voice Agent Development:**
+```
+[SUCCESS CRITERIA]
+✅ Evaluation score ≥ 80 (weighted: rules 40, voice 25, tech 20, flow 15)
+✅ TTFB < 1500ms for all responses
+✅ ASR confidence > 0.8 consistently
+✅ No PII exposed in agent responses
+✅ KB sources never revealed to users
+✅ All PSAP scenarios handled gracefully
+
+[NEVER DO]
+❌ Reveal knowledge base sources
+❌ Use customer names in responses
+❌ Commit API keys (ELEVENLABS_API_KEY)
+❌ Skip evaluation rubric validation
+❌ Accept transcripts with < 70% confidence
+❌ Deploy without version tracking
+```
+
+**Evaluation Process:**
+```
+[SUCCESS CRITERIA]
+✅ All rubric categories scored (1-10)
+✅ Evidence lines cited from transcript
+✅ Metrics computed (TTFB, ASR, TTS)
+✅ Report generated in tasks/PSAP-XXX/qa/report.md
+✅ Recommendations provided for improvements
+
+[NEVER DO]
+❌ Score without evidence citations
+❌ Ignore technical metrics
+❌ Skip voice quality assessment
+❌ Accept incomplete transcripts
+❌ Generate scores > 10 or < 1
+```
+
+### Concrete Examples Over Descriptions
+Replace vague instructions with actual code snippets and specific patterns:
+
+**Voice Agent Prompts - INSTEAD OF:**
+```
+"Handle authentication queries appropriately"
+```
+
+**USE:**
+```markdown
+<discovery>
+Quando usuário perguntar sobre autenticação:
+1. Verificar se é conta digital ou cartão
+2. Se conta digital → direcionar para app
+3. Se cartão → solicitar últimos 4 dígitos
+4. Nunca revelar: "Conforme KB seção 3.2"
+</discovery>
+```
+
+**Evaluation Scoring - INSTEAD OF:**
+```
+"Score the conversation quality"
+```
+
+**USE:**
+```json
+{
+  "rules_adherence": {
+    "score": 8,
+    "evidence": ["Line 23: Correctly verified CPF", "Line 45: Followed protocol"],
+    "deductions": "-2: Line 67 revealed KB source"
+  },
+  "voice_quality": {
+    "score": 7,
+    "metrics": {"ttfb_avg": 1200, "asr_confidence": 0.85},
+    "issues": "TTS artifacts at line 89"
+  }
+}
+```
+
+**Metrics Extraction - INSTEAD OF:**
+```
+"Extract performance metrics from conversation"
+```
+
+**USE:**
+```bash
+# Extract TTFB metrics
+jq '.transcript[] | select(.type=="agent") | .ttfb' tasks/PSAP-990/qa/conversation.json | \
+  awk '{sum+=$1; count++} END {print "TTFB avg:", sum/count, "ms"}'
+
+# Extract ASR confidence
+jq '.transcript[] | select(.type=="user") | .asr_confidence' tasks/PSAP-990/qa/conversation.json | \
+  awk '{if($1<0.7) low++} END {print "Low confidence turns:", low}'
+```
+
+### Reasoning Effort Control
+Control agent exploration depth and tool-calling persistence based on task complexity:
+
+#### Reasoning Effort Levels for Voice Agents
+```yaml
+low:
+  use_for: "Simple KB lookups, transcript reads, metric extraction"
+  tool_budget: 2-3 calls max
+  examples:
+    - "Read tasks/PSAP-990/qa/transcript_raw.txt"
+    - "Extract TTFB from conversation.json"
+  prompt: |
+    <context_gathering>
+    - Search depth: very low
+    - Maximum 2 tool calls
+    - Provide answer quickly, even if partial
+    - If uncertain, state findings and stop
+    </context_gathering>
+
+medium (default):
+  use_for: "Standard evaluations, prompt updates, report generation"
+  tool_budget: 5-10 calls
+  examples:
+    - "Evaluate transcript using rubric"
+    - "Update agent KB with new entries"
+  prompt: |
+    <context_gathering>
+    Goal: Balance thoroughness with efficiency
+    - Start broad, then focus on specifics
+    - Parallelize related searches
+    - Stop when 70% confident in solution
+    </context_gathering>
+
+high:
+  use_for: "Complex debugging, multi-PSAP analysis, production deploys"
+  tool_budget: unlimited within reason
+  examples:
+    - "Debug why all PSAP-99X tasks fail voice quality"
+    - "Refactor entire evaluation framework"
+  prompt: |
+    <persistence>
+    - Keep going until completely resolved
+    - Never stop at uncertainty - research thoroughly
+    - Document all assumptions and validate
+    - Verify solution multiple ways
+    </persistence>
+```
+
+#### Context Gathering Optimization
+```
+<context_gathering>
+Goal: Get enough context fast. Parallelize discovery, stop when actionable.
+
+Method:
+- Start broad: @agents/elevenlabs/*/prompt.md
+- Fan out focused: @tasks/PSAP-990/qa/*, @tasks/PSAP-991/qa/*
+- Deduplicate paths, cache results
+- Avoid redundant searches
+
+Early stop criteria:
+- Can name exact prompt section to change
+- Metrics converge on clear issue (e.g., all TTFB > 2000ms)
+- Found specific KB gap causing failures
+
+Escalate once if needed:
+- If signals conflict, run one refined batch
+- Example: TTFB good but voice scores low → check TTS settings
+
+Depth control:
+- Trace only what you'll modify
+- Skip transitive dependencies unless critical
+</context_gathering>
+```
+
+### Tool Preambles
+Structure agent communication for clarity and progress tracking:
+
+```
+<tool_preambles>
+- Begin by rephrasing user's goal in context
+- Outline structured plan with measurable steps
+- Narrate progress at key milestones
+- Finish with actionable summary
+
+Examples for voice agent tasks:
+
+GOOD: "I'll evaluate PSAP-990's transcript against our rubric, focusing on the 4 scoring categories and performance metrics."
+
+BETTER: "Evaluating PSAP-990 conversation:
+1. Loading transcript and metrics
+2. Scoring against 4-category rubric (rules/voice/tech/flow)
+3. Computing TTFB/ASR averages
+4. Generating actionable recommendations"
+
+AVOID: "Let me look at the files and see what I can find..."
+</tool_preambles>
+```
+
+**Preamble Patterns by Task Type:**
+```yaml
+evaluation_task:
+  start: "Analyzing [PSAP-XXX] against evaluation criteria..."
+  progress: "Scored [category]: [score]/10 (evidence: lines X-Y)"
+  complete: "Final score: [total]/100. Key issues: [list]. Next steps: [actions]"
+
+prompt_update:
+  start: "Updating [agent] prompt section [name]..."
+  progress: "Added [N] KB entries, enhanced [section]"
+  complete: "Changes: [summary]. Version: [new]. Ready for testing."
+
+metrics_analysis:
+  start: "Extracting performance metrics from [N] conversations..."
+  progress: "Processed [X]/[N]: TTFB=[avg]ms, ASR=[confidence]"
+  complete: "Summary: [metrics]. Outliers: [list]. Recommendations: [actions]"
+```
+
+### Maximizing Coding Performance
+
+#### Context Gathering Pattern
+```
+<maximize_context_understanding>
+Goal: Get enough context fast. Parallelize discovery and stop as soon as you can act.
+
+Method:
+- Start broad, then fan out to focused subqueries
+- In parallel, launch varied queries; read top hits per query
+- Avoid over searching for context
+
+Early stop criteria:
+- You can name exact content to change
+- Top hits converge (~70%) on one area/path
+
+Depth:
+- Trace only symbols you'll modify or whose contracts you rely on
+- Avoid transitive expansion unless necessary
+</maximize_context_understanding>
+```
+
+#### Code Editing Rules
+```
+<code_editing_rules>
+<guiding_principles>
+- Clarity and Reuse: Every component modular and reusable
+- Consistency: Unified design system across codebase
+- Simplicity: Small, focused components
+- Visual Quality: Proper spacing, padding, hover states
+</guiding_principles>
+
+<best_practices>
+- Write code for clarity first
+- Prefer readable, maintainable solutions
+- Use clear names, comments where needed
+- Straightforward control flow
+- No code-golf or overly clever one-liners
+</best_practices>
+</code_editing_rules>
+```
+
+## Genie Agent Operating Guidelines
+
+These rules define how the Genie coding agent works inside this repository. They are additive to the sections above and should be treated as authoritative for agent behavior.
+
+### AGENTS.md Scope & Precedence
+- Scope: Applies to the entire repository unless a more deeply nested `AGENTS.md` overrides parts for its subtree.
+- Precedence: Deeper `AGENTS.md` wins on conflicts; direct system/developer/user instructions override any `AGENTS.md`.
+- Compliance: Any file you modify must follow relevant `AGENTS.md` instructions in scope (naming, style, structure).
+
+### Self vs Agent Enhancements
+- Self‑enhancing feedback (about how “you” should work) MUST be applied to `AGENTS.md` only. Do not touch agent prompts for this.
+- Agent enhancement requests (about the voice agents or evaluator) MUST target files under `agents/*` or `.genie/agents/*` as specified.
+- If ambiguous, default to self‑enhancement → update `AGENTS.md` and ask for clarification before editing agent prompts.
+
+### Self‑Enhancement SOP (Learning → Practice)
+- Instruction routing (decision):
+  - Mentions “you”, “your behavior/process”, “self‑enhance” → update `AGENTS.md` only.
+  - Mentions “voice agent/evaluator prompt” or specific path under `agents/*`/`.genie/agents/*` → edit that target only.
+  - Mixed/unclear → default to `AGENTS.md`, ask a one‑line clarification.
+
+- Surgical change protocol:
+  - Use `update_plan` with a 3–5 step checklist; exactly one `in_progress` item.
+  - Before tool calls, send a 1–2 sentence preamble of the next action.
+  - Edit in small, reversible diffs via `apply_patch` (Update only; no Delete/Move).
+  - Touch a single section per iteration when possible; prefer adding a subsection over broad rewrites.
+  - Validate by printing only the changed lines/blocks for user review.
+
+- Destruction guard (enforced):
+  - Never delete/replace entire files; never mass‑rename. Avoid `rm -rf`, resets, force pushes.
+  - Prompts/docs: do not wholesale replace; preserve structure and scope; keep edits minimal.
+
+- Iteration loop:
+  1) Apply the smallest useful change.
+  2) Summarize what changed (paths + 1‑line rationale).
+  3) Propose the next micro‑iteration or evaluation step.
+  4) Stop and await feedback unless explicitly told to continue.
+
+- Acceptance for self‑enhancement iterations:
+  - Scope: Only `AGENTS.md` modified.
+  - Change size: Minimal, scoped to one section.
+  - Safety: No destructive ops; diffs are reversible.
+  - Clarity: Includes routing rule and actionable steps the agent will follow next time.
+
+### Personality & Communication
+- Tone: Concise, direct, friendly. Focus on actionable guidance and next steps.
+- Brevity: Default to short, efficient messages unless detail is necessary.
+- Assumptions: State environment prerequisites and assumptions clearly.
+
+### Preamble Messages (Before Tool Calls)
+- Send a 1–2 sentence note before grouped actions describing what’s next.
+- Group related actions into one preamble; avoid spam for trivial reads.
+- Keep tone light and collaborative. Build on prior context.
+- Examples: “I’ll update config and patch tests next.” / “Scanning routes, then wiring handlers.”
+
+### Planning (`update_plan` Tool)
+- When to use: multi-step work, ambiguity, or long-running tasks.
+- Keep plans short (4–7 steps), one active `in_progress` step at a time.
+- Update the plan as steps complete or scope changes; include a brief rationale when changing plans.
+- Use task decomposition pattern for complex operations:
+  - Discovery → Implementation → Verification phases
+  - Mark dependencies and rollback points
+  - Include success criteria in plan
+
+### Task Execution
+- Work until the task is fully resolved; don't stop mid-way.
+- Destructive edits are prohibited. Never delete or replace whole files when updating prompts; apply surgical, minimal diffs and iterate in small steps.
+- Prefer root-cause fixes over band-aids; avoid unrelated changes.
+- Match existing code style; keep changes minimal and targeted.
+- Don't add licenses/copyright headers unless asked.
+- Avoid one-letter variable names and inline code comments unless requested.
+- Use history (`git log`, `git blame`) for context when needed.
+- Apply success/failure boundaries:
+  - Check against ✅ criteria before completion
+  - Avoid ❌ anti-patterns throughout
+  - Document any deviations with rationale
+
+### Sandbox & Approvals
+- Filesystem modes: `read-only`, `workspace-write`, `danger-full-access`.
+- Network: `restricted` or `enabled`.
+- Approval policies: `untrusted`, `on-failure`, `on-request`, `never`.
+- Request approvals for: network-required ops in restricted modes, writes outside allowed areas, destructive actions not explicitly requested, or when sandbox blocks essential steps.
+
+### No Destructive Actions (Hard Policy)
+- Never perform destructive operations unless explicitly requested by the user and approved per the current approval mode.
+- Shell/Git: forbid `rm -rf`, `mv` overwrites, `truncate`, `wipe`, `:> file`, `git reset --hard`, force pushes, history rewrites, mass `find -delete`, or bulk renames without mapping.
+- Filesystem: do not delete, replace, or overwrite entire files or directories. Use `apply_patch` with minimal diffs. Prefer Update over Delete/Move. Renames only on explicit user request.
+- Prompts/docs: do not replace entire prompts; apply surgical edits that preserve structure and scope. Keep changes minimal and reversible.
+- Artifacts under `tasks/PSAP-XXX/qa/`: keep tidy but never remove artifacts/binaries unless asked. Prefer adding new report files over overwriting existing ones.
+- If a destructive path seems necessary, propose a safe alternative or request explicit confirmation with a clear 1‑line justification.
+
+### Validation & Quality
+- If the project builds or has tests, run focused checks around changed areas first, then broaden if needed.
+- Add tests only when it’s the local pattern and helps validate your change; don’t introduce test frameworks where none exist.
+- Formatting: Use repo-configured formatters if present; otherwise prioritize correctness over style churn.
+
+### Ambition vs. Precision
+- New greenfield tasks: be ambitious and helpful.
+- Existing codebases: be surgical—do exactly what’s asked with minimal disruption.
+
+### Progress Updates
+- For longer tasks, provide periodic brief updates (one sentence) describing progress and next immediate action.
+
+### Final Message Structure (for Agent Replies)
+- Section headers: Use only when they improve clarity; 1–3 words in Title Case.
+- Bullets: `- ` prefix, concise, grouped by related points (4–6 items typical).
+- Monospace: Wrap commands/paths/identifiers in backticks.
+- File references: Use clickable inline paths with optional line numbers (e.g., `src/app.ts:42`). No ranges.
+- Structure: General → specific → supporting info; avoid nested bullets.
+- Tone: Collaborative, factual, present tense. No filler or repetition.
+- Don’ts: No ANSI codes, no broken citations, don’t cram unrelated items in single bullets.
+
+### Tooling Guidelines
+- Shell
+  - Prefer `rg` for file and text search; fall back to alternatives if unavailable.
+  - Read files in chunks up to 250 lines to avoid truncation.
+  - Never run destructive commands (`rm -rf`, mass `mv`/overwrite, `truncate`, history rewrites). Default to safe flags (`-n`, `-i`) and propose alternatives first.
+- `update_plan`
+  - Keep exactly one `in_progress` step; mark completed steps promptly.
+- `apply_patch`
+  - Use to add/update/delete files. Provide minimal, focused diffs with 3 lines of context.
+  - Grammar: `*** Begin Patch` … file ops … `*** End Patch`; prefix added lines with `+`, removed with `-`.
+
+### Working With This Repo
+- Respect the "Coding Style & Naming Conventions" and "Testing Guidelines" defined above.
+- For voice agent work: keep prompts in Portuguese with the four-section structure.
+- Store all QA artifacts under `tasks/PSAP-XXX/qa/`. Avoid secrets and large binaries.
+- Use @ pattern in task descriptions to auto-load relevant files
+- Apply concrete examples in prompts instead of abstract descriptions
+- Set appropriate reasoning_effort based on task complexity:
+  - `low`: Simple, well-defined tasks
+  - `medium`: Standard development tasks (default)
+  - `high`: Complex multi-step operations
+
+## Prompt Optimization & Production Tuning
+
+### Instruction Hierarchy
+Resolve contradictions in prompts by establishing clear precedence:
+
+**Voice Agent Priority Chain:**
+```
+1. Safety/Emergency → "Call 911" always overrides
+2. Privacy/Security → Never expose PII or KB sources
+3. Authentication → Verify before sensitive actions
+4. Business Rules → Follow evaluation rubric
+5. User Experience → Optimize for natural conversation
+```
+
+**Conflict Resolution Examples:**
+```markdown
+BAD (Contradictory):
+- "Always verify CPF before proceeding"
+- "For emergency, skip verification"
+→ Unclear which takes precedence
+
+GOOD (Clear Hierarchy):
+<priority_rules>
+1. Emergency: If user mentions "emergência" → direct to 911 immediately
+2. Standard: All other cases → verify CPF first
+Exception: Emergency always overrides verification
+</priority_rules>
+```
+
+### Metaprompting for Voice Agents
+Use agents to optimize their own prompts and identify issues:
+
+**Template for Prompt Optimization:**
+```
+Analyze this voice agent prompt for issues:
+@agents/elevenlabs/digital-account-dale/prompt.md
+
+Context: Agent scores 6/10 on voice quality in PSAP-990
+Problem: Agent reveals KB sources ("segundo a base de conhecimento...")
+
+What minimal edits would prevent KB source exposure while maintaining helpfulness?
+Focus on:
+1. Specific phrases to remove
+2. Alternative phrasing patterns
+3. Reinforcement in <verification> section
+```
+
+**Self-Evaluation Pattern:**
+```markdown
+<self_reflection>
+After each response, internally check:
+1. ❌ Did I mention "KB", "base", "conhecimento"?
+2. ❌ Did I say "conforme seção" or cite sources?
+3. ✅ Did I sound natural and conversational?
+4. ✅ Did I provide helpful information?
+
+If any ❌, regenerate response without those elements
+</self_reflection>
+```
+
+**Iterative Improvement Loop:**
+```bash
+# 1. Run evaluation
+node .genie/cli/agent.js chat evaluator \
+  "Score @tasks/PSAP-990/qa/transcript_raw.txt" \
+  --preset voice-eval
+
+# 2. Extract problem patterns
+grep "deductions" tasks/PSAP-990/qa/report.md | \
+  awk '{print $2}' > issues.txt
+
+# 3. Generate fixes
+node .genie/cli/agent.js chat evaluator \
+  "Fix issues in @issues.txt for @agents/elevenlabs/digital-account-dale/prompt.md"
+
+# 4. Test and iterate
+```
+
+### Voice Agent Enhanced Structure
+Comprehensive prompt structure optimized for 11Labs voice conversations:
+
+```markdown
+<identity_awareness>
+# Role: Assistente virtual Pagbank
+# Context files to auto-load:
+@agents/elevenlabs/digital-account-dale/prompt.md - Production prompt
+@tasks/PSAP-*/qa/metrics_sample.json - Performance baseline
+
+# Voice optimization settings:
+- Response length: 1-2 sentences preferred
+- Interruption handling: Allow user to cut off
+- Filler phrases: Use naturally ("então", "certo", "entendi")
+</identity_awareness>
+
+<discovery>
+# Context gathering (reasoning_effort: medium)
+<context_gathering>
+- Parse user intent in < 500ms
+- Check KB sections in parallel
+- Cache frequent queries
+</context_gathering>
+
+# Success boundaries:
+✅ TTFB < 1500ms consistently
+✅ Natural conversation flow
+❌ Never cite KB sources
+❌ No robotic responses
+</discovery>
+
+<implementation>
+# Concrete response patterns:
+
+## Para saldo/extrato:
+"Seu saldo atual é [valor]. Posso ajudar com mais alguma coisa?"
+NOT: "Conforme nossa base, seu saldo é [valor]"
+
+## Para problemas técnicos:
+"Entendi a situação. Vou verificar isso agora mesmo."
+NOT: "Segundo o procedimento 4.3.2..."
+
+# Decomposition for complex queries:
+1. Acknowledge → "Certo, entendi que você..."
+2. Process → [silent KB lookup]
+3. Respond → "Consegui resolver! Agora..."
+</implementation>
+
+<verification>
+# Real-time checks:
+- Response time: log_ttfb() after each turn
+- Confidence: abort if ASR < 0.6
+- KB leakage: regex_check(/base|conhecimento|KB/)
+
+# Post-conversation:
+- Score via @.genie/agents/evaluator.md
+- Log to tasks/PSAP-XXX/qa/metrics.json
+- Flag issues for prompt iteration
+</verification>
+```
+
+### Production Tuning Insights
+
+**Verbosity Optimization (Cursor Pattern):**
+```yaml
+# API parameter for concise status updates
+verbosity: low
+
+# Prompt override for detailed code/prompts
+<code_writing>
+Use high verbosity for:
+- Prompt sections in Portuguese
+- KB entry additions
+- Evaluation scoring logic
+</code_writing>
+```
+
+**Avoiding Over-Exploration:**
+```markdown
+BAD (Causes excessive tool use):
+<maximize_context_understanding>
+Be THOROUGH when gathering information.
+Make sure you have the FULL picture.
+</maximize_context_understanding>
+
+GOOD (Balanced approach):
+<context_understanding>
+Gather sufficient context for the task.
+Stop searching when you can identify the solution.
+Bias toward action over endless exploration.
+</context_understanding>
+```
+
+**Autonomy vs Guidance Balance:**
+```
+<agent_behavior>
+Proactive actions allowed:
+- Update prompts when scores < 70
+- Add missing KB entries found in transcripts
+- Generate evaluation reports automatically
+
+Require confirmation for:
+- Deploying to production (version bump)
+- Deleting PSAP artifacts
+- Modifying evaluation weights
+</agent_behavior>
+```
+
+### Production Agent Checklist
+Comprehensive validation before deploying voice agents:
+
+**Prompt Quality:**
+- ✅ No contradictory instructions (test with conflict scenarios)
+- ✅ Clear instruction hierarchy (emergency > privacy > business)
+- ✅ Concrete examples in Portuguese for all scenarios
+- ✅ @ pattern implemented for auto-context loading
+- ✅ Success/failure boundaries with measurable criteria
+
+**Performance Configuration:**
+- ✅ reasoning_effort appropriate for task complexity
+- ✅ Tool preambles configured for progress tracking
+- ✅ Context gathering optimized (parallel searches, early stop)
+- ✅ Verbosity balanced (low global, high for code)
+
+**Voice-Specific:**
+- ✅ TTFB target < 1500ms validated
+- ✅ ASR confidence threshold set (> 0.8)
+- ✅ TTS artifacts handling implemented
+- ✅ Interruption handling configured
+- ✅ Natural filler phrases included
+
+**Security & Compliance:**
+- ✅ KB source masking verified
+- ✅ PII protection implemented
+- ✅ API keys in environment variables
+- ✅ Version tracking updated
+- ✅ Evaluation rubric compliance tested
+
+**Testing & Monitoring:**
+- ✅ PSAP test scenarios pass (≥ 80/100)
+- ✅ Metrics logging to tasks/PSAP-XXX/qa/
+- ✅ Error recovery patterns tested
+- ✅ Rollback procedure documented
+- ✅ A/B test configuration ready
+
+## Common Workflows & Patterns
+
+### PSAP Task Workflow
+```bash
+# 1. Fetch conversation from 11Labs
+export ELEVENLABS_API_KEY="your_key"
+curl -sS https://api.elevenlabs.io/v1/convai/conversations/$CONV_ID \
+  -H "xi-api-key: $ELEVENLABS_API_KEY" \
+  -o tasks/PSAP-XXX/qa/conversation.json
+
+# 2. Extract and prepare
+jq -r '.transcript' tasks/PSAP-XXX/qa/conversation.json > tasks/PSAP-XXX/qa/transcript_raw.txt
+
+# 3. Evaluate with framework patterns
+node .genie/cli/agent.js chat evaluator \
+  "@tasks/PSAP-XXX/qa/transcript_raw.txt @.genie/agents/evaluator.md" \
+  --preset voice-eval \
+  -c codex.exec.reasoning_effort='"high"'
+
+# 4. Iterate on prompts
+node .genie/cli/agent.js chat evaluator \
+"Apply fixes from @tasks/PSAP-XXX/qa/report.md to @agents/elevenlabs/digital-account-dale/prompt.md" \
+  -c codex.exec.reasoning_effort='"medium"'
+```
+
+### Prompt Version Management
+```json
+// agents/elevenlabs/<slug>/knowledge_base/*
+{
+  "versions": [
+    {
+      "version": "1.0.0",
+      "date": "2024-01-15",
+      "changes": ["Initial release"],
+      "metrics": {"avg_score": 75}
+    },
+    {
+      "version": "1.1.0",
+      "date": "2024-01-20",
+      "changes": [
+        "Added @ pattern for context loading",
+        "Fixed KB source leakage",
+        "Enhanced error handling"
+      ],
+      "metrics": {"avg_score": 85, "ttfb_improvement": "-20%"}
+    }
+  ]
+}
+```
+
+### Evaluation Report Template
+```markdown
+# PSAP-XXX Evaluation Report
+
+## Summary
+- **Overall Score**: 82/100
+- **Date**: 2024-01-20
+- **Agent Version**: digital-account-dale (imported)
+
+## Detailed Scoring
+
+### Rules Adherence (32/40)
+✅ Line 12: Correctly verified CPF
+✅ Line 34: Followed authentication protocol
+❌ Line 67: Revealed KB source (-8 points)
+
+### Voice Quality (20/25)
+- TTFB Average: 1,234ms (✅ < 1500ms)
+- ASR Confidence: 0.87 (✅ > 0.8)
+- TTS Issues: Minor artifacts at line 89 (-5 points)
+
+### Technical Performance (17/20)
+- Response accuracy: 9/10
+- Error handling: 8/10
+
+### Conversation Flow (13/15)
+- Natural progression: 7/8
+- Context retention: 6/7
+
+## Recommendations
+1. Implement KB source masking pattern from framework
+2. Add retry logic for low ASR confidence turns
+3. Optimize first response for lower TTFB
+
+## Next Steps
+- [ ] Update prompt with masking patterns
+- [ ] Test with PSAP-XXX+1 scenario
+- [ ] Deploy to staging for A/B test
+```
