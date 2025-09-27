@@ -5,6 +5,7 @@
 - Current source of truth: `.agent-os/product/mission.md`, `.agent-os/product/mission-lite.md`, `.agent-os/product/tech-stack.md`, `.agent-os/product/roadmap.md`, and `research.md`.
 - External dependencies: ElevenLabs TTS (Flash v2.5; v3 alpha optional), Groq Whisper‑large‑v3‑turbo STT, local WhisperX/faster‑whisper fallback. Set `ELEVENLABS_API_KEY` and `GROQ_API_KEY`.
 - Optional orchestration: Genie CLI integration if present (`.genie/`), otherwise use shell scripts and Rust binaries.
+ - Environment variables: documented in `.agent-os/product/environment.md`.
 
 ## Mandatory Prompting Standards (.claude/commands/prompt.md)
 - Always structure prompts using Discovery → Implementation → Verification and keep these sections explicit.
@@ -72,6 +73,62 @@ Notes:
 - Real‑time pipeline: raw WebSocket control to ElevenLabs TTS (Flash v2.5; v3 alpha opt‑in), streaming STT (Groq primary; WhisperX/faster‑whisper local fallback).
 - Turn‑taking: VAD + heuristics baseline; optional ASD/diarization (pyannote, etc.) for overlap and crosstalk policies.
 - Experiment harness: strategy modules for prosody/backchannels/overlap policies, A/B evaluation, and per‑turn metrics (TTFB, ASR conf., artifacts).
+ - Agents WS compatibility: mirror ElevenLabs Agents WebSocket handshake/events for easier interop and tooling.
+ - Connection management: warm, reusable WS connections; avoid per‑turn handshakes; enable multi‑context streams for overlap experiments.
+
+## Research‑Driven Defaults & Tradeoffs
+- Hot path transport: Prefer raw WebSockets over SDKs for precise partials, `flush`, and chunk scheduling. SDKs OK for management (CRUD, lists).
+- TTS choice: Default ElevenLabs Flash v2.5 (fastest TTFB ~75ms). Use Turbo v2.5 for higher fidelity. Gate v3 alpha behind `EXPERIMENTAL_TTS_V3=1`.
+- STT choice: Primary Groq Whisper‑large‑v3‑turbo (low latency, cost‑efficient). Local fallback via WhisperX or faster‑whisper (quantized allowed).
+- Region pinning: Fix provider regions to cut round‑trips; colocate where possible.
+- Fallbacks: Local STT/TTS options for offline/edge (see matrix below) with graceful degradation.
+
+## Latency Tuning Playbook
+- Keep TTFB budget < 900ms (P99 < 1200ms):
+  - Reuse WS connections; pre‑warm TTS; send partial text and `flush` early.
+  - Use 120–200ms audio chunks; partial flush window ≤ 120ms.
+  - Choose fast voices/models (Flash v2.5); pin regions; avoid cold starts.
+- Measure continuously:
+  - Log per‑turn `ttfb_ms`, `ttsa_artifacts`, `asr_confidence`.
+  - Track overlap collisions and cancel‑tail latency (target < 80ms).
+- Diagnose:
+  - If TTFB spikes: check cold starts, network RTT, model selection, chunk sizes.
+  - If artifacts rise: reduce chunk rate or switch voice/model; verify audio worklet timing.
+
+## Turn‑Taking & Overlap Policies
+- Baseline: VAD + heuristics (300–500ms silence) to mark turn‑end; allow barge‑in anytime.
+- ASD/Diarization: Evaluate pyannote for crosstalk; consider small ONNX turn‑end classifier.
+- Strategy ideas:
+  - half_duplex (safe), rapid_duplex (fast overlaps), overlap_aware (cancel/resume with micro‑pauses).
+  - Backchannels: insert subtle acknowledgements every 2–4s to improve naturalness.
+
+## Model & Fallback Matrix
+- TTS primary: ElevenLabs Flash v2.5 (WS stream‑input); Turbo v2.5 optional.
+- TTS experimental: ElevenLabs v3 alpha multi‑context (explicit opt‑in; not recommended by vendor for real‑time agents).
+- TTS local (experimental): VibeVoice (1.5B/7B, quantizable); ResembleAI Chatterbox (multilingual, watermarking).
+- STT primary: Groq Whisper‑large‑v3‑turbo (streaming; billed min 10s).
+- STT local: whisper.cpp / whisper‑rs (preloaded) or faster‑whisper; use quantized for edge.
+
+## Experiment Themes & IDs
+- Use `experiments/AH-XXX/qa/` with concise names and a README per experiment.
+- Suggested first set:
+  - `AH-001` — Baseline speak‑back (Flash v2.5, VAD heuristics)
+  - `AH-002` — Rapid duplex overlap (partial flush tuning)
+  - `AH-003` — Pyannote diarization for crosstalk
+  - `AH-004` — v3 alpha multi‑context TTS (experimental flag)
+  - `AH-005` — Chunk size & region pinning ablation
+  - `AH-006` — Local STT fallback behavior (WhisperX/faster‑whisper)
+
+## Provider Docs & References
+- ElevenLabs TTS WebSocket (stream‑input) and multi‑context
+- ElevenLabs Agents WebSocket (handshake + event schema)
+- ElevenLabs Latency Optimization (Flash/Turbo, streaming, pinning)
+- Real‑time generation overview (WS basics)
+- Groq pricing/performance for Whisper‑large‑v3‑turbo
+- Pyannote VAD/diarization, VibeVoice/Chatterbox for local TTS
+
+## Diagrams
+- Architecture and turn sequence diagrams are tracked in research; add updated images under `docs/diagrams/` when available.
 
 ## Testing & Evaluation Guidelines
 - Primary goals:
