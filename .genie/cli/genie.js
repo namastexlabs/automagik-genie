@@ -131,6 +131,9 @@ function main() {
       case 'continue':
         runContinue(parsed, config, paths);
         break;
+      case 'view':
+        runView(parsed, config, paths);
+        break;
       case 'runs':
         runRuns(parsed, config, paths);
         break;
@@ -169,7 +172,9 @@ function parseArguments(argv) {
     json: false,
     style: 'compact',
     status: null,
-    stop: null
+    stop: null,
+    follow: false,
+    lines: 60
   };
 
   const filtered = [];
@@ -225,6 +230,17 @@ function parseArguments(argv) {
     if (token === '--stop') {
       if (i + 1 >= raw.length) throw new Error('Missing value for --stop');
       options.stop = raw[++i];
+      continue;
+    }
+    if (token === '--follow') {
+      options.follow = true;
+      continue;
+    }
+    if (token === '--lines') {
+      if (i + 1 >= raw.length) throw new Error('Missing value for --lines');
+      const n = parseInt(raw[++i], 10);
+      if (!Number.isFinite(n) || n <= 0) throw new Error('Invalid --lines value');
+      options.lines = n;
       continue;
     }
     filtered.push(token);
@@ -697,7 +713,7 @@ function runRuns(parsed, config, paths) {
     console.log('No runs found. Start one with: genie run <agent> "<prompt>" or genie mode <mode> "<prompt>"');
     return;
   }
-  const header = `\nRuns:\n  ${pad('ID', 18)} ${pad('Status', 12)} ${pad('Session ID', 36)} ${pad('Last Used', 22)} Log`;
+  const header = `\nRuns:\n  ${pad('ID', 18)} ${pad('Status', 12)} ${pad('Session ID', 36)} ${pad('Last Used', 20)} Log`;
   console.log(header);
   data.forEach(r => {
     const id = r.agent;
@@ -705,10 +721,77 @@ function runRuns(parsed, config, paths) {
     const sid = r.sessionId || 'n/a';
     const when = r.lastUsed ? new Date(r.lastUsed).toLocaleString() : 'n/a';
     const logRel = r.log ? formatPathRelative(r.log, paths.baseDir) : 'n/a';
-    console.log(`  ${pad(id, 18)} ${pad(status, 12)} ${pad(sid, 36)} ${pad(when, 22)} ${logRel}`);
-    if (r.log) console.log(`    View:   tail -f ${logRel}`);
-    if (r.sessionId) console.log(`    Resume: genie continue ${r.sessionId} "<follow-up prompt>"`);
+    console.log(`  ${pad(id, 18)} ${pad(status, 12)} ${pad(sid, 36)} ${pad(when, 20)} ${logRel}`);
   });
+  console.log(`\nUse: genie view <id|sessionId> [--follow]   •   Resume: genie continue <sessionId> "<prompt>"`);
+}
+
+function runView(parsed, config, paths) {
+  const [target] = parsed.commandArgs;
+  if (!target) {
+    console.log('Usage: genie view <id|sessionId> [--follow] [--lines N]');
+    return;
+  }
+  const store = loadSessions(paths);
+  const entry = resolveEntryByIdOrSession(store, target);
+  if (!entry) {
+    console.error(`❌ No run found matching '${target}'`);
+    return;
+  }
+  const logFile = entry.logFile;
+  if (!logFile || !fs.existsSync(logFile)) {
+    console.error('❌ Log not found for this run');
+    return;
+  }
+  if (parsed.options.follow) {
+    // Fallback to tail -f for live view
+    const tail = spawn('tail', ['-n', String(parsed.options.lines || 60), '-f', logFile], { stdio: 'inherit' });
+    tail.on('error', (e) => console.error('❌ Failed to tail log:', e.message));
+    return;
+  }
+  // Friendly parse
+  const content = fs.readFileSync(logFile, 'utf8');
+  const lines = content.split(/\r?\n/);
+  const lastN = (parsed.options.lines && parsed.options.lines > 0) ? parsed.options.lines : 60;
+  const tailLines = lines.slice(-lastN);
+  // Extract last User instructions block
+  let lastInstructionsIdx = -1;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (lines[i].includes('User instructions:')) { lastInstructionsIdx = i; break; }
+  }
+  let instructions = [];
+  if (lastInstructionsIdx !== -1) {
+    const start = lastInstructionsIdx;
+    const acc = [];
+    for (let i = start; i < Math.min(lines.length, start + 20); i++) {
+      acc.push(lines[i]);
+      // Heuristic: stop when we hit a blank line after instructions
+      if (i > start && lines[i].trim() === '') break;
+    }
+    instructions = acc;
+  }
+  // Extract recent errors
+  const errorLines = lines.filter(l => /\bERROR\b|\bError:\b|\bFailed\b/i.test(l)).slice(-10);
+  // Output
+  console.log(`\nView: ${entry.agent} | session:${entry.sessionId || 'n/a'} | log:${formatPathRelative(logFile, paths.baseDir)}`);
+  if (instructions.length) {
+    console.log('\nLast Instructions:');
+    instructions.forEach(l => console.log('  ' + l));
+  }
+  if (errorLines.length) {
+    console.log('\nRecent Errors:');
+    errorLines.forEach(l => console.log('  ' + l));
+  }
+  console.log(`\nTail (${lastN} lines):`);
+  tailLines.forEach(l => console.log('  ' + l));
+}
+
+function resolveEntryByIdOrSession(store, target) {
+  if (store.agents[target]) return store.agents[target];
+  for (const data of Object.values(store.agents || {})) {
+    if (data && data.sessionId === target) return data;
+  }
+  return null;
 }
 
 function resolveDisplayStatus(entry) {
@@ -777,6 +860,7 @@ function runHelp(config, paths) {
     { cmd: 'run', args: '<agent> "<prompt>"', desc: 'Start a run (background default)' },
     { cmd: 'mode', args: '<genie-mode> "<prompt>"', desc: 'Run a Genie Mode (maps to genie-<mode>)' },
     { cmd: 'continue', args: '<sessionId> "<prompt>"', desc: 'Continue run by session id' },
+    { cmd: 'view', args: '<id|sessionId> [--follow] [--lines N]', desc: 'View run output (friendly); live follow with --follow' },
     { cmd: 'runs', args: '[--status <s>] [--json]', desc: 'List runs with status; manage background tasks' },
     { cmd: 'list', args: '', desc: 'Show active/completed sessions' },
     { cmd: 'clear', args: '<agent>', desc: 'Clear a stopped/completed session' },
@@ -825,7 +909,8 @@ function runHelp(config, paths) {
     'genie mode planner "[Discovery] @vendors/... [Implementation] … [Verification] …"',
     'genie run forge-coder "[Discovery] @files … [Implementation] … [Verification] …"',
     'genie continue <sessionId> "Follow-up: refine branch B"',
-    'genie runs --status running'
+    'genie runs --status running',
+    'genie view <id|sessionId> --follow'
   ].map(e => `  ${e}`).join('\n');
 
   console.log(`${hdr}\n\n${usage}\n${bg}\n\nCommands:\n${commandsBlock}\n\nGlobal Options:\n${globalOpts}\n\nRuns Options:\n${runsOpts}\n\nConfig & Paths:\n  ${pad('Config:', cmdW + argW)} ${CONFIG_PATH}\n  ${pad('Logs:', cmdW + argW)} ${formatPathRelative(paths.logsDir, paths.baseDir)}\n\nPresets:\n${presetsBlock || '  (none)'}\n\nPrompt Skeleton:\n  ${promptSkeleton}\n\nExamples:\n${examples}`);
