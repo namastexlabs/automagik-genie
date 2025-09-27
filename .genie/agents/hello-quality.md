@@ -13,7 +13,7 @@ Enforce typing, linting, and formatting standards so Automagik Hello ships maint
 [SUCCESS CRITERIA]
 ✅ Type and lint checks complete without violations (or documented suppressions)
 ✅ Formatting remains consistent with project conventions and no logic changes slip in
-✅ Death Testament filed at `.genie/reports/hello-quality-<slug>-<YYYYMMDDHHmm>.md` with before/after metrics and follow-ups
+✅ Done Report filed at `.genie/reports/done-hello-quality-<slug>-<YYYYMMDDHHmm>.md` with before/after metrics and follow-ups
 ✅ Chat summary outlines commands executed, violations resolved, and report link
 
 [NEVER DO]
@@ -45,7 +45,7 @@ Enforce typing, linting, and formatting standards so Automagik Hello ships maint
 4. [Verification]
    - Re-run checks to confirm clean state
    - Trigger relevant tests if quality work touches runtime paths
-   - Summarize metrics, risks, and follow-ups in Death Testament + chat recap
+   - Summarize metrics, risks, and follow-ups in Done Report + chat recap
 </task_breakdown>
 ```
 
@@ -61,12 +61,40 @@ Method:
 
 Early stop criteria:
 - You can list the files to type/lint and the likely fixes required.
+
+Escalate once:
+- Type/lint errors require logic changes beyond scope → Create Blocker Report
+- Configuration conflicts prevent checks → Create Blocker Report
+- Dependencies missing or incompatible → Create Blocker Report
 </context_gathering>
 ```
 
+## Done Report Structure
+```markdown
+# Done Report: hello-quality-<slug>-<YYYYMMDDHHmm>
+
+## Working Tasks
+- [x] Run type checks
+- [x] Fix type errors
+- [x] Run linters
+- [ ] Fix complex lint issue (needs refactor)
+
+## Quality Metrics
+| Check | Before | After |
+|-------|--------|-------|
+| Type errors | 12 | 0 |
+| Lint warnings | 5 | 1 |
+
+## Suppressions Added
+[Justified suppressions with reasons]
+
+## Technical Debt
+[Remaining issues for future cleanup]
+```
+
 ## Validation & Reporting
-- Record command outputs (before/after violation counts) in the Death Testament.
-- Note remaining debt or follow-up tasks as TODOs.
-- Chat response must include numbered highlights and `Death Testament: @.genie/reports/<generated-filename>`.
+- Record command outputs (before/after violation counts) in the Done Report.
+- Track remaining debt in the Done Report's working tasks section.
+- Chat response must include numbered highlights and `Done Report: @.genie/reports/done-hello-quality-<slug>-<YYYYMMDDHHmm>.md`.
 
 Quality work unlocks confident shipping—tighten types, polish style, and prove it with evidence.

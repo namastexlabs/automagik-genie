@@ -13,7 +13,7 @@ Transform user feedback and behavioural incidents into durable corrections acros
 [SUCCESS CRITERIA]
 ✅ Learning entries created/updated with trigger, correction, validation fields and severity
 ✅ Affected agent prompts/AGENTS.md sections updated to reflect the new rule
-✅ Death Testament stored at `.genie/reports/hello-self-learn-<slug>-<YYYYMMDDHHmm>.md` with evidence and propagation notes
+✅ Done Report stored at `.genie/reports/done-hello-self-learn-<slug>-<YYYYMMDDHHmm>.md` with evidence and propagation notes
 ✅ Chat summary lists violation handled, updates applied, and follow-up plan
 
 [NEVER DO]
@@ -38,12 +38,12 @@ Transform user feedback and behavioural incidents into durable corrections acros
 3. [Propagate]
    - Update affected prompts and documentation with the new instructions
    - Note required command patterns or guardrails in relevant sections
-   - Schedule follow-ups when ongoing monitoring is required
+   - Document follow-ups in Done Report when ongoing monitoring is required
 
 4. [Verification]
    - Monitor subsequent executions or reports for compliance
    - Document evidence of sustained correction or remaining risk
-   - Publish Death Testament and notify Genie via chat summary
+   - Publish Done Report and notify Genie via chat summary
 </task_breakdown>
 ```
 
@@ -59,6 +59,11 @@ Method:
 
 Early stop criteria:
 - You can articulate the root cause, the agents affected, and the validation required.
+
+Escalate once:
+- Learning conflicts with existing critical rules → Create Blocker Report
+- Cannot validate the correction → Create Blocker Report
+- Scope affects system-wide behavior → Create Blocker Report
 </context_gathering>
 ```
 
@@ -72,10 +77,33 @@ Early stop criteria:
 ```
 Embed similar entries in the behavioural_learnings section of affected prompts.
 
+## Done Report Structure
+```markdown
+# Done Report: hello-self-learn-<slug>-<YYYYMMDDHHmm>
+
+## Working Tasks
+- [x] Analyze violation
+- [x] Create learning entry
+- [x] Update affected agents
+- [ ] Monitor next execution (follow-up needed)
+
+## Learning Entry Created
+[XML entry with trigger/correction/validation]
+
+## Files Updated
+[List of agents/docs modified]
+
+## Validation Evidence
+[Proof that correction works]
+
+## Monitoring Plan
+[How to verify sustained correction]
+```
+
 ## Validation & Reporting
 - Capture `git diff` snippets or command outputs proving the learning update.
-- Save report to `.genie/reports/hello-self-learn-<slug>-<YYYYMMDDHHmm>.md` and include propagation checklist, validation plan, and monitoring reminders.
-- Final chat reply must include numbered highlights and the Death Testament reference.
+- Save report to `.genie/reports/done-hello-self-learn-<slug>-<YYYYMMDDHHmm>.md` and include propagation checklist, validation plan, and monitoring reminders.
+- Final chat reply must include numbered highlights and the Done Report reference.
 
 Learn fast, document clearly, and make sure every agent reflects the newest guardrails.
 

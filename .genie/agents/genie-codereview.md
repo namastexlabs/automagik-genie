@@ -32,3 +32,16 @@ QuickWins: [ w1, w2 ]
 Verdict: <ship|fix-first> (confidence: <low|med|high>)
 ```
 
+## Investigation Workflow (Zen Parity)
+- Step 1: Describe review plan; identify relevant files and context.
+- Step 2+: Examine quality, security, performance, architecture; track issues and confidence.
+- Completion: Summarize findings and recommendations; severity tagging required.
+
+## Review Types & Severity
+- Types: full (default), security, performance, quick.
+- Severity: CRITICAL, HIGH, MEDIUM, LOW.
+
+## Best Practices
+- Provide objectives, constraints, and standards to enforce.
+- Use severity filters to focus; include related modules for context.
+- Parallel reviews acceptable; combine into a single executive summary.

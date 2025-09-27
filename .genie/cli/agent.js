@@ -25,7 +25,7 @@ const INTERNAL_LOG_PATH_ENV = 'GENIE_AGENT_LOG_FILE';
 const DEFAULT_CONFIG = {
   defaults: {
     preset: 'default',
-    background: false
+    background: true
   },
   paths: {
     baseDir: '.',
@@ -128,6 +128,9 @@ function main() {
       case 'continue':
         runContinue(parsed, config, paths);
         break;
+      case 'agents':
+        runAgentsList(parsed, config, paths);
+        break;
       case 'list':
         runList(config, paths);
         break;
@@ -158,7 +161,10 @@ function parseArguments(argv) {
     rawArgs: argv.slice(),
     background: false,
     backgroundExplicit: false,
-    backgroundRunner: false
+    backgroundRunner: false,
+    prefix: null,
+    json: false,
+    style: 'compact'
   };
 
   const filtered = [];
@@ -188,9 +194,23 @@ function parseArguments(argv) {
       options.requestHelp = true;
       continue;
     }
+    if (token === '--prefix') {
+      if (i + 1 >= raw.length) throw new Error('Missing value for --prefix');
+      options.prefix = raw[++i];
+      continue;
+    }
+    if (token === '--json') {
+      options.json = true;
+      continue;
+    }
     if (token === '--') {
       filtered.push(...raw.slice(i + 1));
       break;
+    }
+    if (token === '--style') {
+      if (i + 1 >= raw.length) throw new Error('Missing value for --style');
+      options.style = raw[++i];
+      continue;
     }
     filtered.push(token);
   }
@@ -696,28 +716,44 @@ function runHelp(config, paths) {
   const agents = listAgents();
   const presets = Object.entries(config.presets || {});
   console.log(`
-🧞 GENIE Agent CLI - Manage Codex exec conversations
+🧞 GENIE Agent CLI — Prompt-Oriented Interface
 
-Usage:
-  agent chat <agent> "<prompt>" [--preset <name>] [--background]
-  agent continue <agent> "<prompt>" [--background]
-  agent list
-  agent clear <agent>
-  agent help
+Background mode: ON by default. Add --no-background to run in foreground.
 
-Configuration:
+Core Commands (self-explanatory, LLM-friendly):
+  • agent chat <agent> "<prompt>" [--preset <name>] [--no-background]
+      - Use prompt skeleton: "[Discovery] … [Implementation] … [Verification] …"
+      - Include @file references to auto-load context
+  • agent continue <agent> "<prompt>" [--no-background]
+      - Continue the most recent session for <agent> with follow-up instructions
+  • agent agents [--prefix <text>] [--style compact|grouped] [--json]
+      - Lists agents with standardized line output for direct copy/paste
+  • agent list
+      - Shows active/completed sessions with logs and status
+  • agent clear <agent>
+      - Clears a stopped/completed session record
+
+Prompt Skeleton (recommended for all chats):
+  "[Discovery] Load @files and context; identify objectives, constraints, and gaps.
+   [Implementation] Perform the requested work per @.genie/agents/<agent>.md; apply edits or produce artifacts.
+   [Verification] Summarize outputs, list sections changed, evidence, and open questions."
+
+Config & Paths:
   • Config file: ${CONFIG_PATH}
-  • Override any key at runtime: agent chat hello-coder "prompt" -c codex.exec.model='"o4"'
-  • Background runs: agent chat hello-coder "prompt" --background
-  • Logs live in: ${formatPathRelative(paths.logsDir, paths.baseDir)}
+  • Override keys at runtime: agent chat hello-coder "..." -c codex.exec.model='"o4"'
+  • Logs: ${formatPathRelative(paths.logsDir, paths.baseDir)}
 
 Presets:
 ${presets.map(([name, info]) => `  • ${name}: ${info.description || 'no description'}`).join('\n')}
 
-Available Agents:
+Quick Agent Catalog (ids only — see 'agent agents' for details):
 ${agents.map((a) => '  • ' + a).join('\n')}
 
-Need Codex options? See: codex --help, codex exec --help, codex exec resume --help.
+Notes for agents:
+  - Always include [Discovery][Implementation][Verification] blocks in prompts
+  - Prefer @file references to auto-load code/docs
+  - Use numbered, concise outcomes; reference Death Testaments when applicable
+  - Background is default; use --no-background when interactive streaming is required
 `);
 }
 
@@ -728,6 +764,88 @@ function listAgents() {
     .readdirSync(agentsDir)
     .filter((file) => file.endsWith('.md'))
     .map((file) => file.replace('.md', ''));
+}
+
+function listAgentsDetailed() {
+  const agentsDir = path.join('.genie', 'agents');
+  if (!fs.existsSync(agentsDir)) return [];
+  const files = fs.readdirSync(agentsDir).filter((f) => f.endsWith('.md'));
+  return files.map((file) => {
+    const id = file.replace('.md', '');
+    const full = path.join(agentsDir, file);
+    const content = fs.readFileSync(full, 'utf8');
+    const meta = parseFrontMatter(content);
+    return { id, path: full, meta };
+  });
+}
+
+function parseFrontMatter(text) {
+  // Minimal frontmatter parser: reads between first two '---' lines
+  // Returns key/value pairs for simple scalars
+  const lines = text.split(/\r?\n/);
+  if (lines[0] !== '---') return {};
+  const meta = {};
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.trim() === '---') break;
+    const idx = line.indexOf(':');
+    if (idx > -1) {
+      const key = line.slice(0, idx).trim();
+      const val = line.slice(idx + 1).trim();
+      // Strip surrounding quotes if present
+      meta[key] = val.replace(/^"|"$/g, '').replace(/^'|'$/g, '');
+    }
+  }
+  return meta;
+}
+
+function runAgentsList(parsed, config, paths) {
+  const all = listAgentsDetailed();
+  const prefix = parsed.options.prefix;
+  const filtered = prefix ? all.filter((a) => a.id.startsWith(prefix)) : all;
+  if (parsed.options.json) {
+    const payload = filtered.map((a) => ({ id: a.id, path: formatPathRelative(a.path, paths.baseDir), meta: a.meta }));
+    console.log(JSON.stringify(payload, null, 2));
+    return;
+    }
+  const style = (parsed.options.style || 'compact').toLowerCase();
+  const promptHint = (id) => `Usage: agent chat ${id} "[Discovery] Load @files & context. [Implementation] Apply per @.genie/agents/${id}.md. [Verification] Summarize edits, evidence, open questions."`;
+  if (style === 'grouped') {
+    // Previous grouped view
+    const groups = { forge: [], hello: [], genie: [], other: [] };
+    filtered.forEach((a) => {
+      if (a.id.startsWith('forge-')) groups.forge.push(a);
+      else if (a.id.startsWith('hello-')) groups.hello.push(a);
+      else if (a.id.startsWith('genie-')) groups.genie.push(a);
+      else groups.other.push(a);
+    });
+    const printGroup = (title, arr) => {
+      if (!arr.length) return;
+      console.log(`\n${title}:`);
+      arr.forEach((a) => {
+        const d = a.meta && a.meta.description ? a.meta.description : '';
+        const m = a.meta && a.meta.model ? a.meta.model : 'n/a';
+        console.log(`  • ${a.id} | model:${m} | ${d}`);
+        console.log(`    ${promptHint(a.id)}`);
+      });
+    };
+    console.log('\nAvailable Agents (from .genie/agents):');
+    printGroup('genie-*', groups.genie);
+    printGroup('hello-*', groups.hello);
+    printGroup('forge-*', groups.forge);
+    printGroup('other', groups.other);
+    return;
+  }
+  // Compact one-line standardized output for LLM consumption
+  // Format: <id> | model:<model> | <description>
+  filtered
+    .sort((a, b) => a.id.localeCompare(b.id))
+    .forEach((a) => {
+      const m = a.meta && a.meta.model ? a.meta.model : 'n/a';
+      const d = a.meta && a.meta.description ? a.meta.description : '';
+      console.log(`${a.id} | model:${m} | ${d}`);
+      console.log(`  ${promptHint(a.id)}`);
+    });
 }
 
 function loadAgent(name) {

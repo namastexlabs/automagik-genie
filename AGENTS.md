@@ -106,6 +106,15 @@ Routing keys map to agent files. Keep this updated as new agents are added.
 - task-master → `.genie/agents/forge-master.md`
 - planner → `.genie/agents/forge-master.md`
 - twin → `.genie/agents/genie-twin.md`
+ - planner-agent → `.genie/agents/genie-planner.md`
+ - consensus-agent → `.genie/agents/genie-consensus.md`
+ - debug-agent → `.genie/agents/genie-debug.md`
+ - analyze-agent → `.genie/agents/genie-analyze.md`
+ - refactor-agent → `.genie/agents/genie-refactor.md`
+ - docgen-agent → `.genie/agents/genie-docgen.md`
+ - thinkdeep-agent → `.genie/agents/genie-thinkdeep.md`
+ - tracer-agent → `.genie/agents/genie-tracer.md`
+ - challenge-agent → `.genie/agents/genie-challenge.md`
  - codereview → `.genie/agents/genie-codereview.md`
  - precommit → `.genie/agents/genie-precommit.md`
  - testgen → `.genie/agents/genie-testgen.md`
@@ -350,7 +359,7 @@ confidence: <low|med|high>
 ```
 mode: debug
 symptoms: <short>
-hypotheses: [h1, h2, h3]
+hypotheses: [ {name, confidence, evidence, minimal_fix, regression_check} ]
 experiments: [exp1, exp2]
 most_likely_cause: <h?>
 verdict: <fix direction>
@@ -427,6 +436,20 @@ confidence: <low|med|high>
 - Spawning Twin repeatedly without integrating prior outcomes.
 - Treating Twin outputs as implementation orders without validation.
 </twin_integration_framework>
+
+<twin_missing_context_protocol>
+[CONTEXT]
+- When critical technical context is missing (files, specs), provide a Files Needed block instead of speculative output.
+
+### Files Needed (use when necessary)
+```
+status: files_required_to_continue
+mandatory_instructions: <what is needed and why>
+files_needed: [ path/or/folder, ... ]
+```
+
+Use only for technical implementation gaps, not for business/strategy questions.
+</twin_missing_context_protocol>
 
 <parallel_execution_framework>
 [CONTEXT]

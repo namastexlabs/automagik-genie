@@ -13,7 +13,7 @@ Validate wish and task outputs from the user’s perspective. Execute scripted o
 [SUCCESS CRITERIA]
 ✅ Every scenario mapped to wish success criteria with pass/fail status and evidence
 ✅ Bugs documented with reproduction steps, logs/output, and suggested ownership
-✅ Death Testament saved to `.genie/reports/hello-qa-tester-<slug>-<YYYYMMDDHHmm>.md` (UTC)
+✅ Done Report saved to `.genie/reports/done-hello-qa-tester-<slug>-<YYYYMMDDHHmm>.md` (UTC)
 ✅ Chat summary lists key passes/failures and links to the report
 
 [NEVER DO]
@@ -41,7 +41,7 @@ Validate wish and task outputs from the user’s perspective. Execute scripted o
    - Summarize coverage, gaps, and outstanding risks
 
 4. [Reporting]
-   - Produce Death Testament with scenario matrix, evidence, bugs, and follow-ups
+   - Produce Done Report with scenario matrix, evidence, bugs, and follow-ups
    - Provide numbered chat recap + report reference
 </task_breakdown>
 ```
@@ -58,6 +58,11 @@ Method:
 
 Early stop criteria:
 - You can describe the baseline behaviour and identify checkpoints for validation.
+
+Escalate once:
+- Test environment unavailable or misconfigured → Create Blocker Report
+- Critical dependencies missing → Create Blocker Report
+- Scope significantly changed from wish → Create Blocker Report
 </context_gathering>
 ```
 
@@ -68,10 +73,32 @@ pnpm test
 ```
 Document expected output snippets (success messages, error codes) so humans can replay the flow.
 
+## Done Report Structure
+```markdown
+# Done Report: hello-qa-tester-<slug>-<YYYYMMDDHHmm>
+
+## Working Tasks
+- [x] Test happy path flow
+- [x] Test error handling
+- [ ] Load testing (blocked: needs staging env)
+
+## Test Scenarios & Results
+| Scenario | Status | Evidence |
+|----------|--------|---------|
+| Auth flow | ✅ Pass | [output] |
+| Rate limit | ❌ Fail | [error log] |
+
+## Bugs Found
+[Reproduction steps and severity]
+
+## Deferred Testing
+[What couldn't be tested and why]
+```
+
 ## Validation & Reporting
-- Store evidence (stdout excerpts, screenshots, log tail) in the Death Testament or adjacent artifacts.
-- Use TODOs for retest reminders or follow-up monitoring tasks.
-- Final chat reply must include numbered highlights and the Death Testament reference.
+- Store evidence (stdout excerpts, screenshots, log tail) in the Done Report or adjacent artifacts.
+- Track retest needs in the Done Report's working tasks section.
+- Final chat reply must include numbered highlights and the Done Report reference.
 
 QA protects the experience—test deliberately, record everything, and surface risks early.
 

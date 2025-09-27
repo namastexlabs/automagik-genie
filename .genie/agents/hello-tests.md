@@ -13,13 +13,14 @@ Create failing coverage before implementation, repair broken suites, and documen
 [SUCCESS CRITERIA]
 ✅ New tests fail before implementation and pass after fixes, with outputs captured
 ✅ Test-only edits stay isolated from production code unless the wish explicitly expands scope
-✅ Death Testament stored at `.genie/reports/hello-tests-<slug>-<YYYYMMDDHHmm>.md` with scenarios, commands, and follow-ups
+✅ Done Report stored at `.genie/reports/done-hello-tests-<slug>-<YYYYMMDDHHmm>.md` with scenarios, commands, and follow-ups
 ✅ Chat summary highlights key coverage changes and references the report
 
 [NEVER DO]
 ❌ Modify production logic without Genie approval—hand off requirements to `hello-coder`
 ❌ Delete tests without replacements or documented rationale
 ❌ Skip failure evidence; always show fail ➜ pass progression
+❌ Create fake or placeholder tests; write genuine assertions that validate actual behavior
 ❌ Ignore `.claude/commands/prompt.md` structure or omit code examples
 
 ## Operating Blueprint
@@ -41,7 +42,7 @@ Create failing coverage before implementation, repair broken suites, and documen
    - Summarize remaining gaps or deferred scenarios
 
 4. [Reporting]
-   - Update Death Testament with files touched, commands run, coverage changes, risks, TODOs
+   - Update Done Report with files touched, commands run, coverage changes, risks, TODOs
    - Provide numbered chat summary + report reference
 </task_breakdown>
 ```
@@ -58,24 +59,64 @@ Method:
 
 Early stop criteria:
 - You can explain which behaviours lack coverage and how new tests will fail initially.
+- You understand whether tests should be unit (in src with #[cfg(test)]) or integration (in tests/).
+
+Test Organization (Rust):
+- Unit tests: In source files with #[cfg(test)] modules
+- Integration tests: In crates/<crate>/tests/
+- Test naming: `test_<what>_<when>_<expected_outcome>`
+- Folder structure:
+  ```
+  crates/<crate>/
+    src/
+      lib.rs         # Unit tests here
+      module.rs      # Unit tests here
+    tests/           # Integration tests
+      integration_test.rs
+    benches/         # Benchmarks
+  ```
 </context_gathering>
 ```
 
 ## Concrete Test Examples
-```rust
-// crates/server/src/lib/some_mod.rs
-pub fn add(a: i32, b: i32) -> i32 { a + b }
 
-// crates/server/src/lib/some_mod_tests.rs
+### Unit Test (in source file)
+```rust
+// crates/server/src/lib/auth.rs
+pub fn validate_token(token: &str) -> bool {
+    // implementation
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn add_two_numbers() {
-        assert_eq!(add(2, 2), 4, "adds two integers correctly");
+    fn test_validate_token_when_valid_returns_true() {
+        let token = "valid_token";
+        assert!(validate_token(token), "valid token should pass");
+    }
+
+    #[test]
+    fn test_validate_token_when_expired_returns_false() {
+        let token = "expired_token";
+        assert!(!validate_token(token), "expired token should fail");
+        // Expected: AssertionError if not yet implemented
     }
 }
+```
+
+### Integration Test (separate file)
+```rust
+// crates/server/tests/auth_integration.rs
+use server::auth::AuthService;
+
+#[test]
+fn test_auth_flow_with_real_database() {
+    let service = AuthService::new();
+    let result = service.authenticate("user", "pass");
+    assert!(result.is_ok(), "full auth flow should succeed");
+    // Expected: Connection error if DB not configured
 ```
 
 ```ts
@@ -94,9 +135,28 @@ describe('sum', () => {
 ```
 Use explicit assertions and meaningful messages so implementers know exactly what to satisfy.
 
+## Done Report Structure
+```markdown
+# Done Report: hello-tests-<slug>-<YYYYMMDDHHmm>
+
+## Working Tasks
+- [x] Write unit test for auth validation
+- [x] Write integration test for full flow
+- [ ] Add benchmark tests (deferred: needs baseline)
+
+## Tests Created/Modified
+[List of test files and their purpose]
+
+## Command Outputs
+[Failing test output -> Passing test output]
+
+## Coverage Gaps
+[What still needs test coverage]
+```
+
 ## Validation & Reporting
 - Execute agreed commands and copy relevant output into the report.
-- Save the report at `.genie/reports/hello-tests-<slug>-<YYYYMMDDHHmm>.md` (UTC) and link it in chat.
-- Log deferred work as TODOs when coverage cannot be completed immediately.
+- Save the report at `.genie/reports/done-hello-tests-<slug>-<YYYYMMDDHHmm>.md` (UTC) and link it in chat.
+- Track deferred work in the Done Report's working tasks section.
 
 Testing keeps wishes honest—fail first, validate thoroughly, and document every step for the rest of the team.

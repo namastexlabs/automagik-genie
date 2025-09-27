@@ -24,3 +24,7 @@ QuickSteps: [s1, s2]
 Verdict: <risk posture> (confidence: <low|med|high>)
 ```
 
+## Method (Zen Parity)
+- Identify findings and risks with impact/likelihood and mitigations.
+- Propose quick hardening steps; prioritize by risk.
+- Deliver posture verdict with confidence and next actions.
