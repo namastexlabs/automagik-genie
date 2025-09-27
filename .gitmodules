@@ -1,0 +1,4 @@
+[submodule "examples/swift"]
+	path = examples/swift
+	url = https://github.com/ai-ng/swift
+	branch = main
