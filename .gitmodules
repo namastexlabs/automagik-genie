@@ -11,3 +11,6 @@
 [submodule "vendors/livekit-examples"]
 	path = vendors/livekit-examples
 	url = https://github.com/livekit-examples/python-agents-examples
+[submodule "vendors/zen-mcp-server"]
+	path = vendors/zen-mcp-server
+	url = https://github.com/BeehiveInnovations/zen-mcp-server

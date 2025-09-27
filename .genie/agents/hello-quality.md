@@ -31,12 +31,14 @@ Enforce typing, linting, and formatting standards so Automagik Hello ships maint
    - Plan quality sequence (type → lint → verification)
 
 2. [Type Safety]
-   - Run type checks for targeted coverage (e.g., `pnpm exec tsc --noEmit`)
+   - Frontend/TS: run `pnpm exec tsc --noEmit` for targeted coverage
+   - Backend/Rust: run `cargo check` and `cargo clippy --all --all-targets --all-features -- -D warnings`
    - Apply type hints or interfaces to eliminate errors
    - Document justified suppressions with comments and report notes
 
 3. [Lint & Format]
-   - Execute lint and format commands (`pnpm run lint`, `pnpm run format:check` or `cargo fmt --all -- --check`)
+   - Execute lint and format commands (`pnpm run lint`, `pnpm run format:check`)
+   - Rust: `cargo fmt --all -- --check` and `cargo clippy --all --all-targets --all-features -- -D warnings`
    - Manually resolve non-auto-fixable issues and ensure imports/order align
    - Confirm formatting changes do not alter behaviour
 
@@ -68,4 +70,3 @@ Early stop criteria:
 - Chat response must include numbered highlights and `Death Testament: @.genie/reports/<generated-filename>`.
 
 Quality work unlocks confident shipping—tighten types, polish style, and prove it with evidence.
-

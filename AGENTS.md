@@ -33,7 +33,7 @@ All commands in `.claude/commands/` simply `@include` the corresponding `.genie/
 - `.genie/cli/agent.js` – CLI runner for agent conversations (supports `--background`)
 
 ## Workflow Summary
-1. **/plan** – single-entry agent for product mode. Loads mission/roadmap/standards, gathers context (`@context`), requests background personas via CLI, and decides if item is wish-ready.
+1. **/plan** – single-entry agent for product mode. Loads mission/roadmap/standards, gathers context via `@` references, requests background personas via CLI, and decides if item is wish-ready.
 2. **/wish** – creates `.genie/wishes/<slug>-wish.md`, embedding context ledger, execution groups, inline `<spec_contract>`, branch/tracker strategy, and blocker protocol.
 3. **/forge** – generates `.genie/state/reports/forge-plan-<slug>-<timestamp>.md` with execution groups, evidence expectations, validation hooks, and external tracker placeholders (`forge/tasks.json`).
 4. **Implementation** – humans/agents follow forge plan, storing evidence where the wish specifies (e.g., `.genie/wishes/<slug>/qa/`). Specialist agents run via `node .genie/cli/agent.js chat <implementor-agent> "..."` (foreground or `--background`). Replace `<implementor-agent>` using the Local Agent Map.
@@ -103,8 +103,13 @@ Routing keys map to agent files. Keep this updated as new agents are added.
 - hooks → `.genie/agents/hello-hooks.md`
 - tests → `.genie/agents/hello-tests.md`
 - self-learn → `.genie/agents/hello-self-learn.md`
-- task-master → `.genie/agents/hello-master.md`
-- twin → `.genie/agents/hello-twin.md`
+- task-master → `.genie/agents/forge-master.md`
+- planner → `.genie/agents/forge-master.md`
+- twin → `.genie/agents/genie-twin.md`
+ - codereview → `.genie/agents/genie-codereview.md`
+ - precommit → `.genie/agents/genie-precommit.md`
+ - testgen → `.genie/agents/genie-testgen.md`
+ - secaudit → `.genie/agents/genie-secaudit.md`
 
 ## Migration Notes
 - Agent OS directories have been merged into `.genie/` (the old `.agent-os/` folder is removed).
@@ -276,16 +281,151 @@ Keep this document synced when introducing new agents, changing folder layouts, 
 
 <twin_integration_framework>
 [CONTEXT]
-- Use CLI to run Twin-style prompts; log purpose and outcomes in the wish or report.
+- `genie-twin` is GENIE's partner for second opinions, plan pressure-tests, deep dives, and decision audits.
+- Use it to reduce risk, surface blind spots, and document reasoning without blocking implementation work.
 
 [SUCCESS CRITERIA]
-✅ Twin sessions logged with purpose and outcomes.
-✅ Insights reconciled with the human before decisions are final.
+✅ Clear purpose, chosen mode, and outcomes logged (wish discovery or Death Testament).
+✅ Human reviews Twin Verdict (with confidence) before high-impact decisions.
+✅ Evidence captured when Twin recommendations change plan/implementation.
 
-### Prompt Patterns
-- Twin Planning: pressure-test the plan; deliver 3 risks, 3 missing validations, 3 refinements; finish with Twin Verdict + confidence.
-- Consensus Loop: challenge conclusion; provide counterpoints, supporting evidence, and a recommendation.
-- Focused Deep-Dive: investigate a specific topic; provide findings, affected files, follow-ups.
+### When To Use
+- Ambiguity: requirements unclear or conflicting.
+- High-risk decision: architectural choices, irreversible migrations, external dependencies.
+- Cross-cutting design: coupling, scalability, observability, simplification.
+- Unknown root cause: puzzling failures/flakiness; competing hypotheses.
+- Compliance/regulatory: controls, evidence, and sign-off mapping.
+- Test strategy: scope, layering, rollback/monitoring concerns.
+- Retrospective: extract wins/misses/lessons for future work.
+
+### How To Run (CLI)
+- Start: `node .genie/cli/agent.js chat genie-twin "Mode: planning. Objective: pressure-test @.genie/wishes/<slug>-wish.md. Deliver 3 risks, 3 missing validations, 3 refinements. Finish with Twin Verdict + confidence."`
+- Continue: `node .genie/cli/agent.js continue genie-twin "Follow-up: address risk #2 with options + trade-offs."`
+- Sessions: reuse the same agent name; the CLI persists session id automatically in `.genie/state/agents/sessions.json`.
+- Logs: check `.genie/state/agents/logs/genie-twin-<timestamp>.log` for the full transcript.
+
+### Modes (quick reference)
+- planning, consensus, deep-dive, debug, socratic, debate, risk-audit, design-review, test-strategy, compliance, retrospective.
+- Full prompt templates live in `@.genie/agents/genie-twin.md`.
+
+### Outputs & Evidence
+- Low-stakes: append a short summary to the wish discovery section.
+- High-stakes: save a Death Testament at `.genie/reports/genie-twin-<slug>-<YYYYMMDDHHmm>.md` with scope, findings, recommendations, disagreements.
+- Always include “Twin Verdict: <summary> (confidence: <low|med|high>)”.
+
+### Twin Verdict Format (per mode)
+Use a compact, scannable block. Include only relevant fields.
+
+```
+mode: planning
+verdict: <1–2 line decision or direction>
+confidence: <low|med|high>
+risks: [r1, r2, r3]
+missing_validations: [v1, v2, v3]
+refinements: [f1, f2, f3]
+next_actions: [a1, a2]
+decisions_changed: <yes|no>
+```
+
+```
+mode: consensus
+decision: <what was evaluated>
+counterpoints: [c1, c2, c3]
+evidence: [e1, e2]
+verdict: <recommendation>
+confidence: <low|med|high>
+next_actions: [a1]
+```
+
+```
+mode: deep-dive
+topic: <focus>
+findings: [f1, f2, f3]
+affected_files: [path1, path2]
+follow_ups: [u1, u2]
+verdict: <summary>
+confidence: <low|med|high>
+```
+
+```
+mode: debug
+symptoms: <short>
+hypotheses: [h1, h2, h3]
+experiments: [exp1, exp2]
+most_likely_cause: <h?>
+verdict: <fix direction>
+confidence: <low|med|high>
+```
+
+```
+mode: socratic
+assumption: <original>
+questions: [q1, q2, q3]
+refined_assumption: <revised>
+verdict: <implication>
+confidence: <low|med|high>
+```
+
+```
+mode: debate
+decision: <contested>
+counterpoints: [c1, c2, c3]
+experiments: [exp1]
+verdict: <go/hold/change with why>
+confidence: <low|med|high>
+```
+
+```
+mode: risk-audit
+scope: <initiative>
+top_risks: [{risk, impact, likelihood, mitigation}, ...]
+verdict: <risk posture>
+confidence: <low|med|high>
+```
+
+```
+mode: design-review
+component: <name>
+findings: [coupling, scalability, observability, simplification]
+refactor_recs: [r1, r2]
+verdict: <goals + recommended direction>
+confidence: <low|med|high>
+```
+
+```
+mode: test-strategy
+feature: <scope>
+layers: [unit, integration, e2e, manual, monitoring, rollback]
+blocking_tests: [t1, t2]
+verdict: <minimal plan to unblock>
+confidence: <low|med|high>
+```
+
+```
+mode: compliance
+change: <scope>
+controls: [c1, c2]
+evidence: [e1, e2]
+sign_off: [roles]
+verdict: <ready|gaps>
+confidence: <low|med|high>
+```
+
+```
+mode: retrospective
+work: <scope>
+wins: [w1, w2]
+misses: [m1, m2]
+lessons: [l1]
+actions: [a1]
+verdict: <focus next>
+confidence: <low|med|high>
+```
+
+### Anti‑Patterns
+- Using Twin to bypass human approval.
+- Spawning Twin repeatedly without integrating prior outcomes.
+- Treating Twin outputs as implementation orders without validation.
 </twin_integration_framework>
 
 <parallel_execution_framework>

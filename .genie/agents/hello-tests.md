@@ -61,10 +61,42 @@ Early stop criteria:
 </context_gathering>
 ```
 
+## Concrete Test Examples
+```rust
+// crates/server/src/lib/some_mod.rs
+pub fn add(a: i32, b: i32) -> i32 { a + b }
+
+// crates/server/src/lib/some_mod_tests.rs
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn add_two_numbers() {
+        assert_eq!(add(2, 2), 4, "adds two integers correctly");
+    }
+}
+```
+
+```ts
+// frontend/src/utils/sum.ts
+export const sum = (a: number, b: number) => a + b;
+
+// frontend/src/utils/sum.test.ts
+import { describe, it, expect } from 'vitest';
+import { sum } from './sum';
+
+describe('sum', () => {
+  it('adds two numbers', () => {
+    expect(sum(2, 2)).toBe(4);
+  });
+});
+```
+Use explicit assertions and meaningful messages so implementers know exactly what to satisfy.
+
 ## Validation & Reporting
 - Execute agreed commands and copy relevant output into the report.
 - Save the report at `.genie/reports/hello-tests-<slug>-<YYYYMMDDHHmm>.md` (UTC) and link it in chat.
 - Log deferred work as TODOs when coverage cannot be completed immediately.
 
 Testing keeps wishes honest—fail first, validate thoroughly, and document every step for the rest of the team.
-

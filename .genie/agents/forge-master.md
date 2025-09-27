@@ -49,6 +49,7 @@ Use after a wish in `.genie/wishes/` reaches `APPROVED`. Planner mode translates
 - **Tracker:** forge/tasks.json placeholder or actual ID
 - **Suggested personas:** forge-coder, forge-quality
 - **Dependencies:** (prior groups, approvals, external signals)
+ - **Twin Gates (optional):** e.g., `planning` before DB migration, `consensus` for high-risk trade-offs
 ```
 
 ### Plan Template
@@ -183,4 +184,3 @@ branch: feat/external-ai-root-resolver
 - Final chat response lists (1) discovery highlights, (2) creation confirmation (task ID + branch), (3) `Death Testament: @genie/reports/<generated-filename>`.
 
 Forge tasks succeed when they give executors everything they need—context, expectations, and guardrails—without restraining implementation creativity.
-

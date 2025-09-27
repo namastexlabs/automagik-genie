@@ -264,9 +264,9 @@ If execution is blocked:
 ./.genie/cli/agent.js clear <agent>
 
 # Context injection (during /plan)
-@context @path/to/file
-@context paste <<EOF ... EOF
-@context link https://...
+@path/to/file     # Auto-loads file
+@https://...      # References external resource
+# Inline content - paste directly
 ```
 
 ## Next Steps
