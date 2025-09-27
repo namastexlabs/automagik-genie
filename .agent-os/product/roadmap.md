@@ -1,5 +1,14 @@
 # Product Roadmap: Build-in-Public Strategy
 
+## Gating Criteria (Decision: LEARN_FROM LiveKit)
+Reference: @.agent-os/product/decisions/2025-09-learn-from-livekit.md
+
+- Gate 1 – Baseline pipeline: End-to-end round trip with sub-~1.5s first audio; no crashes
+- Gate 2 – Latency & overlap: TTFB ~1s; interruption tail < 100ms; smooth resume after false alarms
+- Gate 3 – Protocol fidelity: ElevenLabs Agents WS compatibility; clients work unchanged
+- Gate 4 – Conversation quality: Natural flow; evaluator ≥ 8/10; ASR confidence > 0.8
+- Gate 5 – Scalability & stability: Expected concurrency; no leaks; stable under load
+
 ## 🚀 Phase 0: Proof of Concept (Week 1-2)
 
 **Goal:** Validate core technical feasibility and baseline performance.
@@ -32,6 +41,7 @@ Success Criteria:
 Tasks
 - [x] Add submodule: `vendors/livekit-agents`
 - [x] Add submodule: `vendors/hume-evi-next-js-starter`
+- [x] Architectural decision recorded: LEARN_FROM (see decisions doc)
 - [ ] Read: Agents Worker lifecycle, Voice AI quickstart, examples/voice_agents/*
 - [ ] Benchmark: TTFB and cancel-tail latency using provided examples
 - [ ] Compare: LiveKit turn model vs our VAD+heuristics; draft overlap_aware policy deltas

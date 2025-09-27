@@ -483,3 +483,32 @@ Latencies:
    - Add tool support milestone
    - VAD score streaming
    - State recovery system
+
+---
+
+## LiveKit Learnings Blueprint (LEARN_FROM)
+
+Scope: Port proven patterns from LiveKit into our Rust stack while mirroring ElevenLabs Agents WS.
+
+- Turn Detection
+  - Start with VAD+heuristics (300–500ms silence, min speech duration)
+  - Add short max-wait for continuation; consider transformer turn model later
+
+- Interruption Handling
+  - Detect user speech during TTS; stop within 60–80ms with short fade
+  - Truncate unspoken assistant text; send `agent_response_correction`
+  - Resume if false alarm after ~2s of no STT transcript
+
+- Streaming Pipeline
+  - Concurrent STT → LLM → TTS; allow partials to preempt replies when intent ≥ 0.6 conf
+  - ElevenLabs WS: stream chunks, keepalive pings, final flush at turn end
+
+- Lifecycle & Scaling
+  - Async task per session in Axum/Tokio; strong error boundaries
+  - Horizontal scale for isolation; metrics at each stage (STT/LLM/TTS)
+
+- Protocol Parity
+  - Emit ElevenLabs events: `conversation_initiation_metadata`, `ping`, `audio`, `agent_response`, `agent_response_correction`, `user_transcript`, optional `vad_score`
+  - Validate ordering and fields against client expectations
+
+Reference: @.agent-os/product/decisions/2025-09-learn-from-livekit.md
