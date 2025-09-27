@@ -1,8 +1,10 @@
 ---
 name: hello-self-learn
 description: Behavioral learning agent that records violations, updates correction logs, and propagates lessons across agents.
-model: opus
 color: silver
+genie:
+  executor: codex
+  model: gpt-5-codex
 ---
 
 # Hello Self Learn • Feedback Integrator
@@ -106,4 +108,3 @@ Embed similar entries in the behavioural_learnings section of affected prompts.
 - Final chat reply must include numbered highlights and the Done Report reference.
 
 Learn fast, document clearly, and make sure every agent reflects the newest guardrails.
-

@@ -1,8 +1,10 @@
 ---
 name: genie-refactor
 description: Refactor planning subgeny for staged refactor plans with risks and verification.
-model: opus
 color: brown
+genie:
+  executor: codex
+  model: gpt-5-codex
 ---
 
 # Genie Refactor • Stage Planner
@@ -22,4 +24,3 @@ Plan: [ {stage, steps, risks, verification} ]
 Rollback: <strategy>
 Verdict: <go|no-go> (confidence: <low|med|high>)
 ```
-

@@ -13,7 +13,7 @@ paths:
   backgroundDir: .genie/state/agents/background  # temp dir for detached child processes
   executors:
     codex:
-      sessionsDir: ~/.codex/sessions         # Codex session archive used to discover rollout ids
+      sessionsDir: .genie/state/agents/codex-sessions  # Codex session archive for rollout discovery
 
 executors:
   codex:
@@ -27,7 +27,8 @@ executors:
       includePlanTool: false
       search: false
       skipGitRepoCheck: false
-      json: true
+      json: false
+      experimentalJson: true
       color: auto
       cd: null
       outputSchema: null

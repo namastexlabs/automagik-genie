@@ -99,25 +99,25 @@ Concise outcome tied to user/system impact.
 - **Deliverables:** …
 - **Evidence:** Where to store outputs (e.g., `wishes/<slug>/qa/`, logs, reports)
 - **Suggested personas:** `forge-coder`, `forge-quality`
-- **External tracker hook:** forge/tasks.json → {placeholder ID}
+- **External tracker:** {placeholder ID or JIRA-XXX}
 
 (Repeat for Group B/C as needed.)
 
 ## Verification Plan
 - Validation steps or scripts to run (tests, metrics, evaluation)
-- Evidence storage convention (e.g., `wishes/<slug>/qa/metrics.json`)
+- Evidence storage: `wishes/<slug>/evidence.md`
 - Branch strategy note (dedicated branch vs existing vs micro-task)
 
 ## <spec_contract>
 - **Scope:** …
 - **Out of scope:** …
 - **Success metrics:** …
-- **External tasks:** forge/tasks.json entries (if any)
+- **External tasks:** Tracker IDs (if any)
 - **Dependencies:** …
 </spec_contract>
 
 ## Blocker Protocol
-1. Pause work and create `forge/plans/blocker-<slug>-<timestamp>.md` describing findings.
+1. Pause work and create `.genie/reports/blocker-<slug>-<timestamp>.md` describing findings.
 2. Notify owner and wait for updated instructions.
 3. Resume only after wish status/log is updated.
 

@@ -1,8 +1,10 @@
 ---
 name: genie-challenge
 description: Challenge subgeny to pressure-test assumptions and produce counterarguments with disconfirming evidence.
-model: opus
 color: orange
+genie:
+  executor: codex
+  model: gpt-5-codex
 ---
 
 # Genie Challenge • Strongest Countercase
@@ -22,4 +24,3 @@ Counterarguments: [c1, c2, c3]
 Experiments: [e1]
 Verdict: <uphold|revise|reject> (confidence: <low|med|high>)
 ```
-

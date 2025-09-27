@@ -18,6 +18,12 @@ try {
 const codexExecutor = require('./executors/codex');
 const sessionStore = require('./session-store');
 const { loadSessions, saveSessions } = sessionStore;
+const {
+  BackgroundManager,
+  INTERNAL_BACKGROUND_ENV,
+  INTERNAL_START_TIME_ENV,
+  INTERNAL_LOG_PATH_ENV
+} = require('./background-manager');
 
 const EXECUTORS = {
   codex: codexExecutor
@@ -25,10 +31,7 @@ const EXECUTORS = {
 
 const SCRIPT_DIR = path.dirname(__filename);
 const CONFIG_PATH = path.join(SCRIPT_DIR, 'config.yaml');
-
-const INTERNAL_BACKGROUND_ENV = 'GENIE_AGENT_BACKGROUND_RUNNER';
-const INTERNAL_START_TIME_ENV = 'GENIE_AGENT_START_TIME';
-const INTERNAL_LOG_PATH_ENV = 'GENIE_AGENT_LOG_FILE';
+const backgroundManager = new BackgroundManager();
 
 const DEFAULT_CONFIG = {
   defaults: {
@@ -39,7 +42,6 @@ const DEFAULT_CONFIG = {
   paths: {
     baseDir: '.',
     sessionsFile: '.genie/state/agents/sessions.json',
-    legacySessionsFile: '~/.genie-sessions.json',
     logsDir: '.genie/state/agents/logs',
     backgroundDir: '.genie/state/agents/background'
   },
@@ -165,7 +167,7 @@ function parseArguments(argv) {
     follow: false,
     lines: 60,
     page: 1,
-    per: 1
+    per: 5
   };
 
   const filtered = [];
@@ -473,7 +475,6 @@ function resolvePaths(pathsConfig) {
   const resolved = {
     baseDir,
     sessionsFile: resolvePath(config.sessionsFile, baseDir),
-    legacySessionsFile: resolvePath(config.legacySessionsFile, baseDir),
     logsDir: resolvePath(config.logsDir, baseDir),
     backgroundDir: resolvePath(config.backgroundDir, baseDir),
     executors: {}
@@ -482,10 +483,6 @@ function resolvePaths(pathsConfig) {
   const executorPathsConfig = (config.executors && typeof config.executors === 'object') ? config.executors : {};
   Object.entries(EXECUTORS).forEach(([key, executor]) => {
     const perExecutor = { ...(executorPathsConfig[key] || {}) };
-    const legacyKey = `${key}SessionsDir`;
-    if (!perExecutor.sessionsDir && config[legacyKey]) {
-      perExecutor.sessionsDir = config[legacyKey];
-    }
     if (executor.resolvePaths) {
       resolved.executors[key] = executor.resolvePaths({ config: perExecutor, baseDir, resolvePath });
     } else {
@@ -516,6 +513,13 @@ function prepareDirectories(paths) {
   }
   ensureDirectory(paths.logsDir);
   ensureDirectory(paths.backgroundDir);
+  if (paths.executors && typeof paths.executors === 'object') {
+    Object.values(paths.executors).forEach((execPaths) => {
+      if (execPaths && execPaths.sessionsDir) {
+        ensureDirectory(execPaths.sessionsDir);
+      }
+    });
+  }
 }
 
 function ensureDirectory(dirPath) {
@@ -543,12 +547,22 @@ function runChat(parsed, config, paths) {
     throw new Error('Prompt is required for chat command.');
   }
 
+  const agentSpec = loadAgentSpec(agentName);
+  const agentMeta = agentSpec.meta || {};
+  const agentGenie = (agentMeta && agentMeta.genie) || {};
+  if (!parsed.options.backgroundExplicit && typeof agentGenie.background === 'boolean') {
+    parsed.options.background = agentGenie.background;
+  }
+  if (!parsed.options.preset && typeof agentGenie.preset === 'string' && agentGenie.preset.length) {
+    parsed.options.preset = agentGenie.preset;
+  }
   const presetName = parsed.options.preset || 'default';
-  const instructions = loadAgent(agentName);
+  const instructions = agentSpec.instructions;
 
-  const executorKey = resolveExecutorKey(parsed.options, config, presetName);
+  const executorKey = agentGenie.executor || resolveExecutorKey(parsed.options, config, presetName);
   const executor = requireExecutor(executorKey);
-  const executorConfig = buildExecutorConfig(config, presetName, executorKey);
+  const executorOverrides = extractExecutorOverrides(agentGenie, executorKey);
+  const executorConfig = buildExecutorConfig(config, presetName, executorKey, executorOverrides);
   const executorPaths = resolveExecutorPaths(paths, executorKey);
   const store = loadSessions(paths, config, DEFAULT_CONFIG);
 
@@ -569,22 +583,28 @@ function runChat(parsed, config, paths) {
     runnerPid: parsed.options.backgroundRunner ? process.pid : null,
     executor: executorKey,
     executorPid: null,
-    codexPid: null,
     exitCode: null,
     signal: null,
-    startTime: new Date(startTime).toISOString()
+    startTime: new Date(startTime).toISOString(),
+    sessionId: null
   };
   store.agents[agentName] = entry;
   saveSessions(paths, store);
 
   if (parsed.options.background && !parsed.options.backgroundRunner) {
-    const runnerPid = spawnBackgroundProcess(parsed.options.rawArgs, startTime, logFile, config);
+    const runnerPid = backgroundManager.launch({
+      rawArgs: parsed.options.rawArgs,
+      startTime,
+      logFile,
+      backgroundConfig: config.background,
+      scriptPath: __filename
+    });
     entry.runnerPid = runnerPid;
     entry.status = 'running';
     saveSessions(paths, store);
     console.log(`🧞 Background conversation started: ${agentName}`);
     console.log(`   Log: ${formatPathRelative(logFile, paths.baseDir)}`);
-    console.log(`   Watch: tail -f ${formatPathRelative(logFile, paths.baseDir)}`);
+    console.log('   Watch: ./genie view <session-id>');
     return;
   }
 
@@ -613,27 +633,6 @@ function runChat(parsed, config, paths) {
   });
 }
 
-function spawnBackgroundProcess(rawArgs, startTime, logFile, config) {
-  if (!config.background || !config.background.enabled) {
-    throw new Error('Background execution is disabled in configuration.');
-  }
-
-  const spawnEnv = {
-    ...process.env,
-    [INTERNAL_BACKGROUND_ENV]: '1',
-    [INTERNAL_START_TIME_ENV]: String(startTime),
-    [INTERNAL_LOG_PATH_ENV]: logFile
-  };
-
-  const child = spawn(process.execPath, [__filename, ...rawArgs], {
-    detached: Boolean(config.background.detach),
-    stdio: config.background.detach ? 'ignore' : 'inherit',
-    env: spawnEnv
-  });
-  child.unref();
-  return child.pid;
-}
-
 function resolveExecutorKey(options, config, presetName) {
   if (options.executor) return options.executor;
   const preset = config.presets && config.presets[presetName];
@@ -651,7 +650,7 @@ function requireExecutor(key) {
   return executor;
 }
 
-function buildExecutorConfig(config, presetName, executorKey) {
+function buildExecutorConfig(config, presetName, executorKey, agentOverrides) {
   const base = deepClone((config.executors && config.executors[executorKey]) || {});
   const preset = config.presets && config.presets[presetName];
   if (!preset && presetName && presetName !== 'default') {
@@ -659,7 +658,11 @@ function buildExecutorConfig(config, presetName, executorKey) {
     throw new Error(`Preset '${presetName}' not found. Available presets: ${available}`);
   }
   const overrides = getExecutorOverrides(preset, executorKey);
-  return mergeDeep(base, overrides);
+  let merged = mergeDeep(base, overrides);
+  if (agentOverrides && Object.keys(agentOverrides).length) {
+    merged = mergeDeep(merged, agentOverrides);
+  }
+  return merged;
 }
 
 function getExecutorOverrides(preset, executorKey) {
@@ -671,6 +674,30 @@ function getExecutorOverrides(preset, executorKey) {
   if (overrides[executorKey]) {
     return overrides[executorKey];
   }
+  return overrides;
+}
+
+function extractExecutorOverrides(agentGenie, executorKey) {
+  if (!agentGenie || typeof agentGenie !== 'object') return {};
+  const { executor, background, preset, json: _json, ...rest } = agentGenie;
+  const overrides = {};
+  const executorDef = EXECUTORS[executorKey] && EXECUTORS[executorKey].defaults;
+  const topLevelKeys = executorDef ? new Set(Object.keys(executorDef)) : null;
+
+  Object.entries(rest || {}).forEach(([key, value]) => {
+    if (key === 'json') return; // CLI reserved
+    if (key === 'exec' || key === 'resume') {
+      overrides[key] = mergeDeep(overrides[key], deepClone(value));
+      return;
+    }
+    if (topLevelKeys && topLevelKeys.has(key)) {
+      overrides[key] = mergeDeep(overrides[key], deepClone(value));
+      return;
+    }
+    if (!overrides.exec) overrides.exec = {};
+    overrides.exec[key] = mergeDeep(overrides.exec[key], deepClone(value));
+  });
+
   return overrides;
 }
 
@@ -699,6 +726,7 @@ function executeRun({
     throw new Error(`Executor '${executorKey}' returned an invalid command configuration.`);
   }
 
+  const logViewer = executor && executor.logViewer ? executor.logViewer : null;
   const logStream = fs.createWriteStream(logFile, { flags: 'a' });
   const spawnOptions = {
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -708,7 +736,6 @@ function executeRun({
 
   entry.status = 'running';
   entry.executorPid = proc.pid || null;
-  entry.codexPid = entry.executorPid; // for compatibility with existing session files
   if (runnerPid) entry.runnerPid = runnerPid;
   saveSessions(paths, store);
 
@@ -739,6 +766,16 @@ function executeRun({
     entry.status = code === 0 ? 'completed' : 'failed';
     saveSessions(paths, store);
     logStream.end();
+
+    const sessionFromLog = logViewer && logViewer.readSessionIdFromLog
+      ? logViewer.readSessionIdFromLog(logFile)
+      : null;
+    const resolvedSessionId = sessionFromLog || null;
+    if (entry.sessionId !== resolvedSessionId) {
+      entry.sessionId = resolvedSessionId;
+      entry.lastUsed = new Date().toISOString();
+      saveSessions(paths, store);
+    }
 
     if (!background) {
       const outcome = code === 0 ? `✅ ${executorKey} run completed` : `⚠️ ${executorKey} exited with code ${code}`;
@@ -775,6 +812,7 @@ function executeRun({
   }
 }
 
+
 function runContinue(parsed, config, paths) {
   if (parsed.options.requestHelp) {
     runHelp(config, paths);
@@ -802,9 +840,16 @@ function runContinue(parsed, config, paths) {
 
   // Reuse exact preset from the originating session; ignore overrides on continue
   const presetName = session.preset || (config.defaults && config.defaults.preset) || 'default';
-  const executorKey = session.executor || resolveExecutorKey(parsed.options, config, presetName);
+  const agentSpec = loadAgentSpec(agentName);
+  const agentMeta = agentSpec.meta || {};
+  const agentGenie = (agentMeta && agentMeta.genie) || {};
+  if (!parsed.options.backgroundExplicit && typeof agentGenie.background === 'boolean') {
+    parsed.options.background = agentGenie.background;
+  }
+  const executorKey = session.executor || agentGenie.executor || resolveExecutorKey(parsed.options, config, presetName);
   const executor = requireExecutor(executorKey);
-  const executorConfig = buildExecutorConfig(config, presetName, executorKey);
+  const executorOverrides = extractExecutorOverrides(agentGenie, executorKey);
+  const executorConfig = buildExecutorConfig(config, presetName, executorKey, executorOverrides);
   const executorPaths = resolveExecutorPaths(paths, executorKey);
   const command = executor.buildResumeCommand({
     config: executorConfig,
@@ -823,19 +868,24 @@ function runContinue(parsed, config, paths) {
   session.runnerPid = parsed.options.backgroundRunner ? process.pid : null;
   session.executor = executorKey;
   session.executorPid = null;
-  session.codexPid = null;
   session.exitCode = null;
   session.signal = null;
   saveSessions(paths, store);
 
   if (parsed.options.background && !parsed.options.backgroundRunner) {
-    const runnerPid = spawnBackgroundProcess(parsed.options.rawArgs, startTime, logFile, config);
+    const runnerPid = backgroundManager.launch({
+      rawArgs: parsed.options.rawArgs,
+      startTime,
+      logFile,
+      backgroundConfig: config.background,
+      scriptPath: __filename
+    });
     session.runnerPid = runnerPid;
     session.status = 'running';
     saveSessions(paths, store);
     console.log(`🧞 Background resume started: ${agentName}`);
     console.log(`   Log: ${formatPathRelative(logFile, paths.baseDir)}`);
-    console.log(`   Watch: tail -f ${formatPathRelative(logFile, paths.baseDir)}`);
+    console.log('   Watch: ./genie view <session-id>');
     return;
   }
 
@@ -874,7 +924,7 @@ function runRuns(parsed, config, paths) {
     lastUsed: d.lastUsed || d.created || null,
     runnerPid: d.runnerPid || null,
     executor: d.executor || (config.defaults && config.defaults.executor) || 'codex',
-    executorPid: d.executorPid || d.codexPid || null
+    executorPid: d.executorPid || null
   }));
 
   if (parsed.options.stop) {
@@ -884,9 +934,9 @@ function runRuns(parsed, config, paths) {
       console.error(`❌ No session for agent '${id}'`);
     } else {
       let stopped = false;
-      const executorPid = entry.executorPid || entry.codexPid;
-      try { if (isProcessAlive(executorPid)) { process.kill(executorPid, 'SIGTERM'); stopped = true; } } catch {}
-      try { if (isProcessAlive(entry.runnerPid)) { process.kill(entry.runnerPid, 'SIGTERM'); stopped = true; } } catch {}
+      const executorPid = entry.executorPid;
+      try { if (backgroundManager.isAlive(executorPid) && backgroundManager.stop(executorPid)) { stopped = true; } } catch {}
+      try { if (backgroundManager.isAlive(entry.runnerPid) && backgroundManager.stop(entry.runnerPid)) { stopped = true; } } catch {}
       if (stopped) {
         entry.status = 'stopped';
         saveSessions(paths, store);
@@ -952,6 +1002,9 @@ function runView(parsed, config, paths) {
     console.error(`❌ No run found matching '${target}'`);
     return;
   }
+  const executorKey = entry.executor || (config.defaults && config.defaults.executor) || 'codex';
+  const executor = requireExecutor(executorKey);
+  const logViewer = executor && executor.logViewer ? executor.logViewer : null;
   const logFile = entry.logFile;
   if (!logFile || !fs.existsSync(logFile)) {
     console.error('❌ Log not found for this run');
@@ -972,117 +1025,26 @@ function runView(parsed, config, paths) {
   // Friendly parse
   const content = fs.readFileSync(logFile, 'utf8');
   const allLines = content.split(/\r?\n/);
+
+  if (!entry.sessionId && logViewer && logViewer.extractSessionIdFromContent) {
+    const sessionFromLog = logViewer.extractSessionIdFromContent(allLines);
+    if (sessionFromLog) {
+      entry.sessionId = sessionFromLog;
+      saveSessions(paths, store);
+    }
+  }
+
   const jsonl = [];
   for (const line of allLines) {
     const t = line.trim();
     if (!t) continue;
     try { jsonl.push(JSON.parse(t)); } catch (_) { /* skip non-json */ }
   }
-  if (jsonl.length) {
-    renderJsonlView({ entry, jsonl, raw: content }, parsed, paths);
+  if (jsonl.length && logViewer && logViewer.renderJsonlView) {
+    logViewer.renderJsonlView({ entry, jsonl, raw: content }, parsed, paths, store, saveSessions, formatPathRelative);
   } else {
     renderTextView({ entry, lines: allLines }, parsed, paths);
   }
-}
-
-function renderJsonlView(src, parsed, paths) {
-  const { entry, jsonl, raw } = src;
-  const meta = jsonl.find((e) => e.provider && e.model) || {};
-  const promptObj = jsonl.find((e) => typeof e.prompt === 'string') || {};
-  const prompt = promptObj.prompt || '';
-  const lastN = (parsed.options.lines && parsed.options.lines > 0) ? parsed.options.lines : 60;
-
-  const byCall = new Map();
-  const execs = [];
-  const mcp = [];
-  const patches = { add: 0, update: 0, move: 0, delete: 0 };
-  const errs = [];
-  let tokenInfo = null;
-  let rateLimits = null;
-
-  jsonl.forEach((ev) => {
-    const m = ev.msg || {};
-    switch (m.type) {
-      case 'exec_command_begin':
-        byCall.set(m.call_id, { cmd: (m.command || []).join(' '), cwd: m.cwd });
-        break;
-      case 'exec_command_end': {
-        const rec = byCall.get(m.call_id) || {};
-        execs.push({ cmd: rec.cmd || '(unknown)', exit: m.exit_code, dur: m.duration });
-        break; }
-      case 'mcp_tool_call_begin':
-        byCall.set(m.call_id, { mcp: { server: m.invocation && m.invocation.server, tool: m.invocation && m.invocation.tool } });
-        break;
-      case 'mcp_tool_call_end': {
-        const rec = byCall.get(m.call_id) || { mcp: {} };
-        const d = m.duration || {};
-        mcp.push({ server: (rec.mcp && rec.mcp.server) || '?', tool: (rec.mcp && rec.mcp.tool) || '?', secs: d.secs || 0 });
-        break; }
-      case 'patch_apply_begin': {
-        const changes = m.changes || {};
-        Object.values(changes).forEach((chg) => {
-          if (chg.add) patches.add += 1;
-          if (chg.update) { patches.update += 1; if (chg.update.move_path) patches.move += 1; }
-          if (chg.delete) patches.delete += 1;
-        });
-        break; }
-      case 'token_count': {
-        if (ev.info && ev.info.total_token_usage) tokenInfo = ev.info.total_token_usage;
-        if (ev.rate_limits) rateLimits = ev.rate_limits;
-        break; }
-      default: {
-        const s = JSON.stringify(m);
-        if (/error/i.test(s)) errs.push(m);
-      }
-    }
-  });
-
-  console.log(`\nView: ${entry.agent} | session:${entry.sessionId || 'n/a'} | log:${formatPathRelative(entry.logFile, paths.baseDir)}`);
-  if (meta.model) {
-    console.log(`Model: ${meta.model} • Provider: ${meta.provider} • Sandbox: ${meta.sandbox || 'n/a'}`);
-    if (meta.workdir) console.log(`Workdir: ${meta.workdir}`);
-  }
-  if (prompt) {
-    console.log('\nPrompt:');
-    console.log('  ' + prompt);
-  }
-  if (mcp.length) {
-    console.log(`\nMCP (${mcp.length}):`);
-    mcp.slice(-5).forEach((c) => console.log(`  • ${c.server}:${c.tool} ${c.secs}s`));
-  }
-  if (patches.add || patches.update || patches.move || patches.delete) {
-    console.log(`\nPatches: add:${patches.add} update:${patches.update} move:${patches.move} delete:${patches.delete}`);
-  }
-  if (execs.length) {
-    console.log(`\nExecs (last ${Math.min(3, execs.length)}):`);
-    execs.slice(-3).forEach((e) => {
-      const ms = e.dur ? (e.dur.secs * 1000 + Math.round((e.dur.nanos || 0)/1e6)) : null;
-      console.log(`  ${e.exit === 0 ? 'OK ' : 'ERR'} ${e.cmd}  (${ms || '?'} ms)`);
-    });
-  }
-  if (errs.length) {
-    console.log('\nErrors (recent):');
-    errs.slice(-5).forEach((e) => {
-      const s = JSON.stringify(e).slice(0, 160);
-      console.log('  ' + s + (s.length >= 160 ? '…' : ''));
-    });
-  }
-  // Footer stats table
-  const okCount = execs.filter(e => e.exit === 0).length;
-  const errCount = execs.filter(e => e.exit !== 0 && e.exit != null).length;
-  console.log('\nStats:');
-  const pad = (s, n) => (String(s || '') + ' '.repeat(n)).slice(0, n);
-  console.log('  ' + pad('MCP', 16) + ` ${mcp.length}`);
-  console.log('  ' + pad('Execs', 16) + ` total:${execs.length} ok:${okCount} err:${errCount}`);
-  console.log('  ' + pad('Patches', 16) + ` add:${patches.add} update:${patches.update} move:${patches.move} delete:${patches.delete}`);
-  if (tokenInfo) {
-    console.log('  ' + pad('Tokens', 16) + ` in:${tokenInfo.input_tokens||0} out:${tokenInfo.output_tokens||0} total:${tokenInfo.total_tokens||0}`);
-  }
-  if (rateLimits && rateLimits.primary) {
-    console.log('  ' + pad('RateLimit', 16) + ` used:${rateLimits.primary.used_percent||0}% reset:${rateLimits.primary.resets_in_seconds||0}s`);
-  }
-  console.log(`\nRaw Tail (${lastN} lines):`);
-  raw.split(/\r?\n/).slice(-lastN).forEach((l) => console.log('  ' + l));
 }
 
 function renderTextView(src, parsed, paths) {
@@ -1118,8 +1080,8 @@ function resolveEntryByIdOrSession(store, target) {
 
 function resolveDisplayStatus(entry) {
   const baseStatus = entry.status || 'unknown';
-  const executorRunning = isProcessAlive(entry.executorPid || entry.codexPid);
-  const runnerRunning = isProcessAlive(entry.runnerPid);
+  const executorRunning = backgroundManager.isAlive(entry.executorPid);
+  const runnerRunning = backgroundManager.isAlive(entry.runnerPid);
 
   if (baseStatus === 'running') {
     if (executorRunning) return 'running';
@@ -1141,17 +1103,6 @@ function resolveDisplayStatus(entry) {
   return baseStatus;
 }
 
-function isProcessAlive(pid) {
-  if (!pid || typeof pid !== 'number') return false;
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    if (error && error.code === 'EPERM') return true;
-    return false;
-  }
-}
-
 function runClear(parsed, config, paths) {
   const [agentName] = parsed.commandArgs;
   if (!agentName) {
@@ -1163,7 +1114,7 @@ function runClear(parsed, config, paths) {
     console.log(`No session found for ${agentName}`);
     return;
   }
-  if (isProcessAlive(entry.executorPid || entry.codexPid) || isProcessAlive(entry.runnerPid)) {
+  if (backgroundManager.isAlive(entry.executorPid) || backgroundManager.isAlive(entry.runnerPid)) {
     console.error(`⚠️ Session for ${agentName} is still running. Stop the process before clearing.`);
     return;
   }
@@ -1265,24 +1216,43 @@ function listAgentsDetailed() {
   });
 }
 
-function parseFrontMatter(text) {
-  // Minimal frontmatter parser: reads between first two '---' lines
-  // Returns key/value pairs for simple scalars
-  const lines = text.split(/\r?\n/);
-  if (lines[0] !== '---') return {};
-  const meta = {};
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i];
-    if (line.trim() === '---') break;
-    const idx = line.indexOf(':');
-    if (idx > -1) {
-      const key = line.slice(0, idx).trim();
-      const val = line.slice(idx + 1).trim();
-      // Strip surrounding quotes if present
-      meta[key] = val.replace(/^"|"$/g, '').replace(/^'|'$/g, '');
+function extractFrontMatter(text) {
+  const input = String(text || '');
+  const lines = input.split(/\r?\n/);
+  if (lines[0] !== '---') {
+    return { meta: {}, body: input };
+  }
+  const metaLines = [];
+  let idx = 1;
+  for (; idx < lines.length; idx += 1) {
+    if (lines[idx].trim() === '---') {
+      idx += 1;
+      break;
+    }
+    metaLines.push(lines[idx]);
+  }
+  const metaText = metaLines.join('\n');
+  let meta = {};
+  if (metaText.trim().length) {
+    try {
+      meta = parseSimpleYaml(metaText);
+    } catch (_) {
+      meta = {};
     }
   }
-  return meta;
+  const body = lines.slice(idx).join('\n');
+  return { meta, body };
+}
+
+function parseFrontMatter(text) {
+  return extractFrontMatter(text).meta || {};
+}
+
+function resolveAgentModel(meta) {
+  if (!meta || typeof meta !== 'object') return 'n/a';
+  if (meta.genie && meta.genie.model) return meta.genie.model;
+  if (meta.model) return meta.model;
+  return 'n/a';
 }
 
 function runAgentsList(parsed, config, paths) {
@@ -1310,7 +1280,7 @@ function runAgentsList(parsed, config, paths) {
       console.log(`\n${title}:`);
       arr.forEach((a) => {
         const d = a.meta && a.meta.description ? a.meta.description : '';
-        const m = a.meta && a.meta.model ? a.meta.model : 'n/a';
+        const m = resolveAgentModel(a.meta);
         console.log(`  • ${a.id} | model:${m} | ${d}`);
         console.log(`    ${promptHint(a.id)}`);
       });
@@ -1327,20 +1297,25 @@ function runAgentsList(parsed, config, paths) {
   filtered
     .sort((a, b) => a.id.localeCompare(b.id))
     .forEach((a) => {
-      const m = a.meta && a.meta.model ? a.meta.model : 'n/a';
+      const m = resolveAgentModel(a.meta);
       const d = a.meta && a.meta.description ? a.meta.description : '';
       console.log(`${a.id} | model:${m} | ${d}`);
       console.log(`  ${promptHint(a.id)}`);
     });
 }
 
-function loadAgent(name) {
+function loadAgentSpec(name) {
   const base = name.endsWith('.md') ? name.slice(0, -3) : name;
   const agentPath = path.join('.genie', 'agents', `${base}.md`);
   if (!fs.existsSync(agentPath)) {
     throw new Error(`❌ Agent '${name}' not found in .genie/agents`);
   }
-  return fs.readFileSync(agentPath, 'utf8');
+  const content = fs.readFileSync(agentPath, 'utf8');
+  const { meta, body } = extractFrontMatter(content);
+  return {
+    meta,
+    instructions: body.replace(/^(\r?\n)+/, '')
+  };
 }
 
 function runMode(parsed, config, paths) {

@@ -1,8 +1,10 @@
 ---
 name: genie-tracer
 description: Tracer subgeny to propose instrumentation (signals, probes) and expected outputs for observability.
-model: sonnet
 color: violet
+genie:
+  executor: codex
+  model: gpt-5-codex
 ---
 
 # Genie Tracer • Observe to Improve
@@ -22,4 +24,3 @@ Signals: [metrics|logs|traces]
 Probes: [ {location, signal, expected_output} ]
 Verdict: <instrumentation plan + priority> (confidence: <low|med|high>)
 ```
-

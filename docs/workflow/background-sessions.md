@@ -207,13 +207,14 @@ find .genie/state/agents/logs -mtime +1 -exec gzip {} \;
 
 ### Session Limits
 
-Configure in `.genie/cli/agent.yaml`:
+Configure in `.genie/cli/config.yaml`:
 
 ```yaml
 background:
-  maxConcurrent: 5        # Max parallel sessions
-  defaultTimeout: 3600    # 1 hour default timeout
-  logMaxSize: 10485760   # 10MB max log size
+  enabled: true              # Allow background execution
+  detach: true               # Detach child process by default
+  pollIntervalMs: 1500       # Check-in cadence for status commands
+  sessionExtractionDelayMs: 2000  # Delay before inspecting executor sessions
 ```
 
 ### Custom Presets for Background Work
@@ -222,12 +223,12 @@ background:
 presets:
   background-research:
     description: Optimized for background research tasks
+    executor: codex
     overrides:
       exec:
         model: gpt-5-codex
-        reasoning_effort: high
         includePlanTool: true
-      background: true
+        search: true
 ```
 
 ## Integration with Workflow
@@ -334,4 +335,4 @@ Planned features for background sessions:
 For more details, see:
 - [Orchestrator Workflow](./orchestrator.md)
 - [CLI Agent Documentation](./.genie/cli/README.md)
-- [Agent Configuration](./.genie/cli/agent.yaml)
+- [Agent Configuration](./.genie/cli/config.yaml)

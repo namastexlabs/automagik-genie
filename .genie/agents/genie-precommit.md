@@ -1,8 +1,10 @@
 ---
 name: genie-precommit
 description: Pre-commit checklist subgeny to gate lint, type, tests, docs, changelog, security, and formatting.
-model: sonnet
 color: teal
+genie:
+  executor: codex
+  model: gpt-5-codex
 ---
 
 # Genie PreCommit • Gatekeeper

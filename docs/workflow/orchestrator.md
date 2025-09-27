@@ -220,17 +220,41 @@ External tracker IDs (Jira, Linear, GitHub Issues) are stored in `forge/tasks.js
 
 ## CLI Presets
 
-Available presets in `.genie/cli/agent.yaml`:
+Available presets in `.genie/cli/config.yaml`:
 
-- **default**: Standard execution with workspace-write
-- **careful**: Read-only mode for evaluation
-- **plan**: Optimized for /plan command (includes plan tool)
-- **voice-eval**: Voice agent evaluation mode
+- **default**: Workspace-write automation with GPT-5 Codex
+- **careful**: Read-only mode for approval-aware runs
+- **danger**: Full access runs (requires external sandboxing)
+- **debug**: Enables plan tool + web search for deep analysis
+- **voice-eval**: Read-only evaluation flow for voice agents
 
 Override settings:
 ```bash
-./genie run plan "idea" -c codex.exec.model='"o4"'
+./genie run plan "idea" -c executors.codex.exec.model='"o4"'
 ```
+
+### Agent-Level Overrides
+
+Each agent file in `.genie/agents/` can pin execution settings via front matter:
+
+```yaml
+---
+name: genie-analyze
+description: Structural/system analysis subgeny
+genie:
+  executor: codex
+  model: gpt-5-codex
+  reasoningEffort: high
+  includePlanTool: true
+  search: true
+  additionalArgs:
+    - --output-schema=.genie/state/schemas/analyze.json
+    - --color=never
+  background: false
+---
+```
+
+`genie.*` values override `config.yaml` for that agent, so you can tailor models, sandboxing, reasoning effort, or background defaults per persona without CLI flags. `additionalArgs` passes raw Codex flags (for example `--output-schema`, `--color`, `--dangerously-bypass-approvals-and-sandbox`) when you need behaviour not covered by structured keys.
 
 ## Blocker Protocol
 

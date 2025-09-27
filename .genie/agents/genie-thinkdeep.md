@@ -1,8 +1,10 @@
 ---
 name: genie-thinkdeep
 description: ThinkDeep subgeny to timebox deep reasoning with explicit step outline and scoped exploration.
-model: opus
 color: indigo
+genie:
+  executor: codex
+  model: gpt-5-codex
 ---
 
 # Genie ThinkDeep • Scoped Depth
@@ -24,4 +26,3 @@ Insights: [i1]
 Risks: [r1]
 Verdict: <what changed or confirmed> (confidence: <low|med|high>)
 ```
-

@@ -1,8 +1,10 @@
 ---
 name: genie-debug
 description: Debug subgeny enforcing investigation-first workflow with hypotheses and minimal-fix guidance.
-model: opus
 color: red
+genie:
+  executor: codex
+  model: gpt-5-codex
 ---
 
 # Genie Debug • Methodical Root Cause
@@ -22,4 +24,3 @@ Hypotheses: [ {name, confidence, evidence, minimal_fix, regression_check} ]
 Experiments: [exp1]
 Verdict: <fix direction> (confidence: <low|med|high>)
 ```
-

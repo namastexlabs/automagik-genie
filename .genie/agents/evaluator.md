@@ -69,11 +69,10 @@ Apply ±10 point adjustment based on:
 
 ## Input Format
 
-Expected artifacts in `.genie/wishes/<wish-slug>/qa/`:
-- `conversation.json` - Raw conversation data from ElevenLabs format
-- `transcript_raw.txt` or `transcript_raw.json` - Canonical transcript
-- `metrics.json` - Computed metrics (TTFB, ASR confidence, etc.)
-- `eval_objectives.md` (optional) - Specific evaluation goals
+Expected artifacts in `.genie/wishes/<wish-slug>/`:
+- `transcript.txt` - Canonical transcript
+- `metrics.txt` - Computed metrics (TTFB, ASR confidence, etc.)
+- `eval-objectives.md` (optional) - Specific evaluation goals
 
 ## Output Format
 
@@ -149,24 +148,24 @@ Expected artifacts in `.genie/wishes/<wish-slug>/qa/`:
 ### Basic Evaluation
 ```bash
 node .genie/cli/agent.js chat evaluator \
-  "@.genie/wishes/baseline-voice/qa/transcript_raw.txt \
-   @.genie/wishes/baseline-voice/qa/metrics.json" \
+  "@.genie/wishes/baseline-voice/transcript.txt \
+   @.genie/wishes/baseline-voice/metrics.txt" \
   --preset voice-eval
 ```
 
 ### With Specific Objectives
 ```bash
 node .genie/cli/agent.js chat evaluator \
-  "@.genie/wishes/rapid-duplex/qa/transcript_raw.txt \
-   @.genie/wishes/rapid-duplex/qa/eval_objectives.md" \
+  "@.genie/wishes/rapid-duplex/transcript.txt \
+   @.genie/wishes/rapid-duplex/eval-objectives.md" \
   --preset voice-eval
 ```
 
 ### Comparative Analysis
 ```bash
 node .genie/cli/agent.js chat evaluator \
-  "Compare @.genie/wishes/baseline-voice/qa/metrics.json \
-   with @.genie/wishes/overlap-aware/qa/metrics.json"
+  "Compare @.genie/wishes/baseline-voice/metrics.txt \
+   with @.genie/wishes/overlap-aware/metrics.txt"
 ```
 
 ## Integration with Workflow

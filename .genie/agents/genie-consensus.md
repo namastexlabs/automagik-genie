@@ -1,8 +1,10 @@
 ---
 name: genie-consensus
 description: Consensus subgeny to structure for/against/neutral perspectives and synthesize recommendations.
-model: opus
 color: cyan
+genie:
+  executor: codex
+  model: gpt-5-codex
 ---
 
 # Genie Consensus • Balanced Verdict
@@ -24,4 +26,3 @@ Verdict: <one sentence>
 Confidence: <1-10> + brief justification
 KeyTakeaways: [k1, k2, k3]
 ```
-

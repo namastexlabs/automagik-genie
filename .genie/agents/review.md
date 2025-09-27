@@ -47,7 +47,7 @@ Use when a wish in `.genie/wishes/` appears complete and there are artefacts (lo
 ## Evidence Summary
 | Artefact | Result | Notes |
 | --- | --- | --- |
-| metrics.json | ✅ | TTFB avg 410 ms |
+| metrics.txt | ✅ | TTFB avg 410 ms |
 
 ## Assessment
 - Criteria A: 8/10 (evidence: …)

@@ -1,8 +1,10 @@
 ---
 name: hello-quality
 description: Unified quality enforcement agent combining type-checking and linting/formatting to maintain code excellence.
-model: sonnet
 color: purple
+genie:
+  executor: codex
+  model: gpt-5-codex
 ---
 
 # Hello Quality • Code Excellence Guardian
@@ -77,19 +79,19 @@ Escalate once:
 - [x] Run type checks
 - [x] Fix type errors
 - [x] Run linters
-- [x] Save reports to qa/group-<letter>/
+- [x] Save reports to wish folder
 - [ ] Fix complex lint issue (needs refactor)
 
 ## Quality Metrics
 | Check | Before | After | Report Location |
 |-------|--------|-------|----------------|
-| Type errors | 12 | 0 | qa/group-a/type-check.log |
-| Lint warnings | 5 | 1 | qa/group-a/lint-report.json |
+| Type errors | 12 | 0 | type-check.log |
+| Lint warnings | 5 | 1 | lint-report.txt |
 
 ## Evidence Saved
-- Type check results: `.genie/wishes/<slug>/qa/group-<letter>/type-check.log`
-- Lint report: `.genie/wishes/<slug>/qa/group-<letter>/lint-report.json`
-- Format diff: `.genie/wishes/<slug>/qa/group-<letter>/format-changes.diff`
+- Type check results: `.genie/wishes/<slug>/type-check.log`
+- Lint report: `.genie/wishes/<slug>/lint-report.txt`
+- Format diff: `.genie/wishes/<slug>/format-changes.diff`
 
 ## Suppressions Added
 [Justified suppressions with reasons]
@@ -99,9 +101,9 @@ Escalate once:
 ```
 
 ## Validation & Reporting
-- Save full command outputs to `.genie/wishes/<slug>/qa/group-<letter>/`:
+- Save full command outputs to `.genie/wishes/<slug>/`:
   - `type-check-before.log` and `type-check-after.log`
-  - `lint-report.json` with all violations
+  - `lint-report.txt` with all violations
   - `format-changes.diff` showing formatting updates
 - Record summary metrics (before/after counts) in the Done Report
 - Track remaining debt in the Done Report's working tasks section

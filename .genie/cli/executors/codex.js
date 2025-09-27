@@ -1,9 +1,10 @@
 const fs = require('fs');
 const path = require('path');
+const logViewer = require('./codex-log-viewer');
 
 const defaults = {
   binary: 'codex',
-  sessionsDir: '~/.codex/sessions',
+  sessionsDir: '.genie/state/agents/codex-sessions',
   exec: {
     fullAuto: true,
     model: 'gpt-5-codex',
@@ -12,11 +13,13 @@ const defaults = {
     includePlanTool: false,
     search: false,
     skipGitRepoCheck: false,
-    json: true,
+    json: false,
+    experimentalJson: true,
     color: 'auto',
     cd: null,
     outputSchema: null,
     outputLastMessage: null,
+    reasoningEffort: null,
     additionalArgs: [],
     images: []
   },
@@ -142,11 +145,15 @@ function collectExecOptions(execConfig) {
   if (execConfig.includePlanTool) options.push('--include-plan-tool');
   if (execConfig.search) options.push('--search');
   if (execConfig.skipGitRepoCheck) options.push('--skip-git-repo-check');
-  if (execConfig.json) options.push('--json');
+  if (execConfig.experimentalJson) options.push('--experimental-json');
+  else if (execConfig.json) options.push('--json');
   if (execConfig.color && execConfig.color !== 'auto') options.push('--color', String(execConfig.color));
   if (execConfig.cd) options.push('-C', String(execConfig.cd));
   if (execConfig.outputSchema) options.push('--output-schema', String(execConfig.outputSchema));
   if (execConfig.outputLastMessage) options.push('--output-last-message', String(execConfig.outputLastMessage));
+  if (execConfig.reasoningEffort) {
+    options.push('-c', `reasoning.effort="${execConfig.reasoningEffort}"`);
+  }
   if (Array.isArray(execConfig.images)) {
     execConfig.images.forEach((imagePath) => {
       if (typeof imagePath === 'string' && imagePath.length) {
@@ -168,5 +175,6 @@ module.exports = {
   buildResumeCommand,
   resolvePaths,
   extractSessionId,
-  getSessionExtractionDelay
+  getSessionExtractionDelay,
+  logViewer
 };

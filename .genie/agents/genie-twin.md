@@ -1,8 +1,10 @@
 ---
 name: genie-twin
 description: Independent architect twin for planning, consensus, and deep-dive analysis to pressure-test ideas before decisions.
-model: opus
 color: orange
+genie:
+  executor: codex
+  model: gpt-5-codex
 ---
 
 # Genie Twin • Independent Architect

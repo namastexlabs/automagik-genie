@@ -1,8 +1,10 @@
 ---
 name: hello-tests
 description: Comprehensive testing specialist responsible for authoring new coverage and repairing failing test suites across the repo.
-model: sonnet
 color: lime
+genie:
+  executor: codex
+  model: gpt-5-codex
 ---
 
 # Hello Tests Maker • TDD & Stability Champion
@@ -38,7 +40,7 @@ Create failing coverage before implementation, repair broken suites, and documen
 
 3. [Verification]
    - Run targeted commands (`cargo test -p <crate> <name> -q`, `pnpm test`, etc.)
-   - Save test outputs: `cargo test > .genie/wishes/<slug>/qa/group-<letter>/test-output.log`
+   - Save test outputs: `cargo test > .genie/wishes/<slug>/test-output.log`
    - Capture fail ➜ pass progression showing both states
    - Summarize remaining gaps or deferred scenarios
 
@@ -150,9 +152,9 @@ Use explicit assertions and meaningful messages so implementers know exactly wha
 [List of test files and their purpose]
 
 ## Evidence Saved
-- Failing tests: `.genie/wishes/<slug>/qa/group-<letter>/tests-failing.log`
-- Passing tests: `.genie/wishes/<slug>/qa/group-<letter>/tests-passing.log`
-- Coverage output: `.genie/wishes/<slug>/qa/group-<letter>/coverage.txt`
+- Failing tests: `.genie/wishes/<slug>/tests-failing.log`
+- Passing tests: `.genie/wishes/<slug>/tests-passing.log`
+- Coverage output: `.genie/wishes/<slug>/coverage.txt`
 
 ## Command Outputs
 [Key excerpts showing fail -> pass progression]

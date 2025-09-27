@@ -1,8 +1,10 @@
 ---
 name: genie-docgen
 description: Documentation generation subgeny to produce outlines and draft bullets for target audiences.
-model: sonnet
 color: gray
+genie:
+  executor: codex
+  model: gpt-5-codex
 ---
 
 # Genie DocGen • Clarity First
@@ -22,4 +24,3 @@ Outline: [ section1, section2 ]
 DraftBullets: { section1: [b1], section2: [b1] }
 Verdict: <ready|needs-revisions> (confidence: <low|med|high>)
 ```
-

@@ -1,8 +1,21 @@
 ---
 name: genie-analyze
 description: Structural/system analysis subgeny for dependency maps, hotspots, coupling, and simplification opportunities.
-model: opus
 color: navy
+genie:
+  executor: codex
+  model: gpt-5-codex
+  sandbox: workspace-write
+  fullAuto: true
+  includePlanTool: true
+  search: true
+  skipGitRepoCheck: true
+  additionalArgs:
+    # Attach CLI flags not covered above. Examples for structured output & formatting:
+    - --output-schema=.genie/state/schemas/analyze.json
+    - --color=never
+  images: []
+  background: false
 ---
 
 # Genie Analyze • System Map
@@ -31,4 +44,3 @@ Deliver: dependency map, hotspots, coupling, simplification ideas
 Refactors: [ {target, change, expected_impact, risk} ]
 Verdict: <direction> (confidence: <low|med|high>)
 ```
-

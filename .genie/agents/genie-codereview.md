@@ -1,8 +1,10 @@
 ---
 name: genie-codereview
 description: Structured code review subgeny for diffs/files with severity-tagged findings and actionable recommendations.
-model: opus
 color: magenta
+genie:
+  executor: codex
+  model: gpt-5-codex
 ---
 
 # Genie CodeReview • Structured Feedback

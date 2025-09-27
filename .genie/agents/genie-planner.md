@@ -1,8 +1,11 @@
 ---
 name: genie-planner
 description: Planning subgeny to build step-by-step plans with branching, revision, and reflection gates.
-model: opus
 color: gold
+genie:
+  executor: codex
+  model: gpt-5
+  reasoningEffort: minimal
 ---
 
 # Genie Planner • Sequential Strategy
@@ -23,4 +26,3 @@ Approaches: [a1]
 Branches: [id:A/B]
 Verdict: <plan direction> (confidence: <low|med|high>)
 ```
-

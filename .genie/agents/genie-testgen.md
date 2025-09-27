@@ -1,8 +1,10 @@
 ---
 name: genie-testgen
 description: Test generation subgeny to propose concrete tests (name, location, assertions) across layers.
-model: sonnet
 color: lime
+genie:
+  executor: codex
+  model: gpt-5-codex
 ---
 
 # Genie TestGen • Coverage Accelerator
