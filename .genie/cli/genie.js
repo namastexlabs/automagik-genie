@@ -44,7 +44,7 @@ const DEFAULT_CONFIG = {
       includePlanTool: false,
       search: false,
       skipGitRepoCheck: false,
-      json: false,
+      json: true,
       color: 'auto',
       cd: null,
       outputSchema: null,
@@ -751,39 +751,118 @@ function runView(parsed, config, paths) {
   }
   // Friendly parse
   const content = fs.readFileSync(logFile, 'utf8');
-  const lines = content.split(/\r?\n/);
+  const allLines = content.split(/\r?\n/);
+  const jsonl = [];
+  for (const line of allLines) {
+    const t = line.trim();
+    if (!t) continue;
+    try { jsonl.push(JSON.parse(t)); } catch (_) { /* skip non-json */ }
+  }
+  if (jsonl.length) {
+    renderJsonlView({ entry, jsonl, raw: content }, parsed, paths);
+  } else {
+    renderTextView({ entry, lines: allLines }, parsed, paths);
+  }
+}
+
+function renderJsonlView(src, parsed, paths) {
+  const { entry, jsonl, raw } = src;
+  const meta = jsonl.find((e) => e.provider && e.model) || {};
+  const promptObj = jsonl.find((e) => typeof e.prompt === 'string') || {};
+  const prompt = promptObj.prompt || '';
   const lastN = (parsed.options.lines && parsed.options.lines > 0) ? parsed.options.lines : 60;
-  const tailLines = lines.slice(-lastN);
-  // Extract last User instructions block
-  let lastInstructionsIdx = -1;
-  for (let i = lines.length - 1; i >= 0; i--) {
-    if (lines[i].includes('User instructions:')) { lastInstructionsIdx = i; break; }
-  }
-  let instructions = [];
-  if (lastInstructionsIdx !== -1) {
-    const start = lastInstructionsIdx;
-    const acc = [];
-    for (let i = start; i < Math.min(lines.length, start + 20); i++) {
-      acc.push(lines[i]);
-      // Heuristic: stop when we hit a blank line after instructions
-      if (i > start && lines[i].trim() === '') break;
+
+  const byCall = new Map();
+  const execs = [];
+  const mcp = [];
+  const patches = { add: 0, update: 0, move: 0, delete: 0 };
+  const errs = [];
+
+  jsonl.forEach((ev) => {
+    const m = ev.msg || {};
+    switch (m.type) {
+      case 'exec_command_begin':
+        byCall.set(m.call_id, { cmd: (m.command || []).join(' '), cwd: m.cwd });
+        break;
+      case 'exec_command_end': {
+        const rec = byCall.get(m.call_id) || {};
+        execs.push({ cmd: rec.cmd || '(unknown)', exit: m.exit_code, dur: m.duration });
+        break; }
+      case 'mcp_tool_call_begin':
+        byCall.set(m.call_id, { mcp: { server: m.invocation && m.invocation.server, tool: m.invocation && m.invocation.tool } });
+        break;
+      case 'mcp_tool_call_end': {
+        const rec = byCall.get(m.call_id) || { mcp: {} };
+        const d = m.duration || {};
+        mcp.push({ server: (rec.mcp && rec.mcp.server) || '?', tool: (rec.mcp && rec.mcp.tool) || '?', secs: d.secs || 0 });
+        break; }
+      case 'patch_apply_begin': {
+        const changes = m.changes || {};
+        Object.values(changes).forEach((chg) => {
+          if (chg.add) patches.add += 1;
+          if (chg.update) { patches.update += 1; if (chg.update.move_path) patches.move += 1; }
+          if (chg.delete) patches.delete += 1;
+        });
+        break; }
+      default: {
+        const s = JSON.stringify(m);
+        if (/error/i.test(s)) errs.push(m);
+      }
     }
-    instructions = acc;
+  });
+
+  console.log(`\nView: ${entry.agent} | session:${entry.sessionId || 'n/a'} | log:${formatPathRelative(entry.logFile, paths.baseDir)}`);
+  if (meta.model) {
+    console.log(`Model: ${meta.model} • Provider: ${meta.provider} • Sandbox: ${meta.sandbox || 'n/a'}`);
+    if (meta.workdir) console.log(`Workdir: ${meta.workdir}`);
   }
-  // Extract recent errors
-  const errorLines = lines.filter(l => /\bERROR\b|\bError:\b|\bFailed\b/i.test(l)).slice(-10);
-  // Output
-  console.log(`\nView: ${entry.agent} | session:${entry.sessionId || 'n/a'} | log:${formatPathRelative(logFile, paths.baseDir)}`);
-  if (instructions.length) {
-    console.log('\nLast Instructions:');
-    instructions.forEach(l => console.log('  ' + l));
+  if (prompt) {
+    console.log('\nPrompt:');
+    console.log('  ' + prompt);
   }
-  if (errorLines.length) {
-    console.log('\nRecent Errors:');
-    errorLines.forEach(l => console.log('  ' + l));
+  if (mcp.length) {
+    console.log(`\nMCP (${mcp.length}):`);
+    mcp.slice(-5).forEach((c) => console.log(`  • ${c.server}:${c.tool} ${c.secs}s`));
   }
+  if (patches.add || patches.update || patches.move || patches.delete) {
+    console.log(`\nPatches: add:${patches.add} update:${patches.update} move:${patches.move} delete:${patches.delete}`);
+  }
+  if (execs.length) {
+    console.log(`\nExecs (last ${Math.min(3, execs.length)}):`);
+    execs.slice(-3).forEach((e) => {
+      const ms = e.dur ? (e.dur.secs * 1000 + Math.round((e.dur.nanos || 0)/1e6)) : null;
+      console.log(`  ${e.exit === 0 ? 'OK ' : 'ERR'} ${e.cmd}  (${ms || '?'} ms)`);
+    });
+  }
+  if (errs.length) {
+    console.log('\nErrors (recent):');
+    errs.slice(-5).forEach((e) => {
+      const s = JSON.stringify(e).slice(0, 160);
+      console.log('  ' + s + (s.length >= 160 ? '…' : ''));
+    });
+  }
+  console.log(`\nRaw Tail (${lastN} lines):`);
+  raw.split(/\r?\n/).slice(-lastN).forEach((l) => console.log('  ' + l));
+}
+
+function renderTextView(src, parsed, paths) {
+  const { entry, lines } = src;
+  const lastN = (parsed.options.lines && parsed.options.lines > 0) ? parsed.options.lines : 60;
+  let lastInstructionsIdx = -1;
+  for (let i = lines.length - 1; i >= 0; i--) { if ((lines[i]||'').includes('User instructions:')) { lastInstructionsIdx = i; break; } }
+  const instructions = [];
+  if (lastInstructionsIdx !== -1) {
+    for (let i = lastInstructionsIdx; i < Math.min(lines.length, lastInstructionsIdx + 20); i++) {
+      instructions.push(lines[i]);
+      if (i > lastInstructionsIdx && (lines[i]||'').trim() === '') break;
+    }
+  }
+  const errorLines = lines.filter(l => /\bERROR\b|\bError:\b|\bFailed\b/i.test(l || '')).slice(-10);
+  console.log(`\nView: ${entry.agent} | session:${entry.sessionId || 'n/a'} | log:${formatPathRelative(entry.logFile, paths.baseDir)}`);
+  if (instructions.length) { console.log('\nLast Instructions:'); instructions.forEach(l => console.log('  ' + l)); }
+  if (errorLines.length) { console.log('\nRecent Errors:'); errorLines.forEach(l => console.log('  ' + l)); }
   console.log(`\nTail (${lastN} lines):`);
-  tailLines.forEach(l => console.log('  ' + l));
+  lines.slice(-lastN).forEach(l => console.log('  ' + l));
 }
 
 function resolveEntryByIdOrSession(store, target) {
