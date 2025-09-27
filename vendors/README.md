@@ -27,3 +27,26 @@ Pointers
 - LiveKit Agents quickstart and examples: `vendors/livekit-agents/examples/voice_agents/`
   - basic_agent.py, background_audio.py for turn-taking/overlap and audio mixing ideas.
 - Hume starter: Next.js scaffolding for conversational UI and metrics overlays we can borrow for `examples/demo-ui/` later.
+
+Swift (Next.js) — Usage
+- Location: `vendors/swift`
+- Run standalone (baseline):
+  - Copy `vendors/swift/.env.example` to `vendors/swift/.env.local` and set `GROQ_API_KEY` and `CARTESIA_API_KEY`.
+  - From `vendors/swift/`: `pnpm install && pnpm dev`
+- Integrate with Automagik Hello (Agents WS clone):
+  - Goal: connect to our WS (ElevenLabs Agents‑compatible) without external keys.
+  - Add an Agents WS client in Swift pointing to `NEXT_PUBLIC_VOICE_WS_URL` (e.g., `ws://localhost:8080/ws/agents`).
+  - Event types to support: `conversation_initiation_metadata`, `audio`, `agent_response`, `agent_response_correction`, `user_transcript`; and client events `contextual_update`, `user_message`, `user_activity`.
+  - Minimal sketch:
+    - `const ws = new WebSocket(process.env.NEXT_PUBLIC_VOICE_WS_URL!)`
+    - Switch on `evt.type` to route audio/text events; map audio base64 → AudioWorklet buffer.
+  - Notes: Do not modify upstream on main; keep changes in a local branch or document patches.
+
+LiveKit Examples — Key paths
+- Location: `vendors/livekit-examples`
+- Complex recipe to study: `complex-agents/medical_office_triage`
+- Follow upstream README for environment and run instructions.
+
+Hume EVI Next.js Starter — Notes
+- Location: `vendors/hume-evi-next-js-starter`
+- Use to study conversational UI patterns and EVI wiring; follow upstream README to run.
