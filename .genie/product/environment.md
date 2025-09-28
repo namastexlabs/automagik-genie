@@ -1,4 +1,4 @@
-# Environment Configuration (Automagik Hello)
+# Environment Configuration (Template)
 
 This is the single source of truth for all environment variables. Define them before implementation decisions are locked. Provide values via a local `.env` (git‑ignored) and CI/CD secrets for staging/prod. Never commit real keys.
 

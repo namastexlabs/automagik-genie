@@ -84,7 +84,7 @@ A common snippet:
 # Start a Genie Mode (preferred for built-in flows)
 ./genie mode planner "[Discovery] … [Implementation] … [Verification] …"
 
-# Start an Agent (hello-*, forge-*, custom)
+# Start an Agent (template-*, forge-*, custom)
 ./genie run forge-coder "[Discovery] … [Implementation] … [Verification] …"
 
 # Inspect runs and view logs (friendly)
@@ -111,12 +111,12 @@ Twin prompt patterns (run through any agent, typically `plan`):
 
 ## Local Agent Map
 Routing keys map to agent files. Keep this updated as new agents are added.
-- implementor → `.genie/agents/hello-coder.md` (template implementor)
-- qa → `.genie/agents/hello-qa-tester.md` (template QA)
-- quality → `.genie/agents/hello-quality.md` (template quality)
-- tests → `.genie/agents/hello-tests.md` (template tests)
-- self-learn → `.genie/agents/hello-self-learn.md` (template self-learn)
-- bug-reporter → `.genie/agents/hello-bug-reporter.md` (template bug reporter)
+- implementor → `.genie/agents/template-implementor.md`
+- qa → `.genie/agents/template-qa.md`
+- quality → `.genie/agents/template-quality.md`
+- tests → `.genie/agents/template-tests.md`
+- self-learn → `.genie/agents/template-self-learn.md`
+- bug-reporter → `.genie/agents/template-bug-reporter.md`
 - task-master → `.genie/agents/forge-master.md`
 - planner → `.genie/agents/forge-master.md`
 - twin → `.genie/agents/genie-twin.md`

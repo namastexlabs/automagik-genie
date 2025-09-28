@@ -8,8 +8,8 @@ This repository is a Genie template that installs into any codebase. It provides
 
 ### Primary Customers
 
-- Open‑source developers and tinkerers: Build personal voice agents with full control over latency, turn‑taking, and voice behavior.
-- Enterprise conversational AI teams: Deploy production‑grade voice entities (e.g., “Ana”) with strict SLAs, observability, and safety.
+- Open‑source developers and tinkerers: Install Genie templates into any repo and orchestrate planning → implementation with evidence-first workflows.
+- Enterprise teams: Standardize agentic workflows (plan/wish/forge/review/commit) with auditability and guardrails across multiple projects.
 
 ### User Personas
 
@@ -27,15 +27,15 @@ This repository is a Genie template that installs into any codebase. It provides
 
 ## The Problem
 
-### Latency and Flow Break Natural Conversation
-End‑to‑end TTFB and turn latency frequently exceed 1000–1500ms, breaking overlap and barge‑in. This yields higher abandonment and lower CSAT.
+### Fragmented Agent Workflows
+Teams duplicate prompt scaffolding and orchestration patterns across repos, causing drift and inconsistent results.
 
-**Our Solution:** A Rust‑first, streaming pipeline with pinned regions, raw WebSocket TTS control, and ultra‑fast STT to keep TTFB consistently sub‑second.
+**Our Solution:** A shared, installable template that unifies prompts, guardrails, and evidence capture without imposing domain specifics.
 
-### Robotic Prosody and Limited Overlap
-Traditional voice agents sound “flat” and cannot handle crosstalk, interruptions, or natural pauses, degrading perceived human‑ness.
+### Hard-to-Audit Changes
+Lack of consistent evidence and report structures slows review and erodes trust.
 
-**Our Solution:** Prosody‑aware strategies, experimental ASD/diarization, and multi‑context streaming to support overlap and interruption gracefully.
+**Our Solution:** Death/Done Testaments, standardized logs, and validation hooks across all agents.
 
 ### No Place to Rapidly Try Human‑Likeness Strategies
 Teams lack an experimentation harness to combine VAD/ASD, prosody, TTS model choices, and timing heuristics — and measure which feels most human.

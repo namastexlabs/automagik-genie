@@ -41,9 +41,9 @@ Use a known session ID (update if fresh runs exist):
 - Verify JSON envelope: append `--json` on one of the above.
 
 ### 5. Background Detach Preview
-Pick an agent with lightweight prompt (e.g., `hello-quality`):
-- `./genie run hello-quality "[Discovery] sanity ping" --no-background`
-- `./genie run hello-quality "[Discovery] background" --background`
+Pick an agent with lightweight prompt (e.g., `template-quality`):
+- `./genie run template-quality "[Discovery] sanity ping" --no-background`
+- `./genie run template-quality "[Discovery] background" --background`
   - Ensure detach callout displays log path + session id.
 - `./genie continue <sessionId> "[Verification] follow-up" --background`
 - `./genie runs --status running` should briefly show `🟢` during execution.

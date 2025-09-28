@@ -1,4 +1,4 @@
-# Product Planning Session Context (Automagik Hello)
+# Product Planning Session Context (Template)
 
 Purpose
 - Keep session context, auto‑context references, and the Discovery → Implementation → Verification scaffold outside of command files.

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Precise definitions for all metrics used in Automagik Hello, compatible with ElevenLabs conversation API schema.
+Precise definitions for all metrics used in {{PROJECT_NAME}} (or your project after install). Adapt to your domain; examples: latency budgets, throughput, accuracy, quality.
 
 ## Latency Metrics
 
