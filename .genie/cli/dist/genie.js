@@ -1061,15 +1061,10 @@ function runView(parsed, config, paths) {
 function runStop(parsed, config, paths) {
     const [target] = parsed.commandArgs;
     if (!target) {
-        throw new Error('Usage: genie stop <sessionId|agent|pid>');
+        throw new Error('Usage: genie stop <sessionId|pid>');
     }
     const store = (0, session_store_1.loadSessions)(paths, config, DEFAULT_CONFIG);
-    let found = findSessionEntry(store, target, paths);
-    let resolvedByAgent = false;
-    if (!found && store.agents[target]) {
-        found = { agentName: target, entry: store.agents[target] };
-        resolvedByAgent = true;
-    }
+    const found = findSessionEntry(store, target, paths);
     if (!found) {
         const numericPid = Number(target);
         if (Number.isInteger(numericPid)) {
@@ -1110,12 +1105,7 @@ function runStop(parsed, config, paths) {
     if (entry.exitCode === undefined)
         entry.exitCode = null;
     (0, session_store_1.saveSessions)(paths, store);
-    if (resolvedByAgent && !entry.sessionId) {
-        console.log(`✅ Stopped processes for agent '${agentName}'. Session id was unavailable.`);
-    }
-    else {
-        console.log(`✅ Stop signal handled for ${identifier}`);
-    }
+    console.log(`✅ Stop signal handled for ${identifier}`);
 }
 function renderTextView(src, parsed, paths) {
     const { entry, lines } = src;
@@ -1168,7 +1158,8 @@ function findSessionEntry(store, sessionId, paths) {
             continue;
         try {
             const content = fs_1.default.readFileSync(logFile, 'utf8');
-            if (content.includes(trimmed)) {
+            const marker = new RegExp(`"session_id":"${trimmed}"`);
+            if (marker.test(content)) {
                 entry.sessionId = trimmed;
                 entry.lastUsed = new Date().toISOString();
                 (0, session_store_1.saveSessions)(paths, store);

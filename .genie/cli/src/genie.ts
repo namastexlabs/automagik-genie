@@ -1132,17 +1132,11 @@ function runView(parsed: ParsedCommand, config: GenieConfig, paths: Required<Con
 function runStop(parsed: ParsedCommand, config: GenieConfig, paths: Required<ConfigPaths>): void {
   const [target] = parsed.commandArgs;
   if (!target) {
-    throw new Error('Usage: genie stop <sessionId|agent|pid>');
+    throw new Error('Usage: genie stop <sessionId|pid>');
   }
 
   const store = loadSessions(paths as SessionPathsConfig, config as SessionLoadConfig, DEFAULT_CONFIG as any);
-  let found = findSessionEntry(store, target, paths);
-  let resolvedByAgent = false;
-
-  if (!found && store.agents[target]) {
-    found = { agentName: target, entry: store.agents[target] };
-    resolvedByAgent = true;
-  }
+  const found = findSessionEntry(store, target, paths);
 
   if (!found) {
     const numericPid = Number(target);
@@ -1185,11 +1179,7 @@ function runStop(parsed: ParsedCommand, config: GenieConfig, paths: Required<Con
   if (entry.exitCode === undefined) entry.exitCode = null;
   saveSessions(paths as SessionPathsConfig, store);
 
-  if (resolvedByAgent && !entry.sessionId) {
-    console.log(`✅ Stopped processes for agent '${agentName}'. Session id was unavailable.`);
-  } else {
-    console.log(`✅ Stop signal handled for ${identifier}`);
-  }
+  console.log(`✅ Stop signal handled for ${identifier}`);
 }
 
 function renderTextView(src: { entry: SessionEntry; lines: string[] }, parsed: ParsedCommand, paths: Required<ConfigPaths>): void {
@@ -1237,7 +1227,8 @@ function findSessionEntry(
     if (!logFile || !fs.existsSync(logFile)) continue;
     try {
       const content = fs.readFileSync(logFile, 'utf8');
-      if (content.includes(trimmed)) {
+      const marker = new RegExp(`"session_id":"${trimmed}"`);
+      if (marker.test(content)) {
         entry.sessionId = trimmed;
         entry.lastUsed = new Date().toISOString();
         saveSessions(paths as SessionPathsConfig, store);
