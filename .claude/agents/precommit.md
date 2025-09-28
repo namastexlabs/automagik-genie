@@ -1,0 +1,1 @@
+@.genie/agents/modes/precommit.md

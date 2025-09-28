@@ -125,6 +125,18 @@ approval_policy: on-failure
 include_plan_tool: true
 ```
 
+### Prompt Author (prompt)
+```yaml
+reasoning_effort: medium
+sandbox: read-only            # prompt agent must never edit files
+approval_policy: on-request   # escalate if asked to exceed prompt-only scope
+include_plan_tool: true       # uses planning notes for context staging
+```
+
+- Sole output is the constructed prompt text; no Done Reports or implementation steps.
+- Reads repository context to enrich prompts but remains in read-only mode.
+- Rejects or escalates requests that require file edits, testing, or artifact generation.
+
 ## Running Agents with Custom Parameters
 
 ### Via CLI Flags

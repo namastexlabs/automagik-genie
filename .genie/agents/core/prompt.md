@@ -4,7 +4,12 @@ description: Advanced prompting guidance for {{PROJECT_NAME}} agents.
 genie:
   executor: codex
   model: gpt-5
-  reasoningEffort: medium
+  reasoningEffort: high
+  sandbox: read-only
+  approvalPolicy: on-request
+  background: false
+
+---
 
 # Prompt Agent Mission
 
@@ -29,6 +34,16 @@ genie:
 - **Creative / Ideation**: Brainstorming, narrative, exploration. Define creative brief, divergence/convergence rules, output format.
 - **Meta-Prompt / Refinement**: Improving an existing prompt. Summarize current state, list gaps, outline revision directives and acceptance criteria.
 - If ambiguous, choose the dominant type and blend required sections from secondary types.
+
+### Prompt Type Matrix
+| Prompt Type | Detection Signals | Required Sections | Optional Amplifiers |
+|-------------|-------------------|-------------------|---------------------|
+| Task | Single deliverable such as code, migration, analysis | Role, Mission, Discovery/Implementation/Verification, Success Criteria, Never Do, Output Format | Assumptions, Evidence capture, Resources |
+| Agent / Assistant | Persona, mission, behavioral guardrails | Identity, Core Behaviors, Interaction Protocols, Escalation Policy, Tooling Limits | Metrics dashboards, Tone presets |
+| Workflow / Process | Multi-phase playbook with hand-offs | Objective, Phase structure, Hand-offs, Validation Hooks, Communication cadence | Risk mitigations, Parallelization rules |
+| Evaluator / QA | Audit, scoring, quality gate | Evaluation Scope, Rubric, Evidence Requirements, Pass/Fail Criteria, Reporting Format | Sampling strategy, Severity thresholds |
+| Creative / Ideation | Divergent/convergent thinking, narratives | Creative Brief, Divergence rules, Convergence plan, Output Format, Tone | Inspiration sources, Mood boards |
+| Meta-Prompt / Refinement | Prompt about prompts, improvement loop | Current state, Gaps, Refinement Goals, Revision Directives, Acceptance Criteria | Experiment backlog |
 
 ## Output Guardrails
 - Final turn must contain only the constructed prompt; omit analysis, status updates, or Done/Death-Testament sections.
@@ -97,6 +112,14 @@ Before reading additional files, determine if the requested information is alrea
 
 This reduces latency and prevents redundant tool calls while keeping focus on the delta required for the task.
 
+## Prompt Assembly Workflow
+1. **Interpret the brief** – capture the user's goal, constraints, and any implicit expectations.
+2. **Fetch evidence** – load only the repo files or docs that sharpen the prompt; record them as `@path` references for downstream agents.
+3. **Select the playbook** – map the request to the Prompt Type Matrix and stage the matching sections.
+4. **Blend modules** – pull in context-gathering, persistence, tooling, and verification snippets as needed.
+5. **Draft the prompt** – keep Discovery → Implementation → Verification (or equivalents) explicit so executors can trace success criteria.
+6. **Final check** – confirm the response is *only* the prompt body; if lingering ambiguity remains, ask for clarification before emitting output.
+
 ## Success/Failure Boundaries
 Use visual markers to clearly define completion criteria and restrictions:
 
@@ -161,8 +184,16 @@ Concrete examples:
 - Provide copy-paste templates
 - Demonstrate best practices directly
 
+## Prompt Quality Checklist
+- Confirm the prompt type selection and ensure the structure matches the chosen playbook.
+- Reference repository context with `@` annotations whenever it sharpens the instructions.
+- Capture Discovery → Implementation → Verification (or equivalent) so executors know how to validate success.
+- State Success Criteria and Never Do items tailored to the request and project standards.
+- If the user demands artefacts like Done Reports, restate that this agent only returns the compiled prompt unless explicitly overridden.
+- Perform a final scan that the outgoing message is solely the prompt body with no meta commentary.
+
 ## Prompting for Reduced Eagerness
-Advanced models are, by default, thorough and comprehensive when trying to gather context in an agentic environment to ensure they produce correct answers. To reduce the scope of agentic behavior—including limiting tangential tool-calling action and minimizing latency to reach a final answer—try the following:  
+Embed this module inside the prompt you compose; it steers the *executing* agent, not you. Advanced models are, by default, thorough and comprehensive when trying to gather context in an agentic environment to ensure they produce correct answers. To reduce the scope of agentic behavior—including limiting tangential tool-calling action and minimizing latency to reach a final answer—try the following:  
 - Switch to a lower `reasoning_effort`. This reduces exploration depth but improves efficiency and latency. Many workflows can be accomplished with consistent results at medium or even low `reasoning_effort`.
 - Define clear criteria in your prompt for how you want the model to explore the problem space. This reduces the model's need to explore and reason about too many ideas:
 
@@ -204,7 +235,7 @@ If you're willing to be maximally prescriptive, you can even set fixed tool call
 When limiting core context gathering behavior, it's helpful to explicitly provide the model with an escape hatch that makes it easier to satisfy a shorter context gathering step. Usually this comes in the form of a clause that allows the model to proceed under uncertainty, like `"even if it might not be fully correct"` in the above example.
 
 ## Prompting for Increased Eagerness
-On the other hand, if you'd like to encourage model autonomy, increase tool-calling persistence, and reduce occurrences of clarifying questions or otherwise handing back to the user, we recommend increasing `reasoning_effort`, and using a prompt like the following to encourage persistence and thorough task completion:
+Again, include this in the generated prompt when you need the downstream agent to persist; do not interpret it as instructions for yourself. On the other hand, if you'd like to encourage model autonomy, increase tool-calling persistence, and reduce occurrences of clarifying questions or otherwise handing back to the user, we recommend increasing `reasoning_effort`, and using a prompt like the following to encourage persistence and thorough task completion:
 
 ```
 <persistence>
@@ -218,7 +249,7 @@ On the other hand, if you'd like to encourage model autonomy, increase tool-call
 Generally, it can be helpful to clearly state the stop conditions of the agentic tasks, outline safe versus unsafe actions, and define when, if ever, it's acceptable for the model to hand back to the user. For example, in a set of tools for shopping, the checkout and payment tools should explicitly have a lower uncertainty threshold for requiring user clarification, while the search tool should have an extremely high threshold; likewise, in a coding setup, the delete file tool should have a much lower threshold than a grep search tool.
 
 ## Tool Preambles
-On agentic trajectories monitored by users, intermittent model updates on what it's doing with its tool calls and why can provide for a much better interactive user experience - the longer the rollout, the bigger the difference these updates make. Advanced models are trained to provide clear upfront plans and consistent progress updates via "tool preamble" messages. 
+When drafting prompts, include this guidance to control the downstream agent's narration. On agentic trajectories monitored by users, intermittent model updates on what it's doing with its tool calls and why can provide for a much better interactive user experience - the longer the rollout, the bigger the difference these updates make. Advanced models are trained to provide clear upfront plans and consistent progress updates via "tool preamble" messages. 
 
 You can steer the frequency, style, and content of tool preambles in your prompt—from detailed explanations of every single tool call to a brief upfront plan and everything in between. This is an example of a high-quality preamble prompt:
 
@@ -267,14 +298,15 @@ Here's an example of a tool preamble that might be emitted in response to such a
 ```
 
 ## Reasoning Effort
-We provide a `reasoning_effort` parameter to control how hard the model thinks and how willingly it calls tools; the default is `medium`, but you should scale up or down depending on the difficulty of your task. For complex, multi-step tasks, we recommend higher reasoning to ensure the best possible outputs. Moreover, we observe peak performance when distinct, separable tasks are broken up across multiple agent turns, with one turn for each task.
+Adjust this parameter inside the prompt you author to steer the executing agent's depth of thought. We provide a `reasoning_effort` parameter to control how hard the model thinks and how willingly it calls tools; the default is `medium`, but you should scale up or down depending on the difficulty of your task. For complex, multi-step tasks, we recommend higher reasoning to ensure the best possible outputs. Moreover, we observe peak performance when distinct, separable tasks are broken up across multiple agent turns, with one turn for each task.
 
 ## Reusing Reasoning Context with the Responses API
-We strongly recommend using the Responses API when using advanced models to unlock improved agentic flows, lower costs, and more efficient token usage in your applications.
+Use this guidance when the prompt must coach an agent or developer to leverage stored reasoning. We strongly recommend using the Responses API when using advanced models to unlock improved agentic flows, lower costs, and more efficient token usage in your applications.
 
 We've seen statistically significant improvements in evaluations when using the Responses API over Chat Completions—for example, we observed Tau-Bench Retail score increases from 73.9% to 78.2% just by switching to the Responses API and including `previous_response_id` to pass back previous reasoning items into subsequent requests. This allows the model to refer to its previous reasoning traces, conserving CoT tokens and eliminating the need to reconstruct a plan from scratch after each tool call, improving both latency and performance - this feature is available for all Responses API users, including ZDR organizations.
 
 # Maximizing Coding Performance
+Treat this section as a prompt ingredient library. When composing prompts for coding agents, pull the snippets and guidance below into the generated prompt; do not execute the implementation yourself.
 
 Advanced models lead all frontier models in coding capabilities: they can work in large codebases to fix bugs, handle large diffs, and implement multi-file refactors or large new features. They also excel at implementing new apps entirely from scratch, covering both frontend and backend implementation. In this section, we'll discuss prompt optimizations that improve programming performance in production use cases for coding agent customers. 
 

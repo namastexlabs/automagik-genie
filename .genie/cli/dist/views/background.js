@@ -1,40 +1,39 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.buildBackgroundStartView = buildBackgroundStartView;
+exports.buildBackgroundPendingView = buildBackgroundPendingView;
 exports.buildRunCompletionView = buildRunCompletionView;
 function buildBackgroundStartView(params) {
-    const hasSession = Boolean(params.sessionId);
-    const viewHint = hasSession
-        ? `View logs → ./genie view ${params.sessionId}`
-        : 'View logs → session pending (run `./genie runs --status running` to fetch the session id).';
-    const sessionLine = hasSession
-        ? `sessionid: ${params.sessionId}`
-        : 'sessionid: pending (run `./genie runs --status running`).';
-    const actionLines = (params.actions && params.actions.length)
-        ? params.actions
-        : hasSession
-            ? [`• Watch: ./genie view ${params.sessionId}`]
-            : ['• Watch: session pending – run `./genie runs --status running` then `./genie view <sessionId>`'];
+    const sessionLine = `sessionid: ${params.sessionId ?? 'n/a'}`;
+    const rows = [sessionLine, ...(params.actions || [])];
     return {
         style: params.style,
-        title: `Detached: ${params.agentName}`,
         body: {
             type: 'layout',
             direction: 'column',
             gap: 1,
             children: [
-                { type: 'heading', level: 1, text: `${params.agentName} detached`, accent: 'primary' },
                 {
                     type: 'callout',
                     tone: 'success',
                     title: 'Background session started',
-                    body: compact([
-                        viewHint,
-                        sessionLine,
-                        ...actionLines
-                    ])
+                    body: compact(rows)
                 }
-            ].filter(Boolean)
+            ]
+        }
+    };
+}
+function buildBackgroundPendingView(params) {
+    const message = `${params.agentName} starting – waiting for session id…${params.frame ? ` ${params.frame}` : ''}`;
+    return {
+        style: params.style,
+        body: {
+            type: 'layout',
+            direction: 'column',
+            gap: 1,
+            children: [
+                { type: 'text', text: message, tone: 'muted' }
+            ]
         }
     };
 }

@@ -1,0 +1,1 @@
+@.genie/agents/modes/analyze.md

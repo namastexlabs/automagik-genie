@@ -13,7 +13,7 @@ import { renderEnvelope, ViewEnvelope, ViewStyle } from './view';
 import { buildHelpView } from './views/help';
 import { buildAgentCatalogView } from './views/agent-catalog';
 import { buildRunsOverviewView, buildRunsScopedView, RunRow } from './views/runs';
-import { buildBackgroundStartView, buildRunCompletionView } from './views/background';
+import { buildBackgroundPendingView, buildBackgroundStartView, buildRunCompletionView } from './views/background';
 import { buildStopView, StopEvent } from './views/stop';
 import { buildErrorView, buildWarningView, buildInfoView } from './views/common';
 import { buildLogTailView } from './views/log-tail';
@@ -678,21 +678,52 @@ async function runChat(parsed: ParsedCommand, config: GenieConfig, paths: Requir
     entry.runnerPid = runnerPid;
     entry.status = 'running';
     saveSessions(paths as SessionPathsConfig, store);
-    const bannerSessionId = await resolveSessionIdForBanner(agentName, config, paths, entry.sessionId, logFile);
-    if (bannerSessionId && !entry.sessionId) {
-      entry.sessionId = bannerSessionId;
+    const emitStatus = async (sessionId: string | null | undefined, frame?: string) => {
+      if (!sessionId) {
+        const pendingView = buildBackgroundPendingView({
+          style: parsed.options.style,
+          agentName,
+          frame
+        });
+        await emitView(pendingView, parsed.options);
+        return;
+      }
+
+      const actions = buildBackgroundActions(sessionId, { resume: true, includeStop: true });
+      const statusView = buildBackgroundStartView({
+        style: parsed.options.style,
+        agentName,
+        logPath: formatPathRelative(logFile, paths.baseDir || '.'),
+        sessionId,
+        actions
+      });
+      await emitView(statusView, parsed.options);
+    };
+
+    if (entry.sessionId) {
+      await emitStatus(entry.sessionId);
+      return;
+    }
+
+    await emitStatus(null, '⠋');
+
+    const resolvedSessionId = await resolveSessionIdForBanner(
+      agentName,
+      config,
+      paths,
+      entry.sessionId,
+      logFile,
+      async (frame) => emitStatus(null, frame)
+    );
+
+    const finalSessionId = resolvedSessionId || entry.sessionId;
+
+    if (finalSessionId && !entry.sessionId) {
+      entry.sessionId = finalSessionId;
+      entry.lastUsed = new Date().toISOString();
       saveSessions(paths as SessionPathsConfig, store);
     }
-    const envelope = buildBackgroundStartView({
-      style: parsed.options.style,
-      agentName,
-      logPath: formatPathRelative(logFile, paths.baseDir || '.'),
-      sessionId: bannerSessionId,
-      actions: buildBackgroundActions(bannerSessionId, {
-        resume: true
-      })
-    });
-    await emitView(envelope, parsed.options);
+    await emitStatus(entry.sessionId ?? resolvedSessionId ?? null);
     return;
   }
 
@@ -907,6 +938,10 @@ function executeRun(args: ExecuteRunArgs): Promise<void> {
     throw new Error(`Executor '${executorKey}' returned an invalid command configuration.`);
   }
 
+  const logDir = path.dirname(logFile);
+  if (!fs.existsSync(logDir)) {
+    fs.mkdirSync(logDir, { recursive: true });
+  }
   const logStream = fs.createWriteStream(logFile, { flags: 'a' });
   const spawnOptions: SpawnOptionsWithoutStdio = {
     stdio: ['ignore', 'pipe', 'pipe'] as any,
@@ -1126,10 +1161,24 @@ function deriveStartTime(): number {
   return Date.now();
 }
 
+function sanitizeLogFilename(agentName: string): string {
+  const fallback = 'agent';
+  if (!agentName || typeof agentName !== 'string') return fallback;
+  const normalized = agentName
+    .trim()
+    .replace(/[\\/]+/g, '-')
+    .replace(/[^a-z0-9._-]+/gi, '-')
+    .replace(/-+/g, '-')
+    .replace(/\.+/g, '.')
+    .replace(/^-+|-+$/g, '')
+    .replace(/^\.+|\.+$/g, '');
+  return normalized.length ? normalized : fallback;
+}
+
 function deriveLogFile(agentName: string, startTime: number, paths: Required<ConfigPaths>): string {
   const envPath = process.env[INTERNAL_LOG_PATH_ENV];
   if (envPath) return envPath;
-  const filename = `${agentName}-${startTime}.log`;
+  const filename = `${sanitizeLogFilename(agentName)}-${startTime}.log`;
   return path.join(paths.logsDir || '.genie/state/agents/logs', filename);
 }
 
@@ -1233,22 +1282,52 @@ async function runContinue(parsed: ParsedCommand, config: GenieConfig, paths: Re
     session.runnerPid = runnerPid;
     session.status = 'running';
     saveSessions(paths as SessionPathsConfig, store);
-    const bannerSessionId = await resolveSessionIdForBanner(agentName, config, paths, session.sessionId, logFile);
-    if (bannerSessionId && !session.sessionId) {
-      session.sessionId = bannerSessionId;
+    const emitStatus = async (sessionId: string | null | undefined, frame?: string) => {
+      if (!sessionId) {
+        const pendingView = buildBackgroundPendingView({
+          style: parsed.options.style,
+          agentName,
+          frame
+        });
+        await emitView(pendingView, parsed.options);
+        return;
+      }
+
+      const actions = buildBackgroundActions(sessionId, { resume: false, includeStop: true });
+      const statusView = buildBackgroundStartView({
+        style: parsed.options.style,
+        agentName,
+        logPath: formatPathRelative(logFile, paths.baseDir || '.'),
+        sessionId,
+        actions
+      });
+      await emitView(statusView, parsed.options);
+    };
+
+    if (session.sessionId) {
+      await emitStatus(session.sessionId);
+      return;
+    }
+
+    await emitStatus(null, '⠋');
+
+    const resolvedSessionId = await resolveSessionIdForBanner(
+      agentName,
+      config,
+      paths,
+      session.sessionId,
+      logFile,
+      async (frame) => emitStatus(null, frame)
+    );
+
+    const finalSessionId = resolvedSessionId || session.sessionId;
+
+    if (finalSessionId && !session.sessionId) {
+      session.sessionId = finalSessionId;
+      session.lastUsed = new Date().toISOString();
       saveSessions(paths as SessionPathsConfig, store);
     }
-    const envelope = buildBackgroundStartView({
-      style: parsed.options.style,
-      agentName,
-      logPath: formatPathRelative(logFile, paths.baseDir || '.'),
-      sessionId: bannerSessionId,
-      actions: buildBackgroundActions(bannerSessionId, {
-        resume: false,
-        includeStop: true
-      })
-    });
-    await emitView(envelope, parsed.options);
+    await emitStatus(session.sessionId ?? resolvedSessionId ?? null);
     return;
   }
 
@@ -1565,7 +1644,9 @@ function buildBackgroundActions(
   options: { resume?: boolean; includeStop?: boolean }
 ): string[] {
   if (!sessionId) {
-    const lines: string[] = ['• Watch: session pending – run `./genie runs --status running` then `./genie view <sessionId>`'];
+    const lines: string[] = [
+      '• Watch: session pending – run `./genie runs --status running` then `./genie view <sessionId>`'
+    ];
     if (options.resume) {
       lines.push('• Resume: session pending – run `./genie continue <sessionId> "<prompt>"` once available');
     }
@@ -1594,49 +1675,73 @@ async function resolveSessionIdForBanner(
   paths: Required<ConfigPaths>,
   current: string | null | undefined,
   logFile: string | null | undefined,
-  timeoutMs = 15000,
+  onProgress?: (frame: string) => Promise<void>,
+  timeoutMs: number | null = null,
   intervalMs = 250
 ): Promise<string | null> {
   if (current) return current;
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    await sleep(intervalMs);
+  const startedAt = Date.now();
+  const frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+  let frameIndex = 0;
+
+  while (true) {
+    if (timeoutMs !== null && Date.now() - startedAt >= timeoutMs) {
+      return current ?? null;
+    }
+
     try {
       const liveStore = loadSessions(
         paths as SessionPathsConfig,
         config as SessionLoadConfig,
         DEFAULT_CONFIG as any
       );
-      const candidate = liveStore.agents?.[agentName]?.sessionId;
-      if (candidate) {
-        return candidate;
+      const agentEntry = liveStore.agents?.[agentName];
+      if (agentEntry?.sessionId) {
+        return agentEntry.sessionId;
       }
+
       if (logFile && fs.existsSync(logFile)) {
         const content = fs.readFileSync(logFile, 'utf8');
         const match = /"session_id"\s*:\s*"([^"]+)"/i.exec(content) || /"sessionId"\s*:\s*"([^"]+)"/i.exec(content);
         if (match) {
           const sessionId = match[1];
-          const refreshStore = loadSessions(
-            paths as SessionPathsConfig,
-            config as SessionLoadConfig,
-            DEFAULT_CONFIG as any
-          );
-          const agentEntry = refreshStore.agents?.[agentName];
           if (agentEntry && !agentEntry.sessionId) {
             agentEntry.sessionId = sessionId;
             agentEntry.lastUsed = new Date().toISOString();
-            saveSessions(paths as SessionPathsConfig, refreshStore);
+            saveSessions(paths as SessionPathsConfig, liveStore);
+          } else {
+            const refreshStore = loadSessions(
+              paths as SessionPathsConfig,
+              config as SessionLoadConfig,
+              DEFAULT_CONFIG as any
+            );
+            const refreshEntry = refreshStore.agents?.[agentName];
+            if (refreshEntry && !refreshEntry.sessionId) {
+              refreshEntry.sessionId = sessionId;
+              refreshEntry.lastUsed = new Date().toISOString();
+              saveSessions(paths as SessionPathsConfig, refreshStore);
+            }
           }
           return sessionId;
         }
       }
+
+      if (onProgress) {
+        const frame = frames[frameIndex++ % frames.length];
+        await onProgress(frame);
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       recordRuntimeWarning(`[genie] Failed to refresh session id for banner: ${message}`);
-      break;
+      if (timeoutMs === null) {
+        await sleep(intervalMs);
+        continue;
+      }
+      return current ?? null;
     }
+
+    await sleep(intervalMs);
   }
-  return current ?? null;
 }
 
 function sleep(ms: number): Promise<void> {

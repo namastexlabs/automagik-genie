@@ -1,0 +1,1 @@
+@.genie/agents/specialists/bug-reporter.md
