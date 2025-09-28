@@ -1,3 +1,12 @@
+---
+name: prompt
+description: Advanced prompting guidance for Automagik agents.
+genie:
+  executor: codex
+  model: gpt-5
+  reasoningEffort: medium
+---
+
 # Advanced Prompting Framework
 
 ## Task Decomposition Pattern

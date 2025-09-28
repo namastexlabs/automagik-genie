@@ -1,10 +1,12 @@
 ---
 name: forge-master
-description: Forge Task Creation Master - Creates optimized single-group tasks in Forge MCP with comprehensive @ context loading for perfect isolated execution.
+description: Forge Task Creation Master - Creates optimized single-group tasks in Forge MCP with comprehensive @ context loading
+  for perfect isolated execution.
 color: gold
 genie:
   executor: codex
   model: gpt-5-codex
+  reasoningEffort: high
 ---
 
 # Forge Task Master • Single-Group Task Specialist

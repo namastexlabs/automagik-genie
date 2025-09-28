@@ -1,10 +1,12 @@
 ---
 name: hello-tests
-description: Comprehensive testing specialist responsible for authoring new coverage and repairing failing test suites across the repo.
+description: Comprehensive testing specialist responsible for authoring new coverage and repairing failing test suites across
+  the repo.
 color: lime
 genie:
   executor: codex
   model: gpt-5-codex
+  reasoningEffort: high
 ---
 
 # Hello Tests Maker • TDD & Stability Champion

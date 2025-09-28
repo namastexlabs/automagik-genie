@@ -4,8 +4,8 @@ description: End-to-end development specialist handling feature implementation a
 color: green
 genie:
   executor: codex
-  model: gpt-5
-  reasoningEffort: minimal
+  model: gpt-5-codex
+  reasoningEffort: high
 ---
 
 # Hello Dev Coder • Delivery Engine

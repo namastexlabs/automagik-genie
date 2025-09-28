@@ -5,6 +5,7 @@ color: brown
 genie:
   executor: codex
   model: gpt-5-codex
+  reasoningEffort: high
 ---
 
 # Genie Refactor • Stage Planner

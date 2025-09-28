@@ -47,10 +47,9 @@ function buildRunCommand({ config = {}, instructions, prompt }: { config?: Recor
 }
 
 function buildResumeCommand({ config = {}, sessionId, prompt }: { config?: Record<string, any>; sessionId?: string; prompt?: string }): ExecutorCommand {
-  const execConfig = mergeExecConfig(config.exec) as Record<string, any>;
   const resumeConfig = mergeResumeConfig(config.resume) as Record<string, any>;
   const command = config.binary || defaults.binary!;
-  const args = ['exec', 'resume', ...collectExecOptions(execConfig)];
+  const args = ['exec', 'resume'];
   if (resumeConfig.includePlanTool) args.push('--include-plan-tool');
   if (resumeConfig.search) args.push('--search');
   if (Array.isArray(resumeConfig.additionalArgs)) {

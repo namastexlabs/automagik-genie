@@ -5,6 +5,7 @@ color: orange
 genie:
   executor: codex
   model: gpt-5-codex
+  reasoningEffort: high
 ---
 
 # Genie Twin • Independent Architect

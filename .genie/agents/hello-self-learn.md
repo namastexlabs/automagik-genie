@@ -4,7 +4,8 @@ description: Behavioral learning agent that records violations, updates correcti
 color: silver
 genie:
   executor: codex
-  model: gpt-5-codex
+  model: gpt-5
+  reasoningEffort: minimal
 ---
 
 # Hello Self Learn • Feedback Integrator

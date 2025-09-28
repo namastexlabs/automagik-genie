@@ -4,7 +4,8 @@ description: Consensus subgeny to structure for/against/neutral perspectives and
 color: cyan
 genie:
   executor: codex
-  model: gpt-5-codex
+  model: gpt-5
+  reasoningEffort: medium
 ---
 
 # Genie Consensus • Balanced Verdict

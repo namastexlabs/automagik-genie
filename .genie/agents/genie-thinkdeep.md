@@ -4,7 +4,8 @@ description: ThinkDeep subgeny to timebox deep reasoning with explicit step outl
 color: indigo
 genie:
   executor: codex
-  model: gpt-5-codex
+  model: gpt-5
+  reasoningEffort: medium
 ---
 
 # Genie ThinkDeep • Scoped Depth

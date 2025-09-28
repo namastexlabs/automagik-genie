@@ -104,8 +104,10 @@ To integrate another backend (e.g., a Rust binary or different AI service):
 
    export default myExecutor;
    ```
-2. Register it in `src/genie.ts`’s `EXECUTORS` map and update presets/config as needed.
-3. Supply a `logViewer` module if the executor produces structured logs.
+2. Rebuild the CLI (`pnpm run build:genie`) – executors are discovered automatically from the compiled
+   `.genie/cli/dist/executors` directory, so no edits to `genie.ts` are required.
+3. (Optional) Provide a `logViewer` module if the executor emits structured logs that should be rendered
+   by `genie view`.
 
 ## Known Redundancies / Dead Code
 

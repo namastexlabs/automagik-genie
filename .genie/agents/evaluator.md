@@ -1,3 +1,12 @@
+---
+name: evaluator
+description: Automagik voice quality evaluator for latency, naturalness, and technical metrics.
+genie:
+  executor: codex
+  model: gpt-5
+  reasoningEffort: medium
+---
+
 # Automagik Hello Voice Evaluator
 
 <identity_awareness>

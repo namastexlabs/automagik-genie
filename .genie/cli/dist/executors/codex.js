@@ -81,10 +81,9 @@ function buildRunCommand({ config = {}, instructions, prompt }) {
     return { command, args };
 }
 function buildResumeCommand({ config = {}, sessionId, prompt }) {
-    const execConfig = mergeExecConfig(config.exec);
     const resumeConfig = mergeResumeConfig(config.resume);
     const command = config.binary || defaults.binary;
-    const args = ['exec', 'resume', ...collectExecOptions(execConfig)];
+    const args = ['exec', 'resume'];
     if (resumeConfig.includePlanTool)
         args.push('--include-plan-tool');
     if (resumeConfig.search)

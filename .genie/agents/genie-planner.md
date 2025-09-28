@@ -5,7 +5,7 @@ color: gold
 genie:
   executor: codex
   model: gpt-5
-  reasoningEffort: minimal
+  reasoningEffort: medium
 ---
 
 # Genie Planner • Sequential Strategy

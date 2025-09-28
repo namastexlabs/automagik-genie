@@ -88,6 +88,53 @@ The agent CLI uses presets for different scenarios:
 - **fast** - Quick execution mode
 - **debug** - Debug mode with search enabled
 
+### Agent Front Matter Reference
+
+Each file in `.genie/agents/` can override executor behaviour by adding a YAML
+front matter block. The CLI loads that block, merges it with `config.yaml`, and
+translates it to `codex exec` flags. The structure is:
+
+```yaml
+---
+name: my-agent
+description: Optional prompt summary
+genie:
+  executor: codex            # Which executor profile to use (defaults to `codex`)
+  background: false          # Force foreground (otherwise inherits CLI default)
+  binary: codex              # Override executable name if needed
+  sessionsDir: .genie/state/agents/codex-sessions
+  sessionExtractionDelayMs: 2000
+  exec:
+    fullAuto: true           # --full-auto
+    model: gpt-5-codex       # -m
+    sandbox: workspace-write # -s
+    profile: null            # -p
+    includePlanTool: true    # --include-plan-tool
+    search: true             # --search
+    skipGitRepoCheck: true   # --skip-git-repo-check
+    json: false              # --json
+    experimentalJson: true   # --experimental-json
+    color: never             # --color
+    cd: null                 # -C <path>
+    outputSchema: null       # --output-schema
+    outputLastMessage: null  # --output-last-message
+    reasoningEffort: high    # -c reasoning.effort="high"
+    images: []               # -i <path> for each entry
+    additionalArgs: []       # Raw flags appended verbatim
+  resume:
+    includePlanTool: true
+    search: true
+    last: false              # --last when resuming
+    additionalArgs: []
+---
+```
+
+Supported keys are derived from the codex executor defaults
+(`.genie/cli/src/executors/codex.ts`). Any value omitted in front matter keeps
+the executor default. Unknown keys under `genie.exec` become additional `codex
+exec` overrides, so the safest pattern is to use the fields above. Put extra
+flags in `additionalArgs` to avoid accidentally shadowing future options.
+
 ## Integration
 
 ### With Claude

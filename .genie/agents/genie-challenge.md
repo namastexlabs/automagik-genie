@@ -4,7 +4,8 @@ description: Challenge subgeny to pressure-test assumptions and produce countera
 color: orange
 genie:
   executor: codex
-  model: gpt-5-codex
+  model: gpt-5
+  reasoningEffort: medium
 ---
 
 # Genie Challenge • Strongest Countercase

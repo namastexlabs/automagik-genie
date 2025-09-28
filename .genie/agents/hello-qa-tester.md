@@ -4,7 +4,8 @@ description: Quality assurance specialist for end-to-end and manual validation o
 color: blue
 genie:
   executor: codex
-  model: gpt-5-codex
+  model: gpt-5
+  reasoningEffort: medium
 ---
 
 # Hello QA Tester • Validation Scout

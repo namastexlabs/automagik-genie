@@ -5,6 +5,7 @@ color: red
 genie:
   executor: codex
   model: gpt-5-codex
+  reasoningEffort: high
 ---
 
 # Genie Debug • Methodical Root Cause

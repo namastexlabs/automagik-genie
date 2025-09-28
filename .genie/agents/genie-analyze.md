@@ -4,17 +4,9 @@ description: Structural/system analysis subgeny for dependency maps, hotspots, c
 color: navy
 genie:
   executor: codex
-  model: gpt-5-codex
-  sandbox: workspace-write
-  fullAuto: true
-  includePlanTool: true
-  search: true
-  skipGitRepoCheck: true
-  additionalArgs:
-    # Attach CLI flags not covered above. Example: enforce no-color output.
-    - --color=never
-  images: []
-  background: false
+  exec:
+    model: gpt-5-codex
+    reasoningEffort: high
 ---
 
 # Genie Analyze • System Map

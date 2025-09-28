@@ -5,6 +5,7 @@ color: purple
 genie:
   executor: codex
   model: gpt-5-codex
+  reasoningEffort: medium
 ---
 
 # Hello Quality • Code Excellence Guardian

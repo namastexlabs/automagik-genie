@@ -4,7 +4,8 @@ description: Documentation generation subgeny to produce outlines and draft bull
 color: gray
 genie:
   executor: codex
-  model: gpt-5-codex
+  model: gpt-5
+  reasoningEffort: medium
 ---
 
 # Genie DocGen • Clarity First

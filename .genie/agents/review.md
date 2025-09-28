@@ -1,8 +1,14 @@
-# /review – Automagik Wish Completion Audit
+---
+name: review
+description: Validate whether a wish has been fully delivered by consolidating evidence, rerunning checks, and producing a
+  concise follow-up report.
+genie:
+  executor: codex
+  model: gpt-5-codex
+  reasoningEffort: high
+---
 
----
-description: Validate whether a wish has been fully delivered by consolidating evidence, rerunning checks, and producing a concise follow-up report.
----
+# /review – Automagik Wish Completion Audit
 
 ## Context
 Use when a wish in `.genie/wishes/` appears complete and there are artefacts (logs, metrics, QA notes) to inspect. `/review` never edits code; it gathers evidence, recommends additional checks, and states whether the wish can transition to `COMPLETED`.

@@ -43,7 +43,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const child_process_1 = require("child_process");
-const codex_1 = __importDefault(require("./executors/codex"));
+const executors_1 = require("./executors");
 const background_manager_1 = __importStar(require("./background-manager"));
 const session_store_1 = require("./session-store");
 let YAML = null;
@@ -54,17 +54,19 @@ try {
 catch (_) {
     // yaml module optional
 }
-const EXECUTORS = {
-    codex: codex_1.default
-};
+const EXECUTORS = (0, executors_1.loadExecutors)();
+if (!EXECUTORS[executors_1.DEFAULT_EXECUTOR_KEY]) {
+    const available = Object.keys(EXECUTORS).join(', ') || 'none';
+    throw new Error(`Default executor '${executors_1.DEFAULT_EXECUTOR_KEY}' not found. Available executors: ${available}`);
+}
 const SCRIPT_DIR = path_1.default.dirname(__filename);
 const CONFIG_PATH = path_1.default.join(SCRIPT_DIR, 'config.yaml');
 const backgroundManager = new background_manager_1.default();
-const DEFAULT_CONFIG = {
+const BASE_CONFIG = {
     defaults: {
         preset: 'default',
         background: true,
-        executor: 'codex'
+        executor: executors_1.DEFAULT_EXECUTOR_KEY
     },
     paths: {
         baseDir: '.',
@@ -72,13 +74,11 @@ const DEFAULT_CONFIG = {
         logsDir: '.genie/state/agents/logs',
         backgroundDir: '.genie/state/agents/background'
     },
-    executors: {
-        codex: codex_1.default.defaults
-    },
+    executors: {},
     presets: {
         default: {
             description: 'Workspace-write automation with GPT-5 Codex.',
-            executor: 'codex',
+            executor: executors_1.DEFAULT_EXECUTOR_KEY,
             overrides: {
                 exec: {
                     model: 'gpt-5-codex',
@@ -122,6 +122,7 @@ const DEFAULT_CONFIG = {
         sessionExtractionDelayMs: 2000
     }
 };
+const DEFAULT_CONFIG = buildDefaultConfig();
 main();
 function main() {
     try {
@@ -350,6 +351,14 @@ function loadConfig(overrides) {
 }
 function deepClone(input) {
     return JSON.parse(JSON.stringify(input));
+}
+function buildDefaultConfig() {
+    const config = deepClone(BASE_CONFIG);
+    config.executors = config.executors || {};
+    Object.entries(EXECUTORS).forEach(([key, executor]) => {
+        config.executors[key] = executor.defaults || {};
+    });
+    return config;
 }
 function mergeDeep(target, source) {
     if (source === null || source === undefined)
@@ -607,7 +616,7 @@ function resolveExecutorKey(options, config, presetName) {
         return preset.executor;
     if (config.defaults && config.defaults.executor)
         return config.defaults.executor;
-    return 'codex';
+    return executors_1.DEFAULT_EXECUTOR_KEY;
 }
 function requireExecutor(key) {
     const executor = EXECUTORS[key];
@@ -844,7 +853,7 @@ function runContinue(parsed, config, paths) {
     const store = (0, session_store_1.loadSessions)(paths, config, DEFAULT_CONFIG);
     const sessionIdArg = cmdArgs[0];
     const prompt = cmdArgs.slice(1).join(' ').trim();
-    const found = findSessionEntry(store, sessionIdArg);
+    const found = findSessionEntry(store, sessionIdArg, paths);
     if (!found)
         throw new Error(`❌ No run found with session id '${sessionIdArg}'`);
     const { agentName, entry: session } = found;
@@ -928,7 +937,7 @@ function runRuns(parsed, config, paths) {
         log: d.logFile || null,
         lastUsed: d.lastUsed || d.created || null,
         runnerPid: d.runnerPid || null,
-        executor: d.executor || config.defaults?.executor || 'codex',
+        executor: d.executor || config.defaults?.executor || executors_1.DEFAULT_EXECUTOR_KEY,
         executorPid: d.executorPid || null
     }));
     const want = parsed.options.status;
@@ -999,13 +1008,13 @@ function runView(parsed, config, paths) {
         return;
     }
     const store = (0, session_store_1.loadSessions)(paths, config, DEFAULT_CONFIG);
-    const found = findSessionEntry(store, sessionId);
+    const found = findSessionEntry(store, sessionId, paths);
     if (!found) {
         console.error(`❌ No run found with session id '${sessionId}'`);
         return;
     }
     const { entry } = found;
-    const executorKey = entry.executor || config.defaults?.executor || 'codex';
+    const executorKey = entry.executor || config.defaults?.executor || executors_1.DEFAULT_EXECUTOR_KEY;
     const executor = requireExecutor(executorKey);
     const logViewer = executor.logViewer;
     const logFile = entry.logFile;
@@ -1050,29 +1059,41 @@ function runView(parsed, config, paths) {
     }
 }
 function runStop(parsed, config, paths) {
-    const [sessionId] = parsed.commandArgs;
-    if (!sessionId) {
-        throw new Error('Usage: genie stop <sessionId>');
+    const [target] = parsed.commandArgs;
+    if (!target) {
+        throw new Error('Usage: genie stop <sessionId|agent|pid>');
     }
     const store = (0, session_store_1.loadSessions)(paths, config, DEFAULT_CONFIG);
-    const found = findSessionEntry(store, sessionId);
+    let found = findSessionEntry(store, target, paths);
+    let resolvedByAgent = false;
+    if (!found && store.agents[target]) {
+        found = { agentName: target, entry: store.agents[target] };
+        resolvedByAgent = true;
+    }
     if (!found) {
-        console.error(`❌ No run found with session id '${sessionId}'`);
+        const numericPid = Number(target);
+        if (Number.isInteger(numericPid)) {
+            const ok = backgroundManager.stop(numericPid);
+            if (ok) {
+                console.log(`Sent SIGTERM to pid ${numericPid}.`);
+            }
+            else {
+                console.error(`❌ No running process found for pid ${numericPid}`);
+            }
+        }
+        else {
+            console.error(`❌ No run found with session id '${target}'`);
+        }
         return;
     }
-    const { entry } = found;
+    const { agentName, entry } = found;
+    const identifier = entry.sessionId || agentName;
     const alivePids = [entry.runnerPid, entry.executorPid].filter((pid) => backgroundManager.isAlive(pid));
-    if (!alivePids.length) {
-        console.log(`No running process found for session ${sessionId}.`);
-        return;
-    }
-    let stoppedAny = false;
     alivePids.forEach((pid) => {
         try {
             const ok = backgroundManager.stop(pid);
             if (ok !== false) {
-                stoppedAny = true;
-                console.log(`Sent SIGTERM to pid ${pid} for session ${sessionId}.`);
+                console.log(`Sent SIGTERM to pid ${pid} for ${identifier}.`);
             }
         }
         catch (error) {
@@ -1080,13 +1101,20 @@ function runStop(parsed, config, paths) {
             console.error(`⚠️ Failed to stop pid ${pid}: ${message}`);
         }
     });
-    if (stoppedAny) {
-        entry.status = 'stopped';
-        entry.lastUsed = new Date().toISOString();
-        entry.signal = 'SIGTERM';
-        entry.exitCode = entry.exitCode || null;
-        (0, session_store_1.saveSessions)(paths, store);
-        console.log(`✅ Stop signal issued for session ${sessionId}`);
+    if (!alivePids.length) {
+        console.log(`No active process found for ${identifier}.`);
+    }
+    entry.status = 'stopped';
+    entry.lastUsed = new Date().toISOString();
+    entry.signal = entry.signal || 'SIGTERM';
+    if (entry.exitCode === undefined)
+        entry.exitCode = null;
+    (0, session_store_1.saveSessions)(paths, store);
+    if (resolvedByAgent && !entry.sessionId) {
+        console.log(`✅ Stopped processes for agent '${agentName}'. Session id was unavailable.`);
+    }
+    else {
+        console.log(`✅ Stop signal handled for ${identifier}`);
     }
 }
 function renderTextView(src, parsed, paths) {
@@ -1123,7 +1151,7 @@ function renderTextView(src, parsed, paths) {
     console.log(`\nTail (${lastN} lines):`);
     lines.slice(-lastN).forEach(l => console.log('  ' + l));
 }
-function findSessionEntry(store, sessionId) {
+function findSessionEntry(store, sessionId, paths) {
     if (!sessionId || typeof sessionId !== 'string')
         return null;
     const trimmed = sessionId.trim();
@@ -1132,6 +1160,24 @@ function findSessionEntry(store, sessionId) {
     for (const [agentName, entry] of Object.entries(store.agents || {})) {
         if (entry && entry.sessionId === trimmed) {
             return { agentName, entry };
+        }
+    }
+    for (const [agentName, entry] of Object.entries(store.agents || {})) {
+        const logFile = entry.logFile;
+        if (!logFile || !fs_1.default.existsSync(logFile))
+            continue;
+        try {
+            const content = fs_1.default.readFileSync(logFile, 'utf8');
+            if (content.includes(trimmed)) {
+                entry.sessionId = trimmed;
+                entry.lastUsed = new Date().toISOString();
+                (0, session_store_1.saveSessions)(paths, store);
+                return { agentName, entry };
+            }
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            console.warn(`[genie] Failed to scan log ${logFile}: ${message}`);
         }
     }
     return null;
@@ -1163,9 +1209,6 @@ function resolveDisplayStatus(entry) {
 function runHelp(config, paths) {
     const agents = listAgents();
     const presetsEntries = Object.entries(config.presets || {});
-    const pad = (s, n) => (s + ' '.repeat(n)).slice(0, n);
-    const cmdW = 12;
-    const argW = 28;
     const backgroundDefault = Boolean(config.defaults && config.defaults.background);
     const runDesc = backgroundDefault ? 'Start a run (background default)' : 'Start a run (foreground default)';
     const rows = [
@@ -1187,20 +1230,25 @@ function runHelp(config, paths) {
     const bg = backgroundDefault
         ? 'Background: ON by default (use --no-background for foreground)'
         : 'Background: OFF by default (use --background to detach)';
-    const commandsBlock = rows
-        .map(r => `  ${pad(r.cmd, cmdW)} ${pad(r.args, argW)} ${r.desc}`)
-        .join('\n');
-    const globalOpts = [
+    const commandTable = renderTable(['Command', 'Arguments', 'Description'], rows.map((r) => [r.cmd, r.args, r.desc]));
+    const globalOptsData = [
         { flag: '--preset <name>', desc: 'Select preset (default: default)' },
         { flag: '-c, --config <key=value>', desc: 'Override config key (repeatable)' },
         { flag: '--no-background', desc: 'Run in foreground (stream output)' }
-    ].map(o => `  ${pad(o.flag, cmdW + argW)} ${o.desc}`).join('\n');
-    const runsOpts = [
+    ];
+    const runsOptsData = [
         { flag: '--status <s>', desc: 'Filter: running|completed|failed|stopped' },
         { flag: '--json', desc: 'JSON output' }
-    ].map(o => `  ${pad(o.flag, cmdW + argW)} ${o.desc}`).join('\n');
+    ];
+    const flagWidth = Math.max(...globalOptsData.map((o) => o.flag.length), ...runsOptsData.map((o) => o.flag.length));
+    const renderOptions = (items) => items
+        .map((o) => `  ${o.flag.padEnd(flagWidth)}  ${o.desc}`)
+        .join('\n');
+    const globalOpts = renderOptions(globalOptsData);
+    const runsOpts = renderOptions(runsOptsData);
+    const presetNameWidth = Math.max(16, ...presets.map((p) => p.name.length));
     const presetsBlock = presets
-        .map(p => `  ${pad(p.name, 16)} ${p.desc}`)
+        .map((p) => `  ${p.name.padEnd(presetNameWidth)}  ${p.desc}`)
         .join('\n');
     const promptSkeleton = ('[Discovery] Load @files; identify objectives, constraints, gaps.\n' +
         '[Implementation] Apply per @.genie/agents/<agent>.md; edit files or produce artifacts.\n' +
@@ -1212,7 +1260,8 @@ function runHelp(config, paths) {
     console.log(`\n${hdr}`);
     console.log(usage);
     console.log(bg);
-    console.log('\nCommands:\n' + commandsBlock);
+    console.log('\nCommands:');
+    commandTable.forEach((line) => console.log(line));
     console.log('\nGlobal Options:\n' + globalOpts);
     console.log('\nRuns Options:\n' + runsOpts);
     console.log('\nPresets:\n' + presetsBlock);
@@ -1243,4 +1292,27 @@ function resolveAgentModel(meta) {
 }
 function promptHint(id) {
     return `Usage: genie run ${id} "[Discovery] Load @files & context. [Implementation] Apply per @.genie/agents/${id}.md. [Verification] Summarize edits, evidence, open questions."`;
+}
+function renderTable(headers, rows) {
+    const columnCount = headers.length;
+    const widths = new Array(columnCount).fill(0);
+    headers.forEach((header, index) => {
+        widths[index] = Math.max(widths[index], header.length);
+    });
+    rows.forEach((row) => {
+        row.forEach((cell, index) => {
+            widths[index] = Math.max(widths[index], cell.length);
+        });
+    });
+    const line = (left, fill, junction, right) => `  ${left}${widths
+        .map((width) => `${fill.repeat(width + 2)}`)
+        .join(junction)}${right}`;
+    const top = line('┌', '─', '┬', '┐');
+    const header = `  │ ${headers
+        .map((header, index) => header.padEnd(widths[index]))
+        .join(' │ ')} │`;
+    const separator = line('├', '─', '┼', '┤');
+    const body = rows.map((row) => `  │ ${row.map((cell, index) => cell.padEnd(widths[index])).join(' │ ')} │`);
+    const bottom = line('└', '─', '┴', '┘');
+    return [top, header, separator, ...body, bottom];
 }
