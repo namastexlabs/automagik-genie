@@ -9,7 +9,7 @@ Provide reusable planning, wishing, forging, review, and commit workflows with e
 ## What’s Included
 
 - Unified prompts for plan, wish, forge, review, commit
-- Template-ready specialist agents (implementor, qa, quality, tests, self-learn, bug-reporter)
+- Specialist agents (bug-reporter, git-workflow, implementor, polish, project-manager, qa, self-learn, tests)
 - CLI wrappers in `.claude/commands/` that @include agents
 - Workspace-managed sessions and logs under `.genie/state/`
 
@@ -21,7 +21,7 @@ Provide reusable planning, wishing, forging, review, and commit workflows with e
 
 ## Technical Stack
 
-- CLI runner: `.genie/cli/agent.js`
+- CLI runner: `./genie`
 - Node/TS + Rust friendly; works in any repo (domain-agnostic)
 
 ## Documentation
@@ -36,32 +36,38 @@ Provide reusable planning, wishing, forging, review, and commit workflows with e
 
 Phase 1: Template sweep in progress (neutralizing project-specific content).
 
+## Install (into an existing repo)
+
+1) Copy these from this template into your repo:
+- `.genie/` (all)
+- `.claude/commands/`
+- `AGENTS.md`
+
+2) Run the CLI:
+- `./genie help`
+- `./genie agent run plan "[Discovery] baseline scan [Implementation] propose wish [Verification] next steps" --no-background`
+
+3) Customize `.genie/product/*` (mission, roadmap, environment) and start your first wish.
+
 ## Repository Structure
 
 ```
 .genie/product/      # Mission, roadmap, environment
-.genie/agents/       # Agent prompts and orchestration playbooks
+.genie/agents/       # Core agents plus modes/ and specialists/
 .genie/wishes/       # Wish blueprints and status logs
-.genie/state/        # CLI-managed session data (inspect via ./genie commands)
-docs/                # Technical documentation
+ .genie/state/        # CLI-managed session data (inspect via ./genie commands)
 vendors/             # External reference repos
 AGENTS.md            # Framework overview & guardrails
 CLAUDE.md            # AI assistant guidelines
 ```
 
-## Submodules (Vendors)
+## Submodules (Optional)
 
-- `vendors/hume-evi-next-js-starter` — Hume EVI Next.js starter
-
-Update your checkout:
-
-```
-git submodule update --init --recursive
-```
+See `vendors/README.md` for managing external references if needed for your project.
 
 ## Notes
 
-- Vendor READMEs may contain product-specific examples; treat them as references. The Genie template remains domain-agnostic.
+- This is a domain-agnostic template. Replace placeholders with your project specifics after installation.
 
 ## Philosophy
 

@@ -1,209 +1,76 @@
-# Naming Conventions
+# Naming Conventions (Template)
 
-## Overview
-
-Consistent naming across the Automagik Hello project to avoid confusion.
+Consistent naming conventions for {{PROJECT_NAME}}. Customize these patterns for your domain.
 
 ## Project Names
 
 ### Repository
-- **GitHub**: `pags-11labs-voiceagent`
-- **Local**: `pags-11labs-voiceagent/`
+- **Pattern**: Use your organization's standard
+- **Example**: `{{ORG}}-{{PROJECT_NAME}}`
 
 ### Product
-- **Marketing Name**: Automagik Hello
-- **Documentation**: "Automagik Hello"
-- **Never use**: "AutoMagik", "automagik hello", "Automagic"
+- **Marketing Name**: {{PROJECT_NAME}}
+- **Documentation**: Use consistent casing
 
 ### Binary/Package
-- **Rust binary**: `automagik-hello`
-- **Docker image**: `automagik-hello`
-- **Process name**: `automagik-hello`
+- **Pattern**: kebab-case
+- **Example**: `{{PROJECT_NAME}}-cli`
 
 ## Environment Variables
 
 ### Prefix
-- **Application**: `AH_` (Automagik Hello)
-- **Never use**: `AUTOMAGIK_`, `HELLO_`
+- **Application**: Use a short prefix like `{{PREFIX}}_`
+- **Providers**: Keep provider names as-is (e.g., `AWS_`, `GITHUB_`)
 
 ### Format
 - **Style**: UPPER_SNAKE_CASE
 - **Examples**:
-  - `AH_SERVER_PORT`
-  - `AH_LOG_LEVEL`
-  - `ELEVENLABS_API_KEY` (provider-specific keep original)
-  - `GROQ_API_KEY` (provider-specific keep original)
+  - `{{PREFIX}}_SERVER_PORT`
+  - `{{PREFIX}}_LOG_LEVEL`
+  - `{{PROVIDER}}_API_KEY`
 
 ## File & Directory Names
 
 ### Directories
 - **Style**: kebab-case
 - **Examples**:
+  - `.genie/`
   - `docs/`
-  - `.agent-os/`
-  - `experiments/`
-  - `voice-agents/` (if needed)
+  - `tests/`
 
 ### Markdown Files
 - **Style**: kebab-case.md
 - **Examples**:
-  - `production-insights.md`
-  - `websocket-protocol.md`
   - `getting-started.md`
+  - `environment-config.md`
 
-### Rust Files
-- **Style**: snake_case.rs
+### Source Files
+Follow language conventions:
+- **Rust**: snake_case.rs
+- **TypeScript**: camelCase.ts or kebab-case.ts
+- **Python**: snake_case.py
+
+## Agent Names
+- **Pattern**: template-{role}
 - **Examples**:
-  - `main.rs`
-  - `websocket_handler.rs`
-  - `tts_pipeline.rs`
+  - `template-implementor`
+  - `template-qa`
+  - `template-tests`
 
-## Code Naming
+## Wish & Report Names
+- **Wishes**: `<feature-slug>-wish.md`
+- **Reports**: `<agent>-<slug>-<YYYYMMDDHHmm>.md`
 
-### Rust
-```rust
-// Modules: snake_case
-mod websocket_handler;
+## Git Conventions
+- **Branches**: `feat/<wish-slug>`, `fix/<issue>`, `chore/<task>`
+- **Tags**: `v<major>.<minor>.<patch>`
 
-// Structs: PascalCase
-struct VoicePipeline;
+## Timestamps
+- **UTC format for reports**: `YYYYMMDDHHmm` (e.g., `20250314T1530Z` → store as `202503141530`)
+- **Date format for summaries**: `YYYY-MM-DD`
+- **Command examples**:
+  - Current UTC timestamp: ``date -u +%Y%m%d%H%M``
+  - Current date: ``date -u +%F``
+  - Do not infer dates from filenames or branch names
 
-// Functions: snake_case
-fn process_audio_chunk() {}
-
-// Constants: UPPER_SNAKE_CASE
-const MAX_CONNECTIONS: usize = 1000;
-
-// Variables: snake_case
-let audio_buffer = Vec::new();
-```
-
-### Configuration
-```toml
-# TOML keys: snake_case
-server_port = 8080
-log_level = "info"
-```
-
-### JSON (API/WebSocket)
-```json
-{
-  // Keys: snake_case (matching ElevenLabs)
-  "conversation_id": "conv_xxx",
-  "agent_response": "Hello",
-  "audio_base_64": "..."
-}
-```
-
-## Experiments
-
-### Naming Pattern
-- **Format**: `AH-XXX` where XXX is a number
-- **Examples**:
-  - `AH-001` (baseline)
-  - `AH-002` (rapid duplex)
-  - `AH-003` (diarization)
-
-### Directory Structure
-```
-experiments/
-├── AH-001/
-│   └── qa/
-│       ├── conversation.json
-│       ├── metrics.json
-│       └── report.md
-```
-
-## Documentation Headers
-
-### Product Docs
-```markdown
-# Product Mission
-```
-
-### Technical Docs
-```markdown
-# WebSocket Protocol Reference
-```
-
-### Experiment Reports
-```markdown
-# Experiment AH-001: Baseline Analysis
-```
-
-## Version Tags
-
-### Format
-- **Style**: `vX.Y.Z`
-- **Examples**:
-  - `v0.1.0` (initial release)
-  - `v1.0.0` (production ready)
-  - `v1.2.3-alpha` (pre-release)
-
-## Branch Names
-
-### Format
-- **Feature**: `feature/description`
-- **Fix**: `fix/description`
-- **Experiment**: `experiment/ah-xxx`
-- **Examples**:
-  - `feature/ultravad-integration`
-  - `fix/none-response-cascade`
-  - `experiment/ah-002`
-
-## Logging
-
-### Log Levels
-- **Format**: lowercase
-- **Values**: `trace`, `debug`, `info`, `warn`, `error`
-
-### Log Fields
-```json
-{
-  "timestamp": "2025-09-27T10:30:00Z",
-  "level": "info",
-  "conversation_id": "conv_xxx",
-  "message": "TTS request",
-  "ttfb_ms": 250
-}
-```
-
-## Metrics
-
-### Metric Names
-- **Format**: snake_case with units
-- **Examples**:
-  - `ttfb_ms`
-  - `asr_confidence`
-  - `none_response_count`
-  - `success_rate_percent`
-
-## Quick Reference
-
-| Context | Convention | Example |
-|---------|------------|---------|
-| Product Name | Title Case | Automagik Hello |
-| Binary | kebab-case | automagik-hello |
-| Env Prefix | UPPER_SNAKE | AH_SERVER_PORT |
-| Rust Module | snake_case | tts_pipeline |
-| Rust Struct | PascalCase | VoicePipeline |
-| JSON Key | snake_case | conversation_id |
-| Experiment | AH-XXX | AH-001 |
-| Directory | kebab-case | voice-agents/ |
-| Markdown | kebab-case.md | getting-started.md |
-
-## Common Mistakes to Avoid
-
-❌ **Wrong**:
-- AutoMagik Hello
-- automagik_hello (binary)
-- AUTOMAGIK_SERVER_PORT
-- TTSPipeline (should be TtsPipeline)
-- conversationId (JSON should be snake_case)
-
-✅ **Correct**:
-- Automagik Hello
-- automagik-hello
-- AH_SERVER_PORT
-- TtsPipeline
-- conversation_id
+Adapt these conventions to match your organization's standards.

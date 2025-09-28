@@ -9,8 +9,6 @@ interface HelpViewParams {
   presets: Array<{ name: string; description: string }>; 
   promptFramework: string[];
   examples: string[];
-  modes: Array<{ mode: string; invoke: string; focus: string }>;
-  agents: Array<{ id: string; model: string; description: string }>;
 }
 
 export function buildHelpView(params: HelpViewParams): ViewEnvelope {
@@ -44,30 +42,6 @@ export function buildHelpView(params: HelpViewParams): ViewEnvelope {
           { key: 'description', label: 'Persona' }
         ],
         rows: params.presets
-      }
-    : null;
-
-  const modesTable = params.modes.length
-    ? {
-        type: 'table' as const,
-        columns: [
-          { key: 'mode', label: 'Mode' },
-          { key: 'invoke', label: 'Invoke' },
-          { key: 'focus', label: 'Focus' }
-        ],
-        rows: params.modes
-      }
-    : null;
-
-  const agentTable = params.agents.length
-    ? {
-        type: 'table' as const,
-        columns: [
-          { key: 'id', label: 'Agent' },
-          { key: 'model', label: 'Model' },
-          { key: 'description', label: 'Focus (first hit)' }
-        ],
-        rows: params.agents
       }
     : null;
 
@@ -127,17 +101,13 @@ export function buildHelpView(params: HelpViewParams): ViewEnvelope {
             { type: 'list', items: params.examples }
           ]
         },
-        modesTable ? { type: 'divider', variant: 'solid', accent: 'muted' } : null,
-        modesTable,
-        agentTable ? { type: 'divider', variant: 'solid', accent: 'muted' } : null,
-        agentTable,
         {
           type: 'callout',
           tone: 'info',
           title: 'Tips',
           body: [
             'Monitor active sessions with `./genie runs --status running`.',
-            'Set `--style art` for maximal flourish, or `--style plain` for no color.'
+            'Use `genie agent list` to browse every agent and mode.'
           ]
         }
       ].filter(Boolean) as any

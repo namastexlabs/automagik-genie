@@ -1,45 +1,23 @@
-# Technical Stack
+# Technical Stack (Template)
 
-## Core Runtime
-- application_framework: Rust (Tokio 1.x, Axum 0.7)
-- rust_version_min: 1.80 (MSRV locked for `async fn` in traits)
-- cargo_tools: `clippy`, `fmt`, `deny` (CI gate)
-- database_system: SQLite (dev) → PostgreSQL (prod) for metrics/experiments
-- javascript_framework: None (thin HTML + htmx 1.9 for demos)
-- import_strategy: importmaps
-- css_framework: Tailwind CSS 3.4
-- ui_component_library: None (headless patterns)
-- fonts_provider: Google Fonts (localizable)
-- icon_library: Lucide
+This template is domain-agnostic. Choose technologies appropriate for your project. Below are examples; replace as needed.
 
-## Speech + Realtime
-- TTS primary: ElevenLabs Flash v2.5 over raw WebSocket stream‑input
-- TTS experimental: ElevenLabs v3 alpha multi‑context (explicit opt‑in)
-- STT primary: Groq Whisper‑large‑v3‑turbo (real‑time, low latency)
-- STT fallback: WhisperX or faster‑whisper (local, quantized options)
-- Turn‑taking: VAD + heuristics baseline; ASD/diarization via pyannote/other HF models
-- realtime_deps:
-  - `tokio-tungstenite` ≥ 0.21 for WS clients
-  - `webrtc-vad-sys` ≥ 0.1 (heuristics mode uses internal energy gate)
-  - `rubato` / `cpal` optional for resampling
+## Core
+- CLI: Node/TypeScript (`./genie`)
+- Agents: Markdown prompts under `.genie/agents/`
+- State: `.genie/state/` (logs, sessions)
 
-## Hosting + Deployment
-- application_hosting: Fly.io or AWS ECS/Fargate (Rust friendly, regional pinning)
-- database_hosting: Neon (PostgreSQL) or SQLite + Litestream (S3)
-- asset_hosting: Cloudflare R2/Pages or S3 + CloudFront
-- deployment_solution: Docker, GitHub Actions CI → Flyctl/AWS deploy
-- code_repository_url: TBD (this repository)
+## Optional Runtimes (examples)
+- Backend: Rust, Node/TS, Python, Go
+- Database: SQLite, Postgres, or project-specific
+- UI: Any framework or none
 
-## Observability
-- Tracing: OpenTelemetry (otlp), Tokio console (dev)
-- Metrics: Prometheus exposition + Grafana dashboards
-- Logging: JSON structured logs with per‑turn correlation IDs
+## CI/CD (examples)
+- GitHub Actions for lint/test
+- Docker for packaging
 
-## Safety + Limits
-- Call/stream limits: configurable per connection
-- Region pinning: provider‑side selection where available
-- Privacy: PII redaction hooks, transcript sanitization
+## Observability (examples)
+- Logs: JSON structured logs
+- Metrics: your preferred stack
 
-## Notes
-- ElevenLabs v3 alpha paths are used only when `EXPERIMENTAL_TTS_V3=1` is set to explicitly opt‑in.
-- Local STT fallbacks are optional and can run quantized for edge devices.
+Keep this file minimal and project-neutral so the template installs cleanly anywhere.

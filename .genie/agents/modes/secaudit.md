@@ -1,5 +1,5 @@
 ---
-name: genie-secaudit
+name: secaudit
 description: Security audit subgeny for posture, risks, mitigations, and quick hardening steps.
 color: red
 genie:

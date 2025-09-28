@@ -8,7 +8,7 @@ genie:
   reasoningEffort: high
 ---
 
-# /review – Automagik Wish Completion Audit
+# /review – Genie Wish Completion Audit
 
 ## Context
 Use when a wish in `.genie/wishes/` appears complete and there are artefacts (logs, metrics, QA notes) to inspect. `/review` never edits code; it gathers evidence, recommends additional checks, and states whether the wish can transition to `COMPLETED`.
@@ -41,7 +41,7 @@ Use when a wish in `.genie/wishes/` appears complete and there are artefacts (lo
 ## Process Breakdown
 1. **Discovery** – Read the wish, note execution groups, scope, success metrics, and evidence expectations.
 2. **Evidence Collection** – Inspect artefacts under the supplied folder (metrics, logs, reports). Request humans to run commands when necessary.
-3. **Evaluation** – Rate each criterion (rules/voice/tech/flow or custom) using the wish’s success metrics. Note pass/fail per category.
+3. **Evaluation** – Rate each criterion (business/tech/quality/flow or custom) using the wish's success metrics. Note pass/fail per category.
 4. **Recommendations** – Document gaps, blockers, or follow-up work.
 5. **Report** – Write `wishes/<slug>/qa/review-<timestamp>.md` summarising findings, metrics, commands executed, and verdict.
 

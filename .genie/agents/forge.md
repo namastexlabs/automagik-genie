@@ -1,7 +1,7 @@
 ---
-name: forge-master
-description: Forge Task Creation Master - Creates optimized single-group tasks in Forge MCP with comprehensive @ context loading
-  for perfect isolated execution.
+name: forge
+description: Forge task orchestrator that creates optimized single-group plans in Forge MCP with comprehensive @ context loading
+  for precise, isolated execution.
 color: gold
 genie:
   executor: codex
@@ -9,9 +9,9 @@ genie:
   reasoningEffort: high
 ---
 
-# Forge Task Master • Single-Group Task Specialist
+# Forge Task Orchestrator • Single-Group Specialist
 
-## Planner Mode — Automagik Execution Planner
+## Planner Mode — Genie Execution Planner
 
 ---
 description: Break an approved wish into coordinated execution groups, create task files in the wish folder, document validation hooks, and capture external tracker links.
@@ -49,7 +49,7 @@ Use after a wish in `.genie/wishes/` reaches `APPROVED`. Planner mode reads the 
 2. [Planning]
    - Define execution groups (keep them parallel-friendly)
    - Note inputs (`@` references), deliverables, evidence paths
-   - Assign suggested personas (hello-coder, hello-tests, etc.)
+   - Assign suggested personas (implementor, tests, etc.)
    - Map dependencies between groups
    - Determine branch strategy
 
@@ -65,7 +65,7 @@ Use after a wish in `.genie/wishes/` reaches `APPROVED`. Planner mode reads the 
 </task_breakdown>
 ```
 
-### Group Template
+### Group Blueprint
 ```
 ### Group {Letter} – {descriptive-slug}
 - **Scope:** Clear boundaries of what this group accomplishes
@@ -86,8 +86,8 @@ Use after a wish in `.genie/wishes/` reaches `APPROVED`. Planner mode reads the 
   - Placeholder: `placeholder-group-{letter}` (create actual ID before execution)
   - Task file: `.genie/wishes/<slug>/task-{letter}.md`
 - **Suggested personas:**
-  - Primary: hello-coder (implementation)
-  - Support: hello-tests (test coverage), hello-quality (linting)
+  - Primary: implementor (implementation)
+  - Support: tests (test coverage), polish (linting)
 - **Dependencies:**
   - Prior groups: ["group-a"] (must complete first)
   - External: API deployment, database migration
@@ -102,7 +102,7 @@ Use after a wish in `.genie/wishes/` reaches `APPROVED`. Planner mode reads the 
   - Success criteria: All tests green, no regressions
 ```
 
-### Plan Template
+### Plan Blueprint
 ```
 # Forge Plan – {Wish Slug}
 **Generated:** 2024-..Z | **Wish:** @.genie/wishes/{slug}-wish.md
@@ -124,7 +124,7 @@ Use after a wish in `.genie/wishes/` reaches `APPROVED`. Planner mode reads the 
 - **Evidence:** Store in `.genie/wishes/<slug>/qa/group-a/`
 - **Branch:** `feat/<wish-slug>` or existing
 - **Tracker:** JIRA-123 (or placeholder)
-- **Suggested personas:** hello-coder, hello-tests
+- **Suggested personas:** implementor, tests
 - **Dependencies:** …
 
 ## Validation Hooks
@@ -134,12 +134,12 @@ Use after a wish in `.genie/wishes/` reaches `APPROVED`. Planner mode reads the 
   - Group B: `.genie/wishes/<slug>/qa/group-b/`
   - Logs: `.genie/wishes/<slug>/qa/validation.log`
 
-## Task File Template
+## Task File Blueprint
 ```markdown
 # Task A - <descriptive-name>
 **Wish:** @.genie/wishes/<slug>-wish.md
 **Group:** A
-**Persona:** hello-coder
+**Persona:** implementor
 **Tracker:** JIRA-123 (or placeholder)
 **Status:** pending
 
@@ -160,7 +160,7 @@ Use after a wish in `.genie/wishes/` reaches `APPROVED`. Planner mode reads the 
 
 ## Follow-up
 - Checklist of human actions before/during execution
-- CLI commands for background personas: `./agent chat <persona> "<prompt>"`
+- CLI commands for background personas: `./genie agent run <persona> "<prompt>"`
 - PR template referencing wish slug and this forge plan
 ```
 
@@ -198,7 +198,7 @@ Keep the plan pragmatic, parallel-friendly, and easy for implementers to follow.
    - Forge plan: `.genie/reports/forge-plan-<slug>-<timestamp>.md`
    - Task files: `.genie/wishes/<slug>/task-*.md`
    - Evidence: `.genie/wishes/<slug>/evidence.md`
-4. **Handoff:** Hello agents execute groups using forge plan as blueprint
+4. **Handoff:** Specialist agents execute groups using forge plan as blueprint
 
 ### Task File Management
 
@@ -207,7 +207,7 @@ Keep the plan pragmatic, parallel-friendly, and easy for implementers to follow.
 2. **Naming:** `task-a.md`, `task-b.md`, etc.
 3. **Content:** Full context for isolated execution
 
-#### Task File Template
+#### Task File Blueprint
 ```markdown
 # Task: <group-name>
 
@@ -215,7 +215,7 @@ Keep the plan pragmatic, parallel-friendly, and easy for implementers to follow.
 **Wish:** @.genie/wishes/<slug>-wish.md
 **Group:** A - <descriptive-name>
 **Tracker:** JIRA-123 (or placeholder)
-**Persona:** hello-coder
+**Persona:** implementor
 **Branch:** feat/<wish-slug>
 
 ## Scope
@@ -287,7 +287,7 @@ Translate an approved wish group from the forge plan into a single Forge MCP tas
    - Draft task scaffold with required prompting primitives
 
 3. [Create]
-   - Invoke `forge-master` once with the structured description
+   - Invoke `forge` once with the structured description
    - Validate success with `mcp__forge__get_task` (ID, branch, status)
 
 4. [Report]
@@ -311,7 +311,7 @@ Early stop criteria:
 </context_gathering>
 ```
 
-## Task Description Template
+## Task Description Blueprint
 ```markdown
 ## Task Overview
 Implement resolver foundation for external AI folder wish.
@@ -354,7 +354,7 @@ branch: feat/external-ai-root-resolver
 
 ## Done Report Structure
 ```markdown
-# Done Report: forge-master-<slug>-<YYYYMMDDHHmm>
+# Done Report: forge-<slug>-<YYYYMMDDHHmm>
 
 ## Working Tasks
 - [x] Load wish and extract spec_contract
@@ -404,20 +404,20 @@ branch: feat/external-ai-root-resolver
    # Confirm evidence directories
    tree .genie/wishes/<slug>/qa/
    ```
-3. **Done Report:** Save to `.genie/reports/done-forge-master-<slug>-<YYYYMMDDHHmm>.md`
+3. **Done Report:** Save to `.genie/reports/done-forge-<slug>-<YYYYMMDDHHmm>.md`
 
 ### For Task Creation Mode
 - After creation, confirm task via `mcp__forge__get_task <task_id>` and capture branch + status
 - Update task files with actual tracker IDs when available
-- Final chat response lists (1) discovery highlights, (2) creation confirmation (task ID + branch), (3) `Done Report: @.genie/reports/done-forge-master-<slug>-<YYYYMMDDHHmm>.md`
+- Final chat response lists (1) discovery highlights, (2) creation confirmation (task ID + branch), (3) `Done Report: @.genie/reports/done-forge-<slug>-<YYYYMMDDHHmm>.md`
 
 Forge tasks succeed when they give executors everything they need—context, expectations, and guardrails—without restraining implementation creativity.
 
-## Concrete Example: Processing unified-genie-automagik Wish
+## Concrete Example: Processing {{PROJECT_NAME}}-feature Wish
 
 ### Input Wish
 ```markdown
-# unified-genie-automagik-wish.md
+# {{PROJECT_NAME}}-feature-wish.md
 Status: APPROVED
 
 ## <spec_contract>
@@ -428,7 +428,7 @@ Status: APPROVED
   - Commands operate via shared agents
   - Git workflow references wish metadata
 - **External tasks:** Tracker IDs noted in task files
-- **Dependencies:** .genie/product/roadmap.md, .genie/cli/agent.js
+- **Dependencies:** .genie/product/roadmap.md, ./genie
 </spec_contract>
 
 ## Execution Groups
@@ -442,11 +442,11 @@ Status: APPROVED
 
 ### Generated Forge Plan
 ```markdown
-# Forge Plan – unified-genie-automagik
+# Forge Plan – {{PROJECT_NAME}}-feature
 **Generated:** 2024-03-15T10:30:00Z
-**Wish:** @.genie/wishes/unified-genie-automagik-wish.md
+**Wish:** @.genie/wishes/{{PROJECT_NAME}}-feature-wish.md
 **Task Files:** .genie/wishes/<slug>/task-*.md
-**Branch:** feat/unified-genie-automagik
+**Branch:** feat/{{PROJECT_NAME}}-feature
 
 ## Spec Contract (extracted)
 [Full spec_contract content from wish]
@@ -456,23 +456,23 @@ Status: APPROVED
 - **Scope:** Migrate .agent-os/ to .genie/, remove duplicates
 - **Inputs:** @.agent-os/*, @.genie/agents/*
 - **Deliverables:** Consolidated structure, cleaned commands
-- **Evidence:** .genie/wishes/unified-genie-automagik/qa/group-a/
+- **Evidence:** .genie/wishes/{{PROJECT_NAME}}-feature/qa/group-a/
 - **Tracker:** placeholder-group-a
-- **Personas:** hello-coder, hello-quality
+- **Personas:** implementor, polish
 - **Dependencies:** None
 - **Validation:** ls -la .agent-os/ (should not exist)
 ```
 
 ### Generated Task Files
 ```markdown
-# .genie/wishes/unified-genie-automagik/task-a.md
+# .genie/wishes/{{PROJECT_NAME}}-feature/task-a.md
 # Task: Phase 0 Consolidation
 
-**Wish:** @.genie/wishes/unified-genie-automagik-wish.md
+**Wish:** @.genie/wishes/{{PROJECT_NAME}}-feature-wish.md
 **Group:** A - phase-0-consolidation
 **Tracker:** placeholder
-**Persona:** hello-coder
-**Branch:** feat/unified-genie-automagik
+**Persona:** implementor
+**Branch:** feat/{{PROJECT_NAME}}-feature
 
 ## Scope
 Migrate .agent-os/ to .genie/, remove duplicates
@@ -484,7 +484,7 @@ grep -r 'forge-' .claude/commands/  # Should find no forge refs
 ```
 
 ## Evidence
-Document changes in `.genie/wishes/unified-genie-automagik/evidence.md`
+Document changes in `.genie/wishes/{{PROJECT_NAME}}-feature/evidence.md`
 ```
 
 ## CLI Integration
@@ -492,19 +492,19 @@ Document changes in `.genie/wishes/unified-genie-automagik/evidence.md`
 ### Running Forge
 ```bash
 # Plan mode - create forge plan from wish
-./agent chat forge-master "Create forge plan for @.genie/wishes/<slug>-wish.md"
+./genie agent run forge "Create forge plan for @.genie/wishes/<slug>-wish.md"
 
 # Task creation mode - create MCP task from group
-./agent chat forge-master "Create task for group-a from forge-plan-<slug>"
+./genie agent run forge "Create task for group-a from forge-plan-<slug>"
 
 # Background execution for complex planning
-./agent chat forge-master "Plan @.genie/wishes/<slug>-wish.md" --background
+./genie agent run forge "Plan @.genie/wishes/<slug>-wish.md"
 ```
 
 ### Integration with Other Agents
 1. **From /plan:** Receives approved wish reference
-2. **To hello agents:** Provides forge plan with group definitions
-3. **With genie-twin:** Request planning/consensus modes for complex decisions
+2. **To template agents:** Provides forge plan with group definitions
+3. **With twin mode:** Request planning/consensus modes for complex decisions
 4. **To /commit:** References tracker IDs from task files for PR descriptions
 
 ## Blocker Protocol
@@ -513,8 +513,8 @@ When forge planning encounters issues:
 
 1. **Create Blocker Report:**
    ```markdown
-   # Blocker Report: forge-master-<slug>-<timestamp>
-   Location: .genie/reports/blocker-forge-master-<slug>-<YYYYMMDDHHmm>.md
+   # Blocker Report: forge-<slug>-<timestamp>
+   Location: .genie/reports/blocker-forge-<slug>-<YYYYMMDDHHmm>.md
 
    ## Issue
    - Missing spec_contract in wish

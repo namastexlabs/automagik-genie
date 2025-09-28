@@ -11,6 +11,7 @@ import { loadExecutors, DEFAULT_EXECUTOR_KEY } from './executors';
 import type { Executor, ExecutorCommand } from './executors/types';
 import { renderEnvelope, ViewEnvelope, ViewStyle } from './view';
 import { buildHelpView } from './views/help';
+import { buildAgentCatalogView } from './views/agent-catalog';
 import { buildRunsOverviewView, buildRunsScopedView, RunRow } from './views/runs';
 import { buildBackgroundStartView, buildRunCompletionView } from './views/background';
 import { buildStopView, StopEvent } from './views/stop';
@@ -107,6 +108,8 @@ const backgroundManager = new BackgroundManager();
 const startupWarnings: string[] = [];
 const runtimeWarnings: string[] = [];
 
+const DEFAULT_RUNS_PER_PAGE = 10;
+
 function recordStartupWarning(message: string): void {
   startupWarnings.push(message);
 }
@@ -198,6 +201,9 @@ async function main(): Promise<void> {
     await flushStartupWarnings(parsed.options);
 
     switch (parsed.command) {
+      case 'agent':
+        await runAgentCommand(parsed, config, paths);
+        break;
       case 'run':
         await runChat(parsed, config, paths);
         break;
@@ -212,9 +218,6 @@ async function main(): Promise<void> {
         break;
       case 'runs':
         await runRuns(parsed, config, paths);
-        break;
-      case 'list':
-        await runList(parsed, config, paths);
         break;
       case 'stop':
         await runStop(parsed, config, paths);
@@ -254,7 +257,7 @@ function parseArguments(argv: string[]): ParsedCommand {
     status: null,
     lines: 60,
     page: 1,
-    per: 5
+    per: 10
   };
 
   const filtered: string[] = [];
@@ -596,7 +599,7 @@ function parseYamlScalar(valueRaw: string): any {
   }
   if ((valueRaw.startsWith('"') && valueRaw.endsWith('"')) || (valueRaw.startsWith('\'') && valueRaw.endsWith('\''))) {
     const unquoted = valueRaw.slice(1, -1);
-    return unquoted.replace(/\\"/g, '"').replace(/\\'/g, "'");
+    return unquoted.replace(/\"/g, '"').replace(/\\'/g, "'");
   }
   return valueRaw;
 }
@@ -675,12 +678,19 @@ async function runChat(parsed: ParsedCommand, config: GenieConfig, paths: Requir
     entry.runnerPid = runnerPid;
     entry.status = 'running';
     saveSessions(paths as SessionPathsConfig, store);
+    const bannerSessionId = await resolveSessionIdForBanner(agentName, config, paths, entry.sessionId, logFile);
+    if (bannerSessionId && !entry.sessionId) {
+      entry.sessionId = bannerSessionId;
+      saveSessions(paths as SessionPathsConfig, store);
+    }
     const envelope = buildBackgroundStartView({
       style: parsed.options.style,
       agentName,
       logPath: formatPathRelative(logFile, paths.baseDir || '.'),
-      sessionId: entry.sessionId,
-      context: ['Watch: ./genie view <sessionId>', 'Resume: ./genie continue <sessionId> "<prompt>"']
+      sessionId: bannerSessionId,
+      actions: buildBackgroundActions(bannerSessionId, {
+        resume: true
+      })
     });
     await emitView(envelope, parsed.options);
     return;
@@ -710,6 +720,75 @@ async function runChat(parsed: ParsedCommand, config: GenieConfig, paths: Requir
     runnerPid: parsed.options.backgroundRunner ? process.pid : null,
     cliOptions: parsed.options
   });
+}
+
+async function runAgentCommand(parsed: ParsedCommand, config: GenieConfig, paths: Required<ConfigPaths>): Promise<void> {
+  const [maybeSubcommand, ...rest] = parsed.commandArgs;
+  if (parsed.options.requestHelp) {
+    await emitView(
+      buildInfoView(parsed.options.style, 'Agent command', [
+        'Usage:',
+        '  genie agent list',
+        '  genie agent run <agent-id> "<prompt>"',
+        '  genie agent <agent-id> "<prompt>"'
+      ]),
+      parsed.options
+    );
+    return;
+  }
+
+  const sub = (maybeSubcommand || '').toLowerCase();
+  if (!maybeSubcommand || sub === 'list' || sub === 'ls') {
+    await emitAgentCatalog(parsed, config, paths);
+    return;
+  }
+
+  if (sub === 'run' || sub === 'start' || sub === 'launch') {
+    if (!rest.length) {
+      throw new Error('Usage: genie agent run <agent-id> "<prompt>"');
+    }
+    const [agentId, ...promptParts] = rest;
+    await runAgentRun(agentId, promptParts, parsed, config, paths);
+    return;
+  }
+
+  if (sub === 'help') {
+    await emitView(
+      buildInfoView(parsed.options.style, 'Agent command', [
+        'Usage:',
+        '  genie agent list',
+        '  genie agent run <agent-id> "<prompt>"',
+        '  genie agent <agent-id> "<prompt>"'
+      ]),
+      parsed.options
+    );
+    return;
+  }
+
+  await runAgentRun(maybeSubcommand, rest, parsed, config, paths);
+}
+
+async function runAgentRun(
+  agentInput: string,
+  promptParts: string[],
+  parsed: ParsedCommand,
+  config: GenieConfig,
+  paths: Required<ConfigPaths>
+): Promise<void> {
+  const agentId = resolveAgentIdentifier(agentInput);
+  const prompt = promptParts.join(' ').trim();
+  if (!prompt) {
+    throw new Error(`Usage: genie agent run ${agentInput} "<prompt>"`);
+  }
+  const cloned: ParsedCommand = {
+    command: 'run',
+    commandArgs: [agentId, prompt],
+    options: {
+      ...parsed.options,
+      rawArgs: [...parsed.options.rawArgs]
+    }
+  };
+  await runChat(cloned, config, paths);
 }
 
 // Due to size, remaining functions continue...
@@ -850,10 +929,12 @@ function executeRun(args: ExecuteRunArgs): Promise<void> {
       const data = JSON.parse(trimmed);
       if (data && typeof data === 'object' && data.type === 'session.created') {
         const sessionId = data.session_id || data.sessionId;
-        if (sessionId && !entry.sessionId) {
-          entry.sessionId = sessionId;
-          entry.lastUsed = new Date().toISOString();
-          saveSessions(paths as SessionPathsConfig, store);
+        if (sessionId) {
+          if (entry.sessionId !== sessionId) {
+            entry.sessionId = sessionId;
+            entry.lastUsed = new Date().toISOString();
+            saveSessions(paths as SessionPathsConfig, store);
+          }
         }
       }
     } catch {
@@ -1028,7 +1109,12 @@ function extractFrontMatter(source: string): { meta?: Record<string, any>; body:
     const parsed = YAML ? YAML.parse(raw) : parseSimpleYaml(raw);
     return { meta: parsed || {}, body };
   } catch {
-    return { meta: {}, body };
+    try {
+      const fallback = parseSimpleYaml(raw);
+      return { meta: fallback || {}, body };
+    } catch {
+      return { meta: {}, body };
+    }
   }
 }
 
@@ -1054,6 +1140,31 @@ function formatPathRelative(targetPath: string, baseDir: string): string {
   } catch {
     return targetPath;
   }
+}
+
+function safeIsoString(value: string): string | null {
+  const timestamp = new Date(value).getTime();
+  if (!Number.isFinite(timestamp)) return null;
+  return new Date(timestamp).toISOString();
+}
+
+function formatRelativeTime(value: string): string {
+  const timestamp = new Date(value).getTime();
+  if (!Number.isFinite(timestamp)) return 'n/a';
+  const diffMs = Date.now() - timestamp;
+  if (diffMs < 0) return 'just now';
+  const seconds = Math.floor(diffMs / 1000);
+  if (seconds < 5) return 'just now';
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 5) return `${weeks}w ago`;
+  return new Date(value).toLocaleDateString();
 }
 
 async function runContinue(parsed: ParsedCommand, config: GenieConfig, paths: Required<ConfigPaths>): Promise<void> {
@@ -1122,13 +1233,20 @@ async function runContinue(parsed: ParsedCommand, config: GenieConfig, paths: Re
     session.runnerPid = runnerPid;
     session.status = 'running';
     saveSessions(paths as SessionPathsConfig, store);
+    const bannerSessionId = await resolveSessionIdForBanner(agentName, config, paths, session.sessionId, logFile);
+    if (bannerSessionId && !session.sessionId) {
+      session.sessionId = bannerSessionId;
+      saveSessions(paths as SessionPathsConfig, store);
+    }
     const envelope = buildBackgroundStartView({
       style: parsed.options.style,
       agentName,
       logPath: formatPathRelative(logFile, paths.baseDir || '.'),
-      sessionId: session.sessionId,
-      note: 'Background session resumed',
-      context: ['Watch: ./genie view <sessionId>', 'Stop: ./genie stop <sessionId>']
+      sessionId: bannerSessionId,
+      actions: buildBackgroundActions(bannerSessionId, {
+        resume: false,
+        includeStop: true
+      })
     });
     await emitView(envelope, parsed.options);
     return;
@@ -1154,9 +1272,6 @@ async function runContinue(parsed: ParsedCommand, config: GenieConfig, paths: Re
   });
 }
 
-async function runList(parsed: ParsedCommand, config: GenieConfig, paths: Required<ConfigPaths>): Promise<void> {
-  await runRuns(parsed, config, paths);
-}
 
 async function runRuns(parsed: ParsedCommand, config: GenieConfig, paths: Required<ConfigPaths>): Promise<void> {
   const warnings: string[] = [];
@@ -1176,25 +1291,43 @@ async function runRuns(parsed: ParsedCommand, config: GenieConfig, paths: Requir
   }));
 
   const want = parsed.options.status;
-  const page = parsed.options.page || 1;
-  const per = parsed.options.per || 5;
+  const page = parsed.options.page && parsed.options.page > 0 ? parsed.options.page : 1;
+  const perCandidate = parsed.options.per && parsed.options.per > 0 ? parsed.options.per : DEFAULT_RUNS_PER_PAGE;
+  const per = perCandidate || DEFAULT_RUNS_PER_PAGE;
 
   const byStatus = (status: string) => dataAll.filter((row) => (row.status || '').toLowerCase().startsWith(status));
-  const sortByTimeDesc = (arr: typeof dataAll) => arr.slice().sort((a, b) => {
-    const aTime = a.lastUsed ? new Date(a.lastUsed).getTime() : 0;
-    const bTime = b.lastUsed ? new Date(b.lastUsed).getTime() : 0;
-    return bTime - aTime;
-  });
+  const sortByTimeDesc = (arr: typeof dataAll) =>
+    arr.slice().sort((a, b) => {
+      const aTime = a.lastUsed ? new Date(a.lastUsed).getTime() : 0;
+      const bTime = b.lastUsed ? new Date(b.lastUsed).getTime() : 0;
+      return bTime - aTime;
+    });
   const paginate = (arr: typeof dataAll) => arr.slice((page - 1) * per, (page - 1) * per + per);
-  const formatRow = (row: typeof dataAll[number]): RunRow => ({
-    agent: row.agent,
-    status: row.status,
-    sessionId: row.sessionId,
-    lastUsed: row.lastUsed ? new Date(row.lastUsed).toLocaleString() : null,
-    log: row.log ? formatPathRelative(row.log, paths.baseDir || '.') : null
-  });
+  const formatRow = (row: typeof dataAll[number]): RunRow => {
+    const iso = row.lastUsed ? safeIsoString(row.lastUsed) : null;
+    return {
+      agent: row.agent,
+      status: row.status,
+      sessionId: row.sessionId,
+      updated: iso ? formatRelativeTime(iso) : 'n/a',
+      updatedIso: iso,
+      log: row.log ? formatPathRelative(row.log, paths.baseDir || '.') : null
+    };
+  };
 
-  const pagerBaseHint = 'Use: genie view <sessionId>   •   Resume: genie continue <sessionId> "<prompt>"   •   Stop: genie stop <sessionId>';
+  const baseHints = [
+    'View details: genie view <sessionId>',
+    'Resume background work: genie continue <sessionId> "<prompt>"',
+    'Stop session: genie stop <sessionId>'
+  ];
+
+  const scopeSuffix = want && want !== 'default' ? ` --status ${want}` : '';
+  const buildPagerHints = (total: number): string[] => {
+    const hints: string[] = [];
+    if (total > page * per) hints.push(`Next page: genie runs${scopeSuffix} --page ${page + 1}`);
+    if (page > 1) hints.push(`Previous page: genie runs${scopeSuffix} --page ${page - 1}`);
+    return hints;
+  };
 
   if (want && want !== 'default') {
     let pool;
@@ -1205,8 +1338,7 @@ async function runRuns(parsed: ParsedCommand, config: GenieConfig, paths: Requir
     const pager = {
       page,
       per,
-      nextHint: `Next: genie runs --status ${want} --page ${page + 1} --per ${per}`,
-      actionHint: pagerBaseHint
+      hints: [...buildPagerHints(pool.length), ...baseHints]
     };
     const envelope = buildRunsScopedView({
       style: parsed.options.style,
@@ -1225,11 +1357,11 @@ async function runRuns(parsed: ParsedCommand, config: GenieConfig, paths: Requir
   );
   const activeRows = paginate(activePool).map(formatRow);
   const recentRows = paginate(recentPool).map(formatRow);
+  const statusHints = ['Focus on running sessions: genie runs --status running', 'See completed sessions: genie runs --status completed'];
   const pager = {
     page,
     per,
-    nextHint: `Next: genie runs --page ${page + 1} --per ${per} • Focus: genie runs --status completed`,
-    actionHint: pagerBaseHint
+    hints: [...buildPagerHints(Math.max(activePool.length, recentPool.length)), ...statusHints, ...baseHints]
   };
 
   const envelope = buildRunsOverviewView({
@@ -1428,6 +1560,89 @@ async function runStop(parsed: ParsedCommand, config: GenieConfig, paths: Requir
   await appendWarningView();
 }
 
+function buildBackgroundActions(
+  sessionId: string | null | undefined,
+  options: { resume?: boolean; includeStop?: boolean }
+): string[] {
+  if (!sessionId) {
+    const lines: string[] = ['• Watch: session pending – run `./genie runs --status running` then `./genie view <sessionId>`'];
+    if (options.resume) {
+      lines.push('• Resume: session pending – run `./genie continue <sessionId> "<prompt>"` once available');
+    }
+    if (options.includeStop) {
+      lines.push('• Stop: session pending – run `./genie stop <sessionId>` once available');
+    }
+    return lines;
+  }
+
+  const lines: string[] = [`• Watch: ./genie view ${sessionId}`];
+
+  if (options.resume) {
+    lines.push(`• Resume: ./genie continue ${sessionId} "<prompt>"`);
+  }
+
+  if (options.includeStop) {
+    lines.push(`• Stop: ./genie stop ${sessionId}`);
+  }
+
+  return lines;
+}
+
+async function resolveSessionIdForBanner(
+  agentName: string,
+  config: GenieConfig,
+  paths: Required<ConfigPaths>,
+  current: string | null | undefined,
+  logFile: string | null | undefined,
+  timeoutMs = 15000,
+  intervalMs = 250
+): Promise<string | null> {
+  if (current) return current;
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    await sleep(intervalMs);
+    try {
+      const liveStore = loadSessions(
+        paths as SessionPathsConfig,
+        config as SessionLoadConfig,
+        DEFAULT_CONFIG as any
+      );
+      const candidate = liveStore.agents?.[agentName]?.sessionId;
+      if (candidate) {
+        return candidate;
+      }
+      if (logFile && fs.existsSync(logFile)) {
+        const content = fs.readFileSync(logFile, 'utf8');
+        const match = /"session_id"\s*:\s*"([^"]+)"/i.exec(content) || /"sessionId"\s*:\s*"([^"]+)"/i.exec(content);
+        if (match) {
+          const sessionId = match[1];
+          const refreshStore = loadSessions(
+            paths as SessionPathsConfig,
+            config as SessionLoadConfig,
+            DEFAULT_CONFIG as any
+          );
+          const agentEntry = refreshStore.agents?.[agentName];
+          if (agentEntry && !agentEntry.sessionId) {
+            agentEntry.sessionId = sessionId;
+            agentEntry.lastUsed = new Date().toISOString();
+            saveSessions(paths as SessionPathsConfig, refreshStore);
+          }
+          return sessionId;
+        }
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      recordRuntimeWarning(`[genie] Failed to refresh session id for banner: ${message}`);
+      break;
+    }
+  }
+  return current ?? null;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function findSessionEntry(
   store: SessionStore,
   sessionId: string,
@@ -1489,20 +1704,20 @@ function resolveDisplayStatus(entry: SessionEntry): string {
 }
 
 async function runHelp(parsed: ParsedCommand, config: GenieConfig, paths: Required<ConfigPaths>): Promise<void> {
-  const agents = listAgents();
-  const modeAgents = agents.filter((agent) => agent.id.startsWith('genie-'));
-  const standardAgents = agents.filter((agent) => !agent.id.startsWith('genie-'));
   const presetsEntries = Object.entries(config.presets || {});
   const backgroundDefault = Boolean(config.defaults && config.defaults.background);
-  const runDesc = backgroundDefault ? 'Start a run (background default)' : 'Start a run (foreground default)';
   const commandRows = [
-    { command: 'run', args: '<agent> "<prompt>"', description: runDesc },
-    { command: 'mode', args: '<genie-mode> "<prompt>"', description: 'Trigger a Genie Mode (maps to genie-<mode>)' },
+    {
+      command: 'agent',
+      args: 'list | run <agent-id> "<prompt>"',
+      description: backgroundDefault
+        ? 'List agents or start a run (background default)'
+        : 'List agents or start a run (foreground default)'
+    },
     { command: 'continue', args: '<sessionId> "<prompt>"', description: 'Continue a background session' },
     { command: 'view', args: '<sessionId> [--lines N]', description: 'Stream the latest output' },
-    { command: 'stop', args: '<sessionId>', description: 'Gracefully end a session' },
     { command: 'runs', args: '[--status <s>] [--json]', description: 'Show background activity' },
-    { command: 'list', args: '', description: 'List recent sessions' },
+    { command: 'stop', args: '<sessionId>', description: 'Gracefully end a session' },
     { command: 'help', args: '', description: 'Open this panel' }
   ];
 
@@ -1519,22 +1734,6 @@ async function runHelp(parsed: ParsedCommand, config: GenieConfig, paths: Requir
     description: (info && info.description) ? info.description : 'no description provided'
   }));
 
-  const modeRows = modeAgents.map((agent) => {
-    const modeName = agent.id.replace(/^genie-/, '');
-    const description = truncateText((agent.meta?.description || '').replace(/\s+/g, ' ').trim(), 56);
-    return {
-      mode: modeName,
-      invoke: `genie mode ${modeName} "<prompt>"`,
-      focus: description
-    };
-  });
-
-  const agentRows = standardAgents.map((agent) => ({
-    id: agent.id,
-    model: resolveAgentModel(agent.meta),
-    description: truncateText((agent.meta?.description || '').replace(/\s+/g, ' ').trim(), 68)
-  }));
-
   const envelope = buildHelpView({
     style: parsed.options.style,
     backgroundDefault,
@@ -1548,84 +1747,136 @@ async function runHelp(parsed: ParsedCommand, config: GenieConfig, paths: Requir
       'Verification -> capture validation commands, metrics, and open questions.'
     ],
     examples: [
-      'genie mode planner "[Discovery] mission @.genie/product/mission.md ..."',
-      'genie run hello-coder "[Discovery] Review @README.md ..."'
-    ],
-    modes: modeRows,
-    agents: agentRows
+      'genie agent run planner "[Discovery] mission @.genie/product/mission.md ..."',
+      'genie agent run implementor "[Discovery] Review @README.md ..."'
+    ]
   });
 
   await emitView(envelope, parsed.options);
 }
 
-function listAgents(): Array<{ id: string; meta: any }> {
-  const dir = '.genie/agents';
-  if (!fs.existsSync(dir)) return [];
-  return fs.readdirSync(dir)
-    .filter((file) => file.endsWith('.md'))
-    .map((file) => {
-      const content = fs.readFileSync(path.join(dir, file), 'utf8');
+type AgentCategory = 'core' | 'mode' | 'specialized';
+
+interface ListedAgent {
+  id: string;
+  label: string;
+  meta: any;
+  category: AgentCategory;
+}
+
+function listAgents(): ListedAgent[] {
+  const baseDir = '.genie/agents';
+  const records: ListedAgent[] = [];
+  const segments: Array<{ relative: string; category: AgentCategory }> = [
+    { relative: '', category: 'core' },
+    { relative: 'modes', category: 'mode' },
+    { relative: 'specialists', category: 'specialized' }
+  ];
+
+  if (!fs.existsSync(baseDir)) return records;
+
+  segments.forEach(({ relative, category }) => {
+    const dirPath = relative ? path.join(baseDir, relative) : baseDir;
+    if (!fs.existsSync(dirPath)) return;
+    fs.readdirSync(dirPath).forEach((entry) => {
+      if (!entry.endsWith('.md') || entry === 'README.md') return;
+      const fullPath = path.join(dirPath, entry);
+      if (!fs.statSync(fullPath).isFile()) return;
+      const relId = relative ? path.join(relative, entry.replace(/\.md$/, '')) : entry.replace(/\.md$/, '');
+      const content = fs.readFileSync(fullPath, 'utf8');
       const { meta } = extractFrontMatter(content);
-      return { id: file.replace(/\.md$/, ''), meta };
-    });
-}
-
-function resolveAgentModel(meta: any): string {
-  return meta?.model || meta?.genie?.model || 'unknown';
-}
-
-function renderTable(headers: string[], rows: Array<string[]>): string[] {
-  const columnCount = headers.length;
-  const widths = new Array(columnCount).fill(0);
-
-  headers.forEach((header, index) => {
-    widths[index] = Math.max(widths[index], header.length);
-  });
-  rows.forEach((row) => {
-    row.forEach((cell, index) => {
-      widths[index] = Math.max(widths[index], cell.length);
+      const metaObj = meta || {};
+      if (metaObj.hidden === true || metaObj.disabled === true) return;
+      const label = (metaObj.name || relId.split(/[\\/]/).pop() || relId).trim();
+      records.push({ id: relId, label, meta: metaObj, category });
     });
   });
 
-  const line = (left: string, fill: string, junction: string, right: string) =>
-    `  ${left}${widths
-      .map((width) => `${fill.repeat(width + 2)}`)
-      .join(junction)}${right}`;
-
-  const top = line('┌', '─', '┬', '┐');
-  const header = `  │ ${headers
-    .map((header, index) => header.padEnd(widths[index]))
-    .join(' │ ')} │`;
-  const separator = line('├', '─', '┼', '┤');
-  const body = rows.map((row) => `  │ ${row.map((cell, index) => cell.padEnd(widths[index])).join(' │ ')} │`);
-  const bottom = line('└', '─', '┴', '┘');
-
-  return [top, header, separator, ...body, bottom];
+  return records;
 }
 
-function renderHero(title: string, subtitle: string): string[] {
-  const width = Math.max(title.length, subtitle.length) + 8;
-  const top = `╔${'═'.repeat(width - 2)}╗`;
-  const pad = (text: string) => `║ ${text.padEnd(width - 4)} ║`;
-  const bottom = `╚${'═'.repeat(width - 2)}╝`;
-  return [top, pad(title), pad(subtitle), bottom];
+async function emitAgentCatalog(parsed: ParsedCommand, _config: GenieConfig, _paths: Required<ConfigPaths>): Promise<void> {
+  const agents = listAgents();
+  const summarize = (entry: ListedAgent) => {
+    const description = ((entry.meta?.description || entry.meta?.summary || '') as string).replace(/\s+/g, ' ').trim();
+    return truncateText(description || '—', 96);
+  };
+
+  const envelope = buildAgentCatalogView({
+    style: parsed.options.style,
+    totals: {
+      all: agents.length,
+      modes: agents.filter((entry) => entry.category === 'mode').length,
+      specialized: agents.filter((entry) => entry.category === 'specialized').length,
+      core: agents.filter((entry) => entry.category === 'core').length
+    },
+    groups: [
+      {
+        label: 'Modes',
+        emptyText: 'No modes found',
+        rows: agents
+          .filter((entry) => entry.category === 'mode')
+          .sort((a, b) => a.label.localeCompare(b.label))
+          .map((entry) => ({ id: entry.label, rawId: entry.id, summary: summarize(entry) }))
+      },
+      {
+        label: 'Core Agents',
+        emptyText: 'No core agents found',
+        rows: agents
+          .filter((entry) => entry.category === 'core')
+          .sort((a, b) => a.label.localeCompare(b.label))
+          .map((entry) => ({ id: entry.label, rawId: entry.id, summary: summarize(entry) }))
+      },
+      {
+        label: 'Specialized Agents',
+        emptyText: 'No specialized agents found',
+        rows: agents
+          .filter((entry) => entry.category === 'specialized')
+          .sort((a, b) => a.label.localeCompare(b.label))
+          .map((entry) => ({ id: entry.label, rawId: entry.id, summary: summarize(entry) }))
+      }
+    ]
+  });
+
+  await emitView(envelope, parsed.options);
 }
 
-function renderKeyValueLines(pairs: Array<{ label: string; value: string }>): string[] {
-  if (pairs.length === 0) return [];
-  const labelWidth = Math.max(...pairs.map((pair) => pair.label.length));
-  return pairs.map((pair) => ` ${pair.label.padEnd(labelWidth)}  ${pair.value}`);
+function resolveAgentIdentifier(input: string): string {
+  const trimmed = (input || '').trim();
+  if (!trimmed) {
+    throw new Error('Agent id is required');
+  }
+  const normalized = trimmed.replace(/\.md$/i, '');
+  const normalizedLower = normalized.toLowerCase();
+
+  const directCandidates = [normalized, normalizedLower];
+  for (const candidate of directCandidates) {
+    if (agentExists(candidate)) return candidate.replace(/\\/g, '/');
+  }
+
+  const agents = listAgents();
+  const byExactId = agents.find((agent) => agent.id.toLowerCase() === normalizedLower);
+  if (byExactId) return byExactId.id;
+
+  const byLabel = agents.find((agent) => agent.label.toLowerCase() === normalizedLower);
+  if (byLabel) return byLabel.id;
+
+  const legacy = normalizedLower.replace(/^genie-/, '').replace(/^template-/, '');
+  const legacyCandidates = [legacy, `modes/${legacy}`, `specialists/${legacy}`];
+  for (const candidate of legacyCandidates) {
+    if (agentExists(candidate)) return candidate;
+  }
+
+  if (normalizedLower === 'forge-master' && agentExists('forge')) return 'forge';
+
+  throw new Error(`❌ Agent '${input}' not found. Try 'genie agent list' to see available ids.`);
 }
 
-function renderSectionHeading(title: string): string {
-  const width = 76;
-  const label = ` ${title.toUpperCase()} `;
-  const filler = '─'.repeat(Math.max(0, width - label.length));
-  return `╭${label}${filler}`;
-}
-
-function renderBulletList(items: string[]): string[] {
-  return items.map((item) => `  - ${item}`);
+function agentExists(id: string): boolean {
+  if (!id) return false;
+  const normalized = id.replace(/\\/g, '/');
+  const file = path.join('.genie', 'agents', `${normalized}.md`);
+  return fs.existsSync(file);
 }
 
 function truncateText(text: string, maxLength = 64): string {

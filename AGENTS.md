@@ -14,11 +14,11 @@
 The Genie workflow lives in `.genie/agents/` and is surfaced via CLI wrappers in `.claude/commands/`:
 - `plan.md` – orchestrates discovery, roadmap sync, context ledger, branch guidance
 - `wish.md` – converts planning brief into a wish with inline `<spec_contract>`
-- `forge-master.md` – breaks approved wish into execution groups + validation hooks (includes planner mode)
+- `forge.md` – breaks approved wish into execution groups + validation hooks (includes planner mode)
 - `review.md` – audits wish completion and produces QA reports
 - `commit.md` – aggregates diffs and proposes commit messaging
 - `prompt.md` – advanced prompting guidance (formerly `.claude.template/commands/prompt.md`)
-- Specialist agents (implementor, qa, quality, tests, self-learn) plus utilities (`refactorer`, `rules-integrator`, optional `evaluator`). See Local Agent Map for current names.
+- Specialized agents (bug-reporter, git-workflow, implementor, polish, project-manager, qa, self-learn, tests) plus utilities (`refactorer`, `rules-integrator`, optional `evaluator`). See Local Agent Map for current names.
 
 All commands in `.claude/commands/` simply `@include` the corresponding `.genie/agents/...` file to avoid duplication.
 
@@ -30,13 +30,15 @@ All commands in `.claude/commands/` simply `@include` the corresponding `.genie/
 - `.genie/state/` – CLI-managed data (e.g., `agents/sessions.json` for session tracking, agent logs, forge plans, commit advisories). Inspect via `./genie runs|list|view` rather than manual edits.
 - `.genie/wishes/` – active wish contracts (`<slug>-wish.md`)
 - `.genie/templates/` – reserved for future wish/plan templates (currently empty)
-- `.genie/cli/agent.js` – CLI runner for agent conversations (supports `--background`)
+- `.genie/agents/modes/` – Genie Modes (planner, twin, analysis, etc.)
+- `.genie/agents/specialists/` – delivery/QA/learning specialists
+- `./genie` – CLI runner for agent conversations
 
 ## Workflow Summary
 1. **/plan** – single-entry agent for product mode. Loads mission/roadmap/standards, gathers context via `@` references, requests background personas via CLI, and decides if item is wish-ready.
 2. **/wish** – creates `.genie/wishes/<slug>-wish.md`, embedding context ledger, execution groups, inline `<spec_contract>`, branch/tracker strategy, and blocker protocol.
 3. **/forge** – surfaces execution groups, evidence expectations, validation hooks, and pointers back to the wish for tracker updates (capture the plan summary inside the wish).
-4. **Implementation** – humans/agents follow forge plan, storing evidence exactly where the wish specifies (no default folders). Specialist agents run via `./genie run <implementor-agent> "..."` (background by default). Replace `<implementor-agent>` using the Local Agent Map.
+4. **Implementation** – humans/agents follow forge plan, storing evidence exactly where the wish specifies (no default folders). Specialized agents run via `./genie agent run <specialized-agent> "..."`. Replace `<specialized-agent>` using the Local Agent Map and tailor the files in `.genie/agents/specialists/` during installation.
 5. **/review** (optional) – aggregates QA artefacts, replays validation commands, and writes a review summary back into the wish (create a dedicated section or file path if needed).
 6. **/commit** – groups diffs, recommends commit message/checklist, and outputs a commit advisory (log highlights inside the wish or PR draft).
 7. **Git workflow** – Branch names typically `feat/<wish-slug>`; alternatives logged in the wish. PRs reference the wish and forge plan, and reuse tracker IDs recorded in the wish itself. Update roadmap status after merge.
@@ -44,7 +46,7 @@ All commands in `.claude/commands/` simply `@include` the corresponding `.genie/
 ## Evidence & Storage Conventions
 - Wishes must declare where artefacts live; there is no default `qa/` directory. Capture metrics inline in the wish (e.g., tables under a **Metrics** section) or in clearly named companion files.
 - External tracker IDs live in the wish markdown (for example a **Tracking** section with `Forge task: FORGE-123`).
-- Background agent outputs are summarised in the wish context ledger; raw logs reside under `.genie/state/agents/logs/` when `--background` is used.
+- Background agent outputs are summarised in the wish context ledger; raw logs can be viewed with `./genie view <sessionId>`.
 
 ## Testing & Evaluation
 - Evaluator tooling is optional. If `@.genie/agents/evaluator.md` is present, `/review` or `/plan` can reference it for scoring; otherwise, evaluation steps default to manual validation.
@@ -82,10 +84,10 @@ A common snippet:
 ./genie help
 
 # Start a Genie Mode (preferred for built-in flows)
-./genie mode planner "[Discovery] … [Implementation] … [Verification] …"
+./genie agent run planner "[Discovery] … [Implementation] … [Verification] …"
 
-# Start an Agent (template-*, forge-*, custom)
-./genie run forge-coder "[Discovery] … [Implementation] … [Verification] …"
+# Start a Core/Specialized Agent
+./genie agent run forge "[Discovery] … [Implementation] … [Verification] …"
 
 # Inspect runs and view logs (friendly)
 ./genie runs --status running
@@ -99,9 +101,9 @@ A common snippet:
 ```
 
 ## Subagents & Twin via CLI
-- Start subagent: `./genie run <agent> "<prompt>" [--preset <name>]`
+- Start subagent: `./genie agent run <agent> "<prompt>" [--preset <name>]`
 - Continue session: `./genie continue <sessionId> "<prompt>"`
-- List sessions: `./genie list`
+- List sessions: `./genie runs`
 - Stop session: `./genie stop <sessionId>`
 
 Twin prompt patterns (run through any agent, typically `plan`):
@@ -110,29 +112,31 @@ Twin prompt patterns (run through any agent, typically `plan`):
 - Focused Deep-Dive: "Investigate <topic>. Provide findings, affected files, follow-ups."
 
 ## Local Agent Map
-Routing keys map to agent files. Keep this updated as new agents are added.
-- implementor → `.genie/agents/template-implementor.md`
-- qa → `.genie/agents/template-qa.md`
-- quality → `.genie/agents/template-quality.md`
-- tests → `.genie/agents/template-tests.md`
-- self-learn → `.genie/agents/template-self-learn.md`
-- bug-reporter → `.genie/agents/template-bug-reporter.md`
-- task-master → `.genie/agents/forge-master.md`
-- planner → `.genie/agents/forge-master.md`
-- twin → `.genie/agents/genie-twin.md`
- - planner-agent → `.genie/agents/genie-planner.md`
- - consensus-agent → `.genie/agents/genie-consensus.md`
- - debug-agent → `.genie/agents/genie-debug.md`
- - analyze-agent → `.genie/agents/genie-analyze.md`
- - refactor-agent → `.genie/agents/genie-refactor.md`
- - docgen-agent → `.genie/agents/genie-docgen.md`
- - thinkdeep-agent → `.genie/agents/genie-thinkdeep.md`
- - tracer-agent → `.genie/agents/genie-tracer.md`
- - challenge-agent → `.genie/agents/genie-challenge.md`
- - codereview → `.genie/agents/genie-codereview.md`
- - precommit → `.genie/agents/genie-precommit.md`
- - testgen → `.genie/agents/genie-testgen.md`
- - secaudit → `.genie/agents/genie-secaudit.md`
+Agent aliases map to agent files. Keep this updated as new agents are added.
+- bug-reporter → `.genie/agents/specialists/bug-reporter.md`
+- git-workflow → `.genie/agents/specialists/git-workflow.md`
+- implementor → `.genie/agents/specialists/implementor.md`
+- polish → `.genie/agents/specialists/polish.md`
+- project-manager → `.genie/agents/specialists/project-manager.md`
+- qa → `.genie/agents/specialists/qa.md`
+- self-learn → `.genie/agents/specialists/self-learn.md`
+- tests → `.genie/agents/specialists/tests.md`
+- forge → `.genie/agents/forge.md`
+- planner → `.genie/agents/modes/planner.md`
+- twin → `.genie/agents/modes/twin.md`
+ - planner-agent → `.genie/agents/modes/planner.md`
+ - consensus-agent → `.genie/agents/modes/consensus.md`
+ - debug-agent → `.genie/agents/modes/debug.md`
+ - analyze-agent → `.genie/agents/modes/analyze.md`
+ - refactor-agent → `.genie/agents/modes/refactor.md`
+ - docgen-agent → `.genie/agents/modes/docgen.md`
+ - thinkdeep-agent → `.genie/agents/modes/thinkdeep.md`
+ - tracer-agent → `.genie/agents/modes/tracer.md`
+ - challenge-agent → `.genie/agents/modes/challenge.md`
+ - codereview → `.genie/agents/modes/codereview.md`
+ - precommit → `.genie/agents/modes/precommit.md`
+ - testgen → `.genie/agents/modes/testgen.md`
+ - secaudit → `.genie/agents/modes/secaudit.md`
 
 ## Migration Notes
 - Agent OS directories have been merged into `.genie/` (the old `.agent-os/` folder is removed).
@@ -274,10 +278,10 @@ Keep this document synced when introducing new agents, changing folder layouts, 
 
 <routing_decision_matrix>
 [CONTEXT]
-- Choose specialists by task type using routing keys.
+- Choose specialists by task type using routing aliases.
 
-### Routing Keys
-- implementor, qa, quality, tests, self-learn, planner, twin.
+### Routing Aliases
+- bug-reporter, git-workflow, implementor, polish, project-manager, qa, self-learn, tests, planner, twin.
 - Map to actual agent files via the Local Agent Map section in this document.
 </routing_decision_matrix>
 
@@ -304,7 +308,7 @@ Keep this document synced when introducing new agents, changing folder layouts, 
 
 <twin_integration_framework>
 [CONTEXT]
-- `genie-twin` is GENIE's partner for second opinions, plan pressure-tests, deep dives, and decision audits.
+- `twin` mode is GENIE's partner for second opinions, plan pressure-tests, deep dives, and decision audits.
 - Use it to reduce risk, surface blind spots, and document reasoning without blocking implementation work.
 
 [SUCCESS CRITERIA]
@@ -324,16 +328,16 @@ Keep this document synced when introducing new agents, changing folder layouts, 
 ### How To Run (CLI)
 - Start: `./genie mode twin "Mode: planning. Objective: pressure-test @.genie/wishes/<slug>-wish.md. Deliver 3 risks, 3 missing validations, 3 refinements. Finish with Twin Verdict + confidence."`
 - Continue: `./genie continue <sessionId> "Follow-up: address risk #2 with options + trade-offs."`
-- Sessions: reuse the same agent name; the CLI persists session id automatically in `.genie/state/agents/sessions.json`.
-- Logs: check `.genie/state/agents/logs/genie-twin-<timestamp>.log` for the full transcript.
+- Sessions: reuse the same agent name; the CLI persists session id automatically and can be viewed with `./genie runs`.
+- Logs: check full transcript with `./genie view <sessionId>`.
 
 ### Modes (quick reference)
 - planning, consensus, deep-dive, debug, socratic, debate, risk-audit, design-review, test-strategy, compliance, retrospective.
-- Full prompt templates live in `@.genie/agents/genie-twin.md`.
+- Full prompt templates live in `@.genie/agents/modes/twin.md`.
 
 ### Outputs & Evidence
 - Low-stakes: append a short summary to the wish discovery section.
-- High-stakes: save a Death Testament at `.genie/reports/genie-twin-<slug>-<YYYYMMDDHHmm>.md` with scope, findings, recommendations, disagreements.
+- High-stakes: save a Death Testament at `.genie/reports/twin-<slug>-<YYYYMMDDHHmm>.md` with scope, findings, recommendations, disagreements.
 - Always include “Twin Verdict: <summary> (confidence: <low|med|high>)”.
 
 ### Twin Verdict Format (per mode)

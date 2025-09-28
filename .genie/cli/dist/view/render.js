@@ -129,35 +129,74 @@ function renderKeyValueNode(node) {
 function renderTableNode(node) {
     const { Box: InkBox, Text: InkText } = useInk();
     const columns = node.columns;
-    const widths = columns.map((col) => Math.max(col.label.length, col.width ?? 0));
+    const MAX_COL_WIDTH = 40;
+    const MIN_COL_WIDTH = 6;
+    const sanitized = (value) => value.replace(/\s+/g, ' ').trim();
+    const truncate = (value, width) => {
+        if (value.length <= width)
+            return value;
+        if (width <= 1)
+            return value.slice(0, 1);
+        return value.slice(0, width - 1) + '…';
+    };
+    const clampWidth = (length) => Math.max(MIN_COL_WIDTH, Math.min(MAX_COL_WIDTH, length));
+    const termWidth = typeof process !== 'undefined' && process.stdout && Number.isFinite(process.stdout.columns)
+        ? Math.max(40, Math.min(process.stdout.columns - 6, 140))
+        : 80;
+    const gapSize = 2;
+    const baseWidths = columns.map((col) => clampWidth(col.label.length));
     node.rows.forEach((row) => {
         columns.forEach((col, idx) => {
-            const value = row[col.key] ?? '';
-            widths[idx] = Math.max(widths[idx], value.length);
+            const raw = row[col.key];
+            const value = raw == null ? '' : String(raw);
+            baseWidths[idx] = Math.max(baseWidths[idx], clampWidth(sanitized(value).length));
         });
     });
-    const renderRow = (row, isHeader = false) => ((0, jsx_runtime_1.jsxs)(InkText, { children: [' ', columns
-                .map((col, idx) => {
-                const raw = isHeader ? col.label : row[col.key] ?? '';
-                const width = widths[idx];
-                const aligned = alignCell(raw, width, col.align ?? 'left');
-                return aligned;
-            })
-                .join(' │ ')] }));
-    const borderTop = '┌' + widths.map((w) => '─'.repeat(w + 2)).join('┬') + '┐';
-    const borderMid = '├' + widths.map((w) => '─'.repeat(w + 2)).join('┼') + '┤';
-    const borderBottom = '└' + widths.map((w) => '─'.repeat(w + 2)).join('┴') + '┘';
-    return ((0, jsx_runtime_1.jsxs)(InkBox, { flexDirection: "column", children: [(0, jsx_runtime_1.jsx)(InkText, { children: borderTop }), renderRow(Object.fromEntries(columns.map((c) => [c.key, c.label])), true), (0, jsx_runtime_1.jsx)(InkText, { children: borderMid }), node.rows.length === 0 && node.emptyText ? ((0, jsx_runtime_1.jsx)(InkText, { color: theme_1.palette.foreground.placeholder, children: ` ${node.emptyText}` })) : (node.rows.map((row, idx) => (0, jsx_runtime_1.jsx)(react_1.Fragment, { children: renderRow(row) }, `row-${idx}`))), (0, jsx_runtime_1.jsx)(InkText, { children: borderBottom })] }));
-}
-function alignCell(text, width, align) {
-    if (align === 'right')
-        return text.padStart(width);
-    if (align === 'center') {
-        const left = Math.floor((width - text.length) / 2);
-        const right = width - text.length - left;
-        return ' '.repeat(left) + text + ' '.repeat(right);
+    const totalBase = sumWithGaps(baseWidths, gapSize);
+    const allowedWidth = Math.max(sumWithGaps(baseWidths.map(() => MIN_COL_WIDTH), gapSize), Math.min(termWidth, totalBase));
+    const widths = squeezeWidths(baseWidths.slice(), gapSize, allowedWidth, MIN_COL_WIDTH);
+    const tableWidth = sumWithGaps(widths, gapSize);
+    const renderRow = (row, isHeader = false) => ((0, jsx_runtime_1.jsx)(InkBox, { flexDirection: "row", children: columns.map((col, idx) => {
+            const raw = isHeader ? col.label : row[col.key] ?? '';
+            const prepared = truncate(sanitized(String(raw)), widths[idx]);
+            const aligned = alignCell(prepared, widths[idx], col.align ?? 'left');
+            const color = isHeader ? (0, theme_1.accentToColor)('secondary') : theme_1.palette.foreground.default;
+            return ((0, jsx_runtime_1.jsx)(InkBox, { width: widths[idx], marginRight: idx < columns.length - 1 ? gapSize : 0, children: (0, jsx_runtime_1.jsx)(InkText, { color: color, bold: isHeader, children: aligned }) }, `${col.key}-${idx}`));
+        }) }));
+    return ((0, jsx_runtime_1.jsxs)(InkBox, { flexDirection: "column", borderStyle: "round", borderColor: (0, theme_1.accentToColor)('muted'), paddingX: 1, paddingY: 1, children: [renderRow(Object.fromEntries(columns.map((c) => [c.key, c.label])), true), node.rows.length === 0 && node.emptyText ? ((0, jsx_runtime_1.jsx)(InkBox, { marginTop: 1, children: (0, jsx_runtime_1.jsx)(InkText, { color: theme_1.palette.foreground.placeholder, children: node.emptyText }) })) : ((0, jsx_runtime_1.jsxs)(react_1.Fragment, { children: [(0, jsx_runtime_1.jsx)(InkBox, { marginY: 1, children: (0, jsx_runtime_1.jsx)(InkText, { color: (0, theme_1.accentToColor)('muted'), dimColor: true, children: '─'.repeat(tableWidth) }) }), node.rows.map((row, idx) => ((0, jsx_runtime_1.jsx)(InkBox, { marginBottom: idx < node.rows.length - 1 ? 1 : 0, children: renderRow(row) }, `row-${idx}`)))] }))] }));
+    function alignCell(text, width, align) {
+        const padLeft = (count) => (count > 0 ? ' '.repeat(count) : '');
+        if (align === 'right')
+            return text.padStart(width);
+        if (align === 'center') {
+            const left = Math.floor((width - text.length) / 2);
+            const right = width - text.length - left;
+            return padLeft(left) + text + padLeft(right);
+        }
+        return text.padEnd(width);
     }
-    return text.padEnd(width);
+}
+function squeezeWidths(widths, gapSize, targetWidth, minWidth) {
+    const total = () => sumWithGaps(widths, gapSize);
+    if (total() <= targetWidth)
+        return widths;
+    const shrinkable = () => widths.some((width) => width > minWidth);
+    while (total() > targetWidth && shrinkable()) {
+        let largestIdx = 0;
+        for (let i = 1; i < widths.length; i += 1) {
+            if (widths[i] > widths[largestIdx])
+                largestIdx = i;
+        }
+        if (widths[largestIdx] <= minWidth)
+            break;
+        widths[largestIdx] -= 1;
+    }
+    return widths;
+}
+function sumWithGaps(widths, gapSize) {
+    if (!widths.length)
+        return 0;
+    return widths.reduce((sum, width, idx) => sum + width + (idx < widths.length - 1 ? gapSize : 0), 0);
 }
 function renderDividerNode(node) {
     const { Text: InkText } = useInk();

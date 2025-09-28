@@ -46,6 +46,7 @@ const child_process_1 = require("child_process");
 const executors_1 = require("./executors");
 const view_1 = require("./view");
 const help_1 = require("./views/help");
+const agent_catalog_1 = require("./views/agent-catalog");
 const runs_1 = require("./views/runs");
 const background_1 = require("./views/background");
 const stop_1 = require("./views/stop");
@@ -71,6 +72,7 @@ const CONFIG_PATH = path_1.default.join(SCRIPT_DIR, 'config.yaml');
 const backgroundManager = new background_manager_1.default();
 const startupWarnings = [];
 const runtimeWarnings = [];
+const DEFAULT_RUNS_PER_PAGE = 10;
 function recordStartupWarning(message) {
     startupWarnings.push(message);
 }
@@ -154,6 +156,9 @@ async function main() {
         prepareDirectories(paths);
         await flushStartupWarnings(parsed.options);
         switch (parsed.command) {
+            case 'agent':
+                await runAgentCommand(parsed, config, paths);
+                break;
             case 'run':
                 await runChat(parsed, config, paths);
                 break;
@@ -168,9 +173,6 @@ async function main() {
                 break;
             case 'runs':
                 await runRuns(parsed, config, paths);
-                break;
-            case 'list':
-                await runList(parsed, config, paths);
                 break;
             case 'stop':
                 await runStop(parsed, config, paths);
@@ -210,7 +212,7 @@ function parseArguments(argv) {
         status: null,
         lines: 60,
         page: 1,
-        per: 5
+        per: 10
     };
     const filtered = [];
     for (let i = 0; i < raw.length; i++) {
@@ -559,7 +561,7 @@ function parseYamlScalar(valueRaw) {
     }
     if ((valueRaw.startsWith('"') && valueRaw.endsWith('"')) || (valueRaw.startsWith('\'') && valueRaw.endsWith('\''))) {
         const unquoted = valueRaw.slice(1, -1);
-        return unquoted.replace(/\\"/g, '"').replace(/\\'/g, "'");
+        return unquoted.replace(/\"/g, '"').replace(/\\'/g, "'");
     }
     return valueRaw;
 }
@@ -632,12 +634,19 @@ async function runChat(parsed, config, paths) {
         entry.runnerPid = runnerPid;
         entry.status = 'running';
         (0, session_store_1.saveSessions)(paths, store);
+        const bannerSessionId = await resolveSessionIdForBanner(agentName, config, paths, entry.sessionId, logFile);
+        if (bannerSessionId && !entry.sessionId) {
+            entry.sessionId = bannerSessionId;
+            (0, session_store_1.saveSessions)(paths, store);
+        }
         const envelope = (0, background_1.buildBackgroundStartView)({
             style: parsed.options.style,
             agentName,
             logPath: formatPathRelative(logFile, paths.baseDir || '.'),
-            sessionId: entry.sessionId,
-            context: ['Watch: ./genie view <sessionId>', 'Resume: ./genie continue <sessionId> "<prompt>"']
+            sessionId: bannerSessionId,
+            actions: buildBackgroundActions(bannerSessionId, {
+                resume: true
+            })
         });
         await emitView(envelope, parsed.options);
         return;
@@ -665,6 +674,57 @@ async function runChat(parsed, config, paths) {
         runnerPid: parsed.options.backgroundRunner ? process.pid : null,
         cliOptions: parsed.options
     });
+}
+async function runAgentCommand(parsed, config, paths) {
+    const [maybeSubcommand, ...rest] = parsed.commandArgs;
+    if (parsed.options.requestHelp) {
+        await emitView((0, common_1.buildInfoView)(parsed.options.style, 'Agent command', [
+            'Usage:',
+            '  genie agent list',
+            '  genie agent run <agent-id> "<prompt>"',
+            '  genie agent <agent-id> "<prompt>"'
+        ]), parsed.options);
+        return;
+    }
+    const sub = (maybeSubcommand || '').toLowerCase();
+    if (!maybeSubcommand || sub === 'list' || sub === 'ls') {
+        await emitAgentCatalog(parsed, config, paths);
+        return;
+    }
+    if (sub === 'run' || sub === 'start' || sub === 'launch') {
+        if (!rest.length) {
+            throw new Error('Usage: genie agent run <agent-id> "<prompt>"');
+        }
+        const [agentId, ...promptParts] = rest;
+        await runAgentRun(agentId, promptParts, parsed, config, paths);
+        return;
+    }
+    if (sub === 'help') {
+        await emitView((0, common_1.buildInfoView)(parsed.options.style, 'Agent command', [
+            'Usage:',
+            '  genie agent list',
+            '  genie agent run <agent-id> "<prompt>"',
+            '  genie agent <agent-id> "<prompt>"'
+        ]), parsed.options);
+        return;
+    }
+    await runAgentRun(maybeSubcommand, rest, parsed, config, paths);
+}
+async function runAgentRun(agentInput, promptParts, parsed, config, paths) {
+    const agentId = resolveAgentIdentifier(agentInput);
+    const prompt = promptParts.join(' ').trim();
+    if (!prompt) {
+        throw new Error(`Usage: genie agent run ${agentInput} "<prompt>"`);
+    }
+    const cloned = {
+        command: 'run',
+        commandArgs: [agentId, prompt],
+        options: {
+            ...parsed.options,
+            rawArgs: [...parsed.options.rawArgs]
+        }
+    };
+    await runChat(cloned, config, paths);
 }
 function resolveExecutorKey(options, config, presetName) {
     if (options.executor)
@@ -767,10 +827,12 @@ function executeRun(args) {
             const data = JSON.parse(trimmed);
             if (data && typeof data === 'object' && data.type === 'session.created') {
                 const sessionId = data.session_id || data.sessionId;
-                if (sessionId && !entry.sessionId) {
-                    entry.sessionId = sessionId;
-                    entry.lastUsed = new Date().toISOString();
-                    (0, session_store_1.saveSessions)(paths, store);
+                if (sessionId) {
+                    if (entry.sessionId !== sessionId) {
+                        entry.sessionId = sessionId;
+                        entry.lastUsed = new Date().toISOString();
+                        (0, session_store_1.saveSessions)(paths, store);
+                    }
                 }
             }
         }
@@ -939,7 +1001,13 @@ function extractFrontMatter(source) {
         return { meta: parsed || {}, body };
     }
     catch {
-        return { meta: {}, body };
+        try {
+            const fallback = parseSimpleYaml(raw);
+            return { meta: fallback || {}, body };
+        }
+        catch {
+            return { meta: {}, body };
+        }
     }
 }
 function deriveStartTime() {
@@ -967,6 +1035,38 @@ function formatPathRelative(targetPath, baseDir) {
     catch {
         return targetPath;
     }
+}
+function safeIsoString(value) {
+    const timestamp = new Date(value).getTime();
+    if (!Number.isFinite(timestamp))
+        return null;
+    return new Date(timestamp).toISOString();
+}
+function formatRelativeTime(value) {
+    const timestamp = new Date(value).getTime();
+    if (!Number.isFinite(timestamp))
+        return 'n/a';
+    const diffMs = Date.now() - timestamp;
+    if (diffMs < 0)
+        return 'just now';
+    const seconds = Math.floor(diffMs / 1000);
+    if (seconds < 5)
+        return 'just now';
+    if (seconds < 60)
+        return `${seconds}s ago`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60)
+        return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24)
+        return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 7)
+        return `${days}d ago`;
+    const weeks = Math.floor(days / 7);
+    if (weeks < 5)
+        return `${weeks}w ago`;
+    return new Date(value).toLocaleDateString();
 }
 async function runContinue(parsed, config, paths) {
     if (parsed.options.requestHelp) {
@@ -1028,13 +1128,20 @@ async function runContinue(parsed, config, paths) {
         session.runnerPid = runnerPid;
         session.status = 'running';
         (0, session_store_1.saveSessions)(paths, store);
+        const bannerSessionId = await resolveSessionIdForBanner(agentName, config, paths, session.sessionId, logFile);
+        if (bannerSessionId && !session.sessionId) {
+            session.sessionId = bannerSessionId;
+            (0, session_store_1.saveSessions)(paths, store);
+        }
         const envelope = (0, background_1.buildBackgroundStartView)({
             style: parsed.options.style,
             agentName,
             logPath: formatPathRelative(logFile, paths.baseDir || '.'),
-            sessionId: session.sessionId,
-            note: 'Background session resumed',
-            context: ['Watch: ./genie view <sessionId>', 'Stop: ./genie stop <sessionId>']
+            sessionId: bannerSessionId,
+            actions: buildBackgroundActions(bannerSessionId, {
+                resume: false,
+                includeStop: true
+            })
         });
         await emitView(envelope, parsed.options);
         return;
@@ -1058,9 +1165,6 @@ async function runContinue(parsed, config, paths) {
         cliOptions: parsed.options
     });
 }
-async function runList(parsed, config, paths) {
-    await runRuns(parsed, config, paths);
-}
 async function runRuns(parsed, config, paths) {
     const warnings = [];
     const store = (0, session_store_1.loadSessions)(paths, config, DEFAULT_CONFIG, { onWarning: (message) => warnings.push(message) });
@@ -1073,8 +1177,9 @@ async function runRuns(parsed, config, paths) {
         lastUsed: entry.lastUsed || entry.created || null
     }));
     const want = parsed.options.status;
-    const page = parsed.options.page || 1;
-    const per = parsed.options.per || 5;
+    const page = parsed.options.page && parsed.options.page > 0 ? parsed.options.page : 1;
+    const perCandidate = parsed.options.per && parsed.options.per > 0 ? parsed.options.per : DEFAULT_RUNS_PER_PAGE;
+    const per = perCandidate || DEFAULT_RUNS_PER_PAGE;
     const byStatus = (status) => dataAll.filter((row) => (row.status || '').toLowerCase().startsWith(status));
     const sortByTimeDesc = (arr) => arr.slice().sort((a, b) => {
         const aTime = a.lastUsed ? new Date(a.lastUsed).getTime() : 0;
@@ -1082,14 +1187,31 @@ async function runRuns(parsed, config, paths) {
         return bTime - aTime;
     });
     const paginate = (arr) => arr.slice((page - 1) * per, (page - 1) * per + per);
-    const formatRow = (row) => ({
-        agent: row.agent,
-        status: row.status,
-        sessionId: row.sessionId,
-        lastUsed: row.lastUsed ? new Date(row.lastUsed).toLocaleString() : null,
-        log: row.log ? formatPathRelative(row.log, paths.baseDir || '.') : null
-    });
-    const pagerBaseHint = 'Use: genie view <sessionId>   •   Resume: genie continue <sessionId> "<prompt>"   •   Stop: genie stop <sessionId>';
+    const formatRow = (row) => {
+        const iso = row.lastUsed ? safeIsoString(row.lastUsed) : null;
+        return {
+            agent: row.agent,
+            status: row.status,
+            sessionId: row.sessionId,
+            updated: iso ? formatRelativeTime(iso) : 'n/a',
+            updatedIso: iso,
+            log: row.log ? formatPathRelative(row.log, paths.baseDir || '.') : null
+        };
+    };
+    const baseHints = [
+        'View details: genie view <sessionId>',
+        'Resume background work: genie continue <sessionId> "<prompt>"',
+        'Stop session: genie stop <sessionId>'
+    ];
+    const scopeSuffix = want && want !== 'default' ? ` --status ${want}` : '';
+    const buildPagerHints = (total) => {
+        const hints = [];
+        if (total > page * per)
+            hints.push(`Next page: genie runs${scopeSuffix} --page ${page + 1}`);
+        if (page > 1)
+            hints.push(`Previous page: genie runs${scopeSuffix} --page ${page - 1}`);
+        return hints;
+    };
     if (want && want !== 'default') {
         let pool;
         if (want === 'all')
@@ -1102,8 +1224,7 @@ async function runRuns(parsed, config, paths) {
         const pager = {
             page,
             per,
-            nextHint: `Next: genie runs --status ${want} --page ${page + 1} --per ${per}`,
-            actionHint: pagerBaseHint
+            hints: [...buildPagerHints(pool.length), ...baseHints]
         };
         const envelope = (0, runs_1.buildRunsScopedView)({
             style: parsed.options.style,
@@ -1119,11 +1240,11 @@ async function runRuns(parsed, config, paths) {
     const recentPool = sortByTimeDesc(dataAll.filter((row) => !['running', 'pending-completion'].includes((row.status || '').toLowerCase())));
     const activeRows = paginate(activePool).map(formatRow);
     const recentRows = paginate(recentPool).map(formatRow);
+    const statusHints = ['Focus on running sessions: genie runs --status running', 'See completed sessions: genie runs --status completed'];
     const pager = {
         page,
         per,
-        nextHint: `Next: genie runs --page ${page + 1} --per ${per} • Focus: genie runs --status completed`,
-        actionHint: pagerBaseHint
+        hints: [...buildPagerHints(Math.max(activePool.length, recentPool.length)), ...statusHints, ...baseHints]
     };
     const envelope = (0, runs_1.buildRunsOverviewView)({
         style: parsed.options.style,
@@ -1309,6 +1430,65 @@ async function runStop(parsed, config, paths) {
     await emitView(envelope, parsed.options);
     await appendWarningView();
 }
+function buildBackgroundActions(sessionId, options) {
+    if (!sessionId) {
+        const lines = ['• Watch: session pending – run `./genie runs --status running` then `./genie view <sessionId>`'];
+        if (options.resume) {
+            lines.push('• Resume: session pending – run `./genie continue <sessionId> "<prompt>"` once available');
+        }
+        if (options.includeStop) {
+            lines.push('• Stop: session pending – run `./genie stop <sessionId>` once available');
+        }
+        return lines;
+    }
+    const lines = [`• Watch: ./genie view ${sessionId}`];
+    if (options.resume) {
+        lines.push(`• Resume: ./genie continue ${sessionId} "<prompt>"`);
+    }
+    if (options.includeStop) {
+        lines.push(`• Stop: ./genie stop ${sessionId}`);
+    }
+    return lines;
+}
+async function resolveSessionIdForBanner(agentName, config, paths, current, logFile, timeoutMs = 15000, intervalMs = 250) {
+    if (current)
+        return current;
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+        await sleep(intervalMs);
+        try {
+            const liveStore = (0, session_store_1.loadSessions)(paths, config, DEFAULT_CONFIG);
+            const candidate = liveStore.agents?.[agentName]?.sessionId;
+            if (candidate) {
+                return candidate;
+            }
+            if (logFile && fs_1.default.existsSync(logFile)) {
+                const content = fs_1.default.readFileSync(logFile, 'utf8');
+                const match = /"session_id"\s*:\s*"([^"]+)"/i.exec(content) || /"sessionId"\s*:\s*"([^"]+)"/i.exec(content);
+                if (match) {
+                    const sessionId = match[1];
+                    const refreshStore = (0, session_store_1.loadSessions)(paths, config, DEFAULT_CONFIG);
+                    const agentEntry = refreshStore.agents?.[agentName];
+                    if (agentEntry && !agentEntry.sessionId) {
+                        agentEntry.sessionId = sessionId;
+                        agentEntry.lastUsed = new Date().toISOString();
+                        (0, session_store_1.saveSessions)(paths, refreshStore);
+                    }
+                    return sessionId;
+                }
+            }
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            recordRuntimeWarning(`[genie] Failed to refresh session id for banner: ${message}`);
+            break;
+        }
+    }
+    return current ?? null;
+}
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
 function findSessionEntry(store, sessionId, paths) {
     if (!sessionId || typeof sessionId !== 'string')
         return null;
@@ -1366,20 +1546,20 @@ function resolveDisplayStatus(entry) {
     return baseStatus;
 }
 async function runHelp(parsed, config, paths) {
-    const agents = listAgents();
-    const modeAgents = agents.filter((agent) => agent.id.startsWith('genie-'));
-    const standardAgents = agents.filter((agent) => !agent.id.startsWith('genie-'));
     const presetsEntries = Object.entries(config.presets || {});
     const backgroundDefault = Boolean(config.defaults && config.defaults.background);
-    const runDesc = backgroundDefault ? 'Start a run (background default)' : 'Start a run (foreground default)';
     const commandRows = [
-        { command: 'run', args: '<agent> "<prompt>"', description: runDesc },
-        { command: 'mode', args: '<genie-mode> "<prompt>"', description: 'Trigger a Genie Mode (maps to genie-<mode>)' },
+        {
+            command: 'agent',
+            args: 'list | run <agent-id> "<prompt>"',
+            description: backgroundDefault
+                ? 'List agents or start a run (background default)'
+                : 'List agents or start a run (foreground default)'
+        },
         { command: 'continue', args: '<sessionId> "<prompt>"', description: 'Continue a background session' },
         { command: 'view', args: '<sessionId> [--lines N]', description: 'Stream the latest output' },
-        { command: 'stop', args: '<sessionId>', description: 'Gracefully end a session' },
         { command: 'runs', args: '[--status <s>] [--json]', description: 'Show background activity' },
-        { command: 'list', args: '', description: 'List recent sessions' },
+        { command: 'stop', args: '<sessionId>', description: 'Gracefully end a session' },
         { command: 'help', args: '', description: 'Open this panel' }
     ];
     const optionRows = [
@@ -1392,20 +1572,6 @@ async function runHelp(parsed, config, paths) {
     const presetsRows = presetsEntries.map(([name, info]) => ({
         name,
         description: (info && info.description) ? info.description : 'no description provided'
-    }));
-    const modeRows = modeAgents.map((agent) => {
-        const modeName = agent.id.replace(/^genie-/, '');
-        const description = truncateText((agent.meta?.description || '').replace(/\s+/g, ' ').trim(), 56);
-        return {
-            mode: modeName,
-            invoke: `genie mode ${modeName} "<prompt>"`,
-            focus: description
-        };
-    });
-    const agentRows = standardAgents.map((agent) => ({
-        id: agent.id,
-        model: resolveAgentModel(agent.meta),
-        description: truncateText((agent.meta?.description || '').replace(/\s+/g, ' ').trim(), 68)
     }));
     const envelope = (0, help_1.buildHelpView)({
         style: parsed.options.style,
@@ -1420,73 +1586,122 @@ async function runHelp(parsed, config, paths) {
             'Verification -> capture validation commands, metrics, and open questions.'
         ],
         examples: [
-            'genie mode planner "[Discovery] mission @.genie/product/mission.md ..."',
-            'genie run hello-coder "[Discovery] Review @README.md ..."'
-        ],
-        modes: modeRows,
-        agents: agentRows
+            'genie agent run planner "[Discovery] mission @.genie/product/mission.md ..."',
+            'genie agent run implementor "[Discovery] Review @README.md ..."'
+        ]
     });
     await emitView(envelope, parsed.options);
 }
 function listAgents() {
-    const dir = '.genie/agents';
-    if (!fs_1.default.existsSync(dir))
-        return [];
-    return fs_1.default.readdirSync(dir)
-        .filter((file) => file.endsWith('.md'))
-        .map((file) => {
-        const content = fs_1.default.readFileSync(path_1.default.join(dir, file), 'utf8');
-        const { meta } = extractFrontMatter(content);
-        return { id: file.replace(/\.md$/, ''), meta };
-    });
-}
-function resolveAgentModel(meta) {
-    return meta?.model || meta?.genie?.model || 'unknown';
-}
-function renderTable(headers, rows) {
-    const columnCount = headers.length;
-    const widths = new Array(columnCount).fill(0);
-    headers.forEach((header, index) => {
-        widths[index] = Math.max(widths[index], header.length);
-    });
-    rows.forEach((row) => {
-        row.forEach((cell, index) => {
-            widths[index] = Math.max(widths[index], cell.length);
+    const baseDir = '.genie/agents';
+    const records = [];
+    const segments = [
+        { relative: '', category: 'core' },
+        { relative: 'modes', category: 'mode' },
+        { relative: 'specialists', category: 'specialized' }
+    ];
+    if (!fs_1.default.existsSync(baseDir))
+        return records;
+    segments.forEach(({ relative, category }) => {
+        const dirPath = relative ? path_1.default.join(baseDir, relative) : baseDir;
+        if (!fs_1.default.existsSync(dirPath))
+            return;
+        fs_1.default.readdirSync(dirPath).forEach((entry) => {
+            if (!entry.endsWith('.md') || entry === 'README.md')
+                return;
+            const fullPath = path_1.default.join(dirPath, entry);
+            if (!fs_1.default.statSync(fullPath).isFile())
+                return;
+            const relId = relative ? path_1.default.join(relative, entry.replace(/\.md$/, '')) : entry.replace(/\.md$/, '');
+            const content = fs_1.default.readFileSync(fullPath, 'utf8');
+            const { meta } = extractFrontMatter(content);
+            const metaObj = meta || {};
+            if (metaObj.hidden === true || metaObj.disabled === true)
+                return;
+            const label = (metaObj.name || relId.split(/[\\/]/).pop() || relId).trim();
+            records.push({ id: relId, label, meta: metaObj, category });
         });
     });
-    const line = (left, fill, junction, right) => `  ${left}${widths
-        .map((width) => `${fill.repeat(width + 2)}`)
-        .join(junction)}${right}`;
-    const top = line('┌', '─', '┬', '┐');
-    const header = `  │ ${headers
-        .map((header, index) => header.padEnd(widths[index]))
-        .join(' │ ')} │`;
-    const separator = line('├', '─', '┼', '┤');
-    const body = rows.map((row) => `  │ ${row.map((cell, index) => cell.padEnd(widths[index])).join(' │ ')} │`);
-    const bottom = line('└', '─', '┴', '┘');
-    return [top, header, separator, ...body, bottom];
+    return records;
 }
-function renderHero(title, subtitle) {
-    const width = Math.max(title.length, subtitle.length) + 8;
-    const top = `╔${'═'.repeat(width - 2)}╗`;
-    const pad = (text) => `║ ${text.padEnd(width - 4)} ║`;
-    const bottom = `╚${'═'.repeat(width - 2)}╝`;
-    return [top, pad(title), pad(subtitle), bottom];
+async function emitAgentCatalog(parsed, _config, _paths) {
+    const agents = listAgents();
+    const summarize = (entry) => {
+        const description = (entry.meta?.description || entry.meta?.summary || '').replace(/\s+/g, ' ').trim();
+        return truncateText(description || '—', 96);
+    };
+    const envelope = (0, agent_catalog_1.buildAgentCatalogView)({
+        style: parsed.options.style,
+        totals: {
+            all: agents.length,
+            modes: agents.filter((entry) => entry.category === 'mode').length,
+            specialized: agents.filter((entry) => entry.category === 'specialized').length,
+            core: agents.filter((entry) => entry.category === 'core').length
+        },
+        groups: [
+            {
+                label: 'Modes',
+                emptyText: 'No modes found',
+                rows: agents
+                    .filter((entry) => entry.category === 'mode')
+                    .sort((a, b) => a.label.localeCompare(b.label))
+                    .map((entry) => ({ id: entry.label, rawId: entry.id, summary: summarize(entry) }))
+            },
+            {
+                label: 'Core Agents',
+                emptyText: 'No core agents found',
+                rows: agents
+                    .filter((entry) => entry.category === 'core')
+                    .sort((a, b) => a.label.localeCompare(b.label))
+                    .map((entry) => ({ id: entry.label, rawId: entry.id, summary: summarize(entry) }))
+            },
+            {
+                label: 'Specialized Agents',
+                emptyText: 'No specialized agents found',
+                rows: agents
+                    .filter((entry) => entry.category === 'specialized')
+                    .sort((a, b) => a.label.localeCompare(b.label))
+                    .map((entry) => ({ id: entry.label, rawId: entry.id, summary: summarize(entry) }))
+            }
+        ]
+    });
+    await emitView(envelope, parsed.options);
 }
-function renderKeyValueLines(pairs) {
-    if (pairs.length === 0)
-        return [];
-    const labelWidth = Math.max(...pairs.map((pair) => pair.label.length));
-    return pairs.map((pair) => ` ${pair.label.padEnd(labelWidth)}  ${pair.value}`);
+function resolveAgentIdentifier(input) {
+    const trimmed = (input || '').trim();
+    if (!trimmed) {
+        throw new Error('Agent id is required');
+    }
+    const normalized = trimmed.replace(/\.md$/i, '');
+    const normalizedLower = normalized.toLowerCase();
+    const directCandidates = [normalized, normalizedLower];
+    for (const candidate of directCandidates) {
+        if (agentExists(candidate))
+            return candidate.replace(/\\/g, '/');
+    }
+    const agents = listAgents();
+    const byExactId = agents.find((agent) => agent.id.toLowerCase() === normalizedLower);
+    if (byExactId)
+        return byExactId.id;
+    const byLabel = agents.find((agent) => agent.label.toLowerCase() === normalizedLower);
+    if (byLabel)
+        return byLabel.id;
+    const legacy = normalizedLower.replace(/^genie-/, '').replace(/^template-/, '');
+    const legacyCandidates = [legacy, `modes/${legacy}`, `specialists/${legacy}`];
+    for (const candidate of legacyCandidates) {
+        if (agentExists(candidate))
+            return candidate;
+    }
+    if (normalizedLower === 'forge-master' && agentExists('forge'))
+        return 'forge';
+    throw new Error(`❌ Agent '${input}' not found. Try 'genie agent list' to see available ids.`);
 }
-function renderSectionHeading(title) {
-    const width = 76;
-    const label = ` ${title.toUpperCase()} `;
-    const filler = '─'.repeat(Math.max(0, width - label.length));
-    return `╭${label}${filler}`;
-}
-function renderBulletList(items) {
-    return items.map((item) => `  - ${item}`);
+function agentExists(id) {
+    if (!id)
+        return false;
+    const normalized = id.replace(/\\/g, '/');
+    const file = path_1.default.join('.genie', 'agents', `${normalized}.md`);
+    return fs_1.default.existsSync(file);
 }
 function truncateText(text, maxLength = 64) {
     if (!text)

@@ -1,5 +1,5 @@
 ---
-name: genie-debug
+name: debug
 description: Debug subgeny enforcing investigation-first workflow with hypotheses and minimal-fix guidance.
 color: red
 genie:

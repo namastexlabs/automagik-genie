@@ -1,5 +1,5 @@
 ---
-name: genie-challenge
+name: challenge
 description: Challenge subgeny to pressure-test assumptions and produce counterarguments with disconfirming evidence.
 color: orange
 genie:

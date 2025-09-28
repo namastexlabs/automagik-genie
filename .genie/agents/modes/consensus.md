@@ -1,5 +1,5 @@
 ---
-name: genie-consensus
+name: consensus
 description: Consensus subgeny to structure for/against/neutral perspectives and synthesize recommendations.
 color: cyan
 genie:

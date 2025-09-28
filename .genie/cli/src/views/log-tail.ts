@@ -17,6 +17,18 @@ export function buildLogTailView(params: LogTailParams): ViewEnvelope {
     text: `  ${line}`,
     tone: classifyTone(line)
   }));
+  const chatBubbles = collectChatBubbles(params.tailLines).slice(-5);
+  const chatSection = chatBubbles.length
+    ? {
+        type: 'layout' as const,
+        direction: 'column' as const,
+        gap: 1,
+        children: [
+          { type: 'heading', level: 2, text: 'Dialogue', accent: 'secondary' },
+          ...chatBubbles.map((bubble) => chatBubbleNode(bubble))
+        ]
+      }
+    : null;
 
   return {
     style: params.style,
@@ -55,6 +67,7 @@ export function buildLogTailView(params: LogTailParams): ViewEnvelope {
               ]
             }
           : null,
+        chatSection,
         {
           type: 'keyValue',
           columns: 1,
@@ -80,4 +93,79 @@ function classifyTone(line: string) {
   if (upper.includes('ERROR')) return 'danger';
   if (upper.includes('WARN')) return 'warning';
   return 'default';
+}
+
+type ChatRole = 'assistant' | 'reasoning' | 'tool';
+
+interface ChatBubble {
+  role: ChatRole;
+  text: string;
+}
+
+function collectChatBubbles(lines: string[]): ChatBubble[] {
+  const bubbles: ChatBubble[] = [];
+  lines.forEach((line) => {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith('{')) return;
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (parsed && parsed.type === 'item.completed') {
+        const item = parsed.item || {};
+        const text = typeof item.text === 'string' ? item.text.trim() : '';
+        if (!text) return;
+        switch (item.item_type) {
+          case 'assistant_message':
+            bubbles.push({ role: 'assistant', text });
+            break;
+          case 'reasoning':
+            bubbles.push({ role: 'reasoning', text });
+            break;
+          case 'tool_call':
+          case 'tool_result':
+            bubbles.push({ role: 'tool', text });
+            break;
+          default:
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  });
+  return bubbles;
+}
+
+function chatBubbleNode(bubble: ChatBubble) {
+  const textTone = bubble.role === 'reasoning' ? 'muted' : bubble.role === 'tool' ? 'info' : 'default';
+  const badgeTone = bubble.role === 'assistant' ? 'info' : bubble.role === 'tool' ? 'warning' : 'muted';
+  const badge = {
+    type: 'badge' as const,
+    text: chatLabel(bubble.role),
+    tone: badgeTone
+  };
+  return {
+    type: 'layout' as const,
+    direction: 'row' as const,
+    gap: 1,
+    children: [
+      badge,
+      {
+        type: 'text' as const,
+        text: bubble.text,
+        tone: textTone,
+        dim: bubble.role === 'reasoning'
+      }
+    ]
+  };
+}
+
+function chatLabel(role: ChatRole): string {
+  switch (role) {
+    case 'assistant':
+      return 'Assistant';
+    case 'tool':
+      return 'Tool';
+    case 'reasoning':
+    default:
+      return 'Reasoning';
+  }
 }

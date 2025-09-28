@@ -1,5 +1,5 @@
 ---
-name: genie-refactor
+name: refactor
 description: Refactor planning subgeny for staged refactor plans with risks and verification.
 color: brown
 genie:

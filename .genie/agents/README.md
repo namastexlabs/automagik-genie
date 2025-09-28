@@ -1,7 +1,13 @@
 # GENIE Agents Documentation
 
 ## Overview
-This directory contains agent definitions that power the GENIE CLI's intelligent orchestration capabilities. Each agent is a specialized persona with specific expertise and behavioral patterns.
+This directory contains agent definitions that power the GENIE CLI's intelligent orchestration capabilities. Agents are organized as:
+
+- **Core** – stable orchestrators (`commit`, `plan`, `forge`, etc.).
+- **Modes** (`modes/`) – Genie framework personas that rarely change between repos (planner, twin, debug, ...).
+- **Specialists** (`specialists/`) – project-tailored delivery/qa/learning agents that the install flow customizes.
+
+Each agent is a specialized persona with specific expertise and behavioral patterns.
 
 ## Agent Parameter Configuration
 
@@ -87,7 +93,7 @@ meta:
 
 ## Common Agent Configurations
 
-### Implementation Agent (hello-coder)
+### Implementation Agent (implementor)
 ```yaml
 reasoning_effort: low
 sandbox: workspace-write
@@ -95,7 +101,7 @@ approval_policy: on-failure
 include_plan_tool: false
 ```
 
-### Planning Agent (forge-master)
+### Planning Agent (forge)
 ```yaml
 reasoning_effort: medium
 sandbox: workspace-write
@@ -103,7 +109,7 @@ approval_policy: on-failure
 include_plan_tool: true
 ```
 
-### Review Agent (hello-qa-tester)
+### Review Agent (qa)
 ```yaml
 reasoning_effort: medium
 sandbox: read-only
@@ -111,7 +117,7 @@ approval_policy: on-failure
 include_plan_tool: false
 ```
 
-### Twin Analysis (genie-twin)
+### Twin Analysis (twin)
 ```yaml
 reasoning_effort: high
 sandbox: read-only
@@ -124,13 +130,13 @@ include_plan_tool: true
 ### Via CLI Flags
 ```bash
 # Run with high reasoning effort
-./genie run hello-coder "Fix the bug" --config "exec.reasoningEffort=high"
+./genie agent run implementor "Fix the bug" --config "exec.reasoningEffort=high"
 
 # Run in read-only mode
-./genie run hello-qa-tester "Review code" --config "exec.sandbox=read-only"
+./genie agent run qa "Review code" --config "exec.sandbox=read-only"
 
 # Enable plan tool
-./genie run forge-master "Plan feature" --config "exec.includePlanTool=true"
+./genie agent run forge "Plan feature" --config "exec.includePlanTool=true"
 ```
 
 ### Via Config Presets
@@ -149,7 +155,7 @@ presets:
 
 Then use:
 ```bash
-./genie run hello-coder "Complex task" --preset high-effort
+./genie agent run implementor "Complex task" --preset high-effort
 ```
 
 ### Via Agent Metadata
@@ -165,10 +171,10 @@ meta:
 
 ## Background Execution
 
-All agents run in background by default:
+Agents run in background by default:
 ```bash
 # Starts in background, returns immediately
-./genie run hello-coder "Implement feature"
+./genie agent run implementor "Implement feature"
 
 # Check status
 ./genie runs
@@ -180,13 +186,15 @@ All agents run in background by default:
 ## Agent Routing Map
 
 Current agent routing (see AGENTS.md for updates):
-- `implementor` → `hello-coder.md`
-- `qa` → `hello-qa-tester.md`
-- `quality` → `hello-quality.md`
-- `tests` → `hello-tests.md`
-- `planner` → `forge-master.md`
-- `twin` → `genie-twin.md`
-- Additional specialist agents in `genie-*.md`
+- `implementor` → `specialists/implementor.md`
+- `qa` → `specialists/qa.md`
+- `polish` → `specialists/polish.md`
+- `tests` → `specialists/tests.md`
+- `git` | `git-workflow` → `specialists/git-workflow.md`
+- `project-manager` → `specialists/project-manager.md`
+- `planner` → `modes/planner.md`
+- `twin` → `modes/twin.md`
+- Additional mode files live in `.genie/agents/modes/`
 
 ## Best Practices
 

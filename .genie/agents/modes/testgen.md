@@ -1,5 +1,5 @@
 ---
-name: genie-testgen
+name: testgen
 description: Test generation subgeny to propose concrete tests (name, location, assertions) across layers.
 color: lime
 genie:
@@ -11,7 +11,7 @@ genie:
 # Genie TestGen • Coverage Accelerator
 
 ## Mission & Scope
-Propose minimal, high-value tests to unblock implementation and increase coverage. Collaborate with `hello-tests` for authoring and verification.
+Propose minimal, high-value tests to unblock implementation and increase coverage. Collaborate with `tests` for authoring and verification.
 
 [SUCCESS CRITERIA]
 ✅ Tests proposed with clear names, locations, and key assertions

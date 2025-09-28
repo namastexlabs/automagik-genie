@@ -32,28 +32,6 @@ function buildHelpView(params) {
             rows: params.presets
         }
         : null;
-    const modesTable = params.modes.length
-        ? {
-            type: 'table',
-            columns: [
-                { key: 'mode', label: 'Mode' },
-                { key: 'invoke', label: 'Invoke' },
-                { key: 'focus', label: 'Focus' }
-            ],
-            rows: params.modes
-        }
-        : null;
-    const agentTable = params.agents.length
-        ? {
-            type: 'table',
-            columns: [
-                { key: 'id', label: 'Agent' },
-                { key: 'model', label: 'Model' },
-                { key: 'description', label: 'Focus (first hit)' }
-            ],
-            rows: params.agents
-        }
-        : null;
     return {
         style,
         title: 'GENIE Command Palette',
@@ -63,7 +41,7 @@ function buildHelpView(params) {
             gap: 1,
             children: [
                 { type: 'heading', level: 1, text: 'GENIE CLI', accent: 'primary', align: 'center' },
-                { type: 'text', text: 'Automagik Hello :: Command Palette Quickstart', tone: 'muted', align: 'center' },
+                { type: 'text', text: 'Genie Template :: Command Palette Quickstart', tone: 'muted', align: 'center' },
                 { type: 'divider', variant: 'double', accent: 'primary' },
                 {
                     type: 'layout',
@@ -110,17 +88,13 @@ function buildHelpView(params) {
                         { type: 'list', items: params.examples }
                     ]
                 },
-                modesTable ? { type: 'divider', variant: 'solid', accent: 'muted' } : null,
-                modesTable,
-                agentTable ? { type: 'divider', variant: 'solid', accent: 'muted' } : null,
-                agentTable,
                 {
                     type: 'callout',
                     tone: 'info',
                     title: 'Tips',
                     body: [
                         'Monitor active sessions with `./genie runs --status running`.',
-                        'Set `--style art` for maximal flourish, or `--style plain` for no color.'
+                        'Use `genie agent list` to browse every agent and mode.'
                     ]
                 }
             ].filter(Boolean)

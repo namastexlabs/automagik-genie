@@ -21,10 +21,10 @@ function buildRunsOverviewView(params) {
                     gap: 2,
                     children: [
                         { type: 'badge', text: `Page ${pager.page}`, tone: 'info' },
-                        { type: 'text', text: `per ${pager.per}`, tone: 'muted' }
+                        { type: 'text', text: `Showing ${pager.per} per page`, tone: 'muted' }
                     ]
                 },
-                actionBar([pager.nextHint, pager.actionHint]),
+                hintList(pager.hints),
                 params.warnings && params.warnings.length
                     ? {
                         type: 'callout',
@@ -61,10 +61,10 @@ function buildRunsScopedView(params) {
                     gap: 2,
                     children: [
                         { type: 'badge', text: `Page ${pager.page}`, tone: 'info' },
-                        { type: 'text', text: `per ${pager.per}`, tone: 'muted' }
+                        { type: 'text', text: `Showing ${pager.per} per page`, tone: 'muted' }
                     ]
                 },
-                actionBar([pager.nextHint, pager.actionHint]),
+                hintList(pager.hints),
                 params.warnings && params.warnings.length
                     ? {
                         type: 'callout',
@@ -84,6 +84,7 @@ function buildRunsScopedView(params) {
     };
 }
 function sectionWithTable(title, rows, emptyText) {
+    const logItems = rows.filter((row) => Boolean(row.log)).map((row) => `${row.agent}: ${truncateLogPath(row.log)}`);
     return {
         type: 'layout',
         direction: 'column',
@@ -95,19 +96,27 @@ function sectionWithTable(title, rows, emptyText) {
                     { key: 'agent', label: 'Agent' },
                     { key: 'status', label: 'Status' },
                     { key: 'sessionId', label: 'Session' },
-                    { key: 'lastUsed', label: 'Last Activity' },
-                    { key: 'log', label: 'Log' }
+                    { key: 'updated', label: 'Updated' }
                 ],
                 rows: rows.map((row) => ({
                     agent: row.agent,
                     status: decorateStatus(row.status),
                     sessionId: row.sessionId ?? 'n/a',
-                    lastUsed: row.lastUsed ?? 'n/a',
-                    log: row.log ?? 'n/a'
+                    updated: row.updated || 'n/a'
                 })),
                 emptyText
-            }
-        ]
+            },
+            logItems.length
+                ? {
+                    type: 'layout',
+                    direction: 'column',
+                    children: [
+                        { type: 'text', text: 'Logs:', tone: 'muted' },
+                        { type: 'list', tone: 'muted', items: logItems }
+                    ]
+                }
+                : null
+        ].filter(Boolean)
     };
 }
 function decorateStatus(status) {
@@ -128,11 +137,16 @@ function statusEmoji(status) {
         return '🔚';
     return '⌛️';
 }
-function actionBar(items) {
+function hintList(items) {
     return {
-        type: 'layout',
-        direction: 'row',
-        gap: 2,
-        children: items.map((item) => ({ type: 'text', text: item, tone: 'muted' }))
+        type: 'list',
+        tone: 'muted',
+        items: items.filter((item) => typeof item === 'string' && item.trim().length)
     };
+}
+function truncateLogPath(value) {
+    const max = 56;
+    if (value.length <= max)
+        return value;
+    return `…${value.slice(-max + 1)}`;
 }

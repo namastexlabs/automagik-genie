@@ -5,8 +5,7 @@ export interface BackgroundStartParams {
   agentName: string;
   logPath: string;
   sessionId?: string | null;
-  note?: string;
-  context?: string[];
+  actions?: string[];
 }
 
 export interface RunCompletionParams {
@@ -22,6 +21,26 @@ export interface RunCompletionParams {
 }
 
 export function buildBackgroundStartView(params: BackgroundStartParams): ViewEnvelope {
+  const hasSession = Boolean(params.sessionId);
+  const viewHint = hasSession
+    ? `View logs → ./genie view ${params.sessionId}`
+    : 'View logs → session pending (run `./genie runs --status running` to fetch the session id).';
+  const sessionLine = hasSession
+    ? `sessionid: ${params.sessionId}`
+    : 'sessionid: pending (run `./genie runs --status running`).';
+
+  const actionLines = (params.actions && params.actions.length)
+    ? params.actions
+    : hasSession
+      ? [`• Watch: ./genie view ${params.sessionId}`]
+      : ['• Watch: session pending – run `./genie runs --status running` then `./genie view <sessionId>`'];
+
+  const [firstAction, ...otherActions] = actionLines;
+  const rows = [
+    firstAction ? `${sessionLine}    ${firstAction}` : sessionLine,
+    ...otherActions
+  ];
+
   return {
     style: params.style,
     title: `Detached: ${params.agentName}`,
@@ -35,15 +54,8 @@ export function buildBackgroundStartView(params: BackgroundStartParams): ViewEnv
           type: 'callout',
           tone: 'success',
           title: 'Background session started',
-          body: compact([
-            `Log → ${params.logPath}`,
-            params.sessionId ? `Session ID → ${params.sessionId}` : null,
-            params.note ?? 'Use `./genie view <sessionId>` to stream output.'
-          ])
-        },
-        params.context && params.context.length
-          ? { type: 'list', items: params.context, tone: 'muted' }
-          : null
+          body: compact(rows)
+        }
       ].filter(Boolean) as any
     }
   };
@@ -56,6 +68,11 @@ export function buildRunCompletionView(params: RunCompletionParams): ViewEnvelop
     : params.outcome === 'warning'
       ? `${params.agentName} completed with warnings`
       : `${params.agentName} failed`;
+
+  const hasSession = Boolean(params.sessionId);
+  const viewHint = hasSession
+    ? `View logs → ./genie view ${params.sessionId}`
+    : 'View logs → session pending (run `./genie runs --status running` to fetch the session id).';
 
   return {
     style: params.style,
@@ -70,8 +87,8 @@ export function buildRunCompletionView(params: RunCompletionParams): ViewEnvelop
           type: 'callout',
           tone,
           body: compact([
-            `Log → ${params.logPath}`,
-            params.sessionId ? `Session → ${params.sessionId}` : null,
+            viewHint,
+            hasSession ? `Session → ${params.sessionId}` : 'Session → pending (check `./genie runs --status running`).',
             params.exitCode !== undefined && params.exitCode !== null ? `Exit code → ${params.exitCode}` : null,
             params.executorKey ? `Executor → ${params.executorKey}` : null,
             params.durationMs ? `Runtime → ${(params.durationMs / 1000).toFixed(1)}s` : null

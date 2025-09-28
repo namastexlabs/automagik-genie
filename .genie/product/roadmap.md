@@ -1,267 +1,58 @@
-# Product Roadmap: Build-in-Public Strategy
+# Template Roadmap (Customize Per Project)
 
-## Gating Criteria (Decision: LEARN_FROM LiveKit)
-Reference: @.agent-os/product/decisions/2025-09-learn-from-livekit.md
+This roadmap is a canvas. Replace phases with goals relevant to your project after installing the template.
 
-- Gate 1 – Baseline pipeline: End-to-end round trip with < 400ms time-to-first-audio; no crashes
-- Gate 2 – Latency & overlap: TTFB < 200ms (P50) / < 300ms (P99); interruption tail < 100ms; smooth resume after false alarms
-- Gate 3 – Protocol fidelity: ElevenLabs Agents WS compatibility; clients work unchanged
-- Gate 4 – Conversation quality: Natural flow; evaluator ≥ 8/10; ASR confidence > 0.8
-- Gate 5 – Scalability & stability: Expected concurrency; no leaks; stable under load
+## Phase 0: Install & Configure
+- Copy `.genie/` and `.claude/commands/` into your repo
+- Run `./genie help` and a `/plan` smoke
+- Customize `.genie/product/*` placeholders
 
-## 🚀 Phase 0: Proof of Concept (Milestone: First latency validation)
+## Phase 1: Plan → Wish → Forge
+- Capture a first wish and define evidence paths
+- Add validation hooks (tests, scripts) per project
 
-**Goal:** Validate core technical feasibility and baseline performance.
-**Success Criteria:** Working end-to-end pipeline with < 300ms TTFB at P99.
-**Public Milestone:** "Day 1: First successful voice conversation"
+## Phase 2: Implementation & Review
+- Use template-implementor/tests/qa/quality agents
+- Record Done/Death Testaments
 
-### Features
-- [x] Basic WebSocket server (Rust/Axum) `[XS]`
-- [ ] ElevenLabs TTS integration (Flash v2.5) `[S]`
-- [ ] Groq Whisper STT integration `[S]`
-- [ ] Simple VAD with WebRTC `[XS]`
-- [ ] Raw session logging for analysis `[XS]`
-- [ ] Metrics collection (TTFB, ASR confidence per ElevenLabs schema) `[XS]`
-- [ ] CLI test harness `[XS]`
+## Phase 3: Iterate
+- Expand agents or prompts as needed
+- Keep AGENTS.md and wrappers in sync
+## Optional Extensions
+- [ ] Custom evaluation metrics for {{DOMAIN}}
+- [ ] Project-specific agent specializations
+- [ ] Integration with {{APIS}}
 
-### Build-in-Public
-- [ ] Twitter/X thread: "Building the fastest voice agent from scratch"
-- [ ] GitHub repo public from day 1
-- [ ] Daily progress videos showing latency improvements
-
-## 🔎 Parallel Track: LiveKit Agents Recon (Milestone: Playbook captured)
-
-Goal: Learn from LiveKit Agents to accelerate our design while keeping a Rust-first runtime.
-
-Success Criteria:
-- Run LiveKit voice quickstart end-to-end and document timing (TTFB, barge-in cancel latency, overlap cadence)
-- Identify 3–5 concrete patterns to port (turn detection, interruption handling, pipeline orchestration, worker/job model)
-- Produce a migration note outlining how to mirror Agents WS semantics in our Axum/Tokio stack
-
-Tasks
-- [x] Add submodule: `vendors/livekit-agents`
-- [x] Add submodule: `vendors/hume-evi-next-js-starter`
-- [x] Architectural decision recorded: LEARN_FROM (see decisions doc)
-- [ ] Read: Agents Worker lifecycle, Voice AI quickstart, examples/voice_agents/*
-- [ ] Benchmark: TTFB and cancel-tail latency using provided examples
-- [ ] Compare: LiveKit turn model vs our VAD+heuristics; draft overlap_aware policy deltas
-- [ ] Draft: "Rust parity plan" mapping Agents abstractions → Tokio/Axum components
-
-Risk & Lock-in Notes
-- Keep our hot path in Rust; do not depend on Python workers for production
-- Treat Agents as a reference protocol/abstractions; mirror where compatible (WS semantics, events)
-- Ensure local/offline fallbacks (WhisperX/faster-whisper, local TTS) remain first-class
-
-## 🎯 Phase 1: Minimal Viable Product (Milestone: Beta-ready stack)
-
-**Goal:** Achieve production-ready latency and basic ElevenLabs compatibility.
-**Success Criteria:** TTS TTFB < 200ms (P50) / < 300ms (P99), ASR latency < 300ms (P95), stable WebSocket protocol.
-**Public Milestone:** "Open-source ElevenLabs-compatible voice server"
-
-### Core Pipeline
-- [ ] Full ElevenLabs WebSocket protocol implementation `[M]`
-- [ ] Transcript schema compatibility (docs/transcript-schema.md) `[S]`
-- [ ] AG-UI event streaming integration `[M]`
-- [ ] Activity events for mid-run progress `[S]`
-- [ ] Session serialization and replay `[S]`
-- [ ] Interrupt-aware lifecycle (barge-in) `[M]`
-- [ ] Basic metrics collection (TTFB, latency, confidence) `[S]`
-- [ ] Fallback response system (prevent "None" cascades observed in production) `[S]`
-
-### Developer Experience
-- [ ] Docker compose setup `[S]`
-- [ ] Environment configuration (docs/environment.md) `[XS]`
-- [ ] Basic demo UI with AudioWorklet `[S]`
-- [ ] Quick-start guide and examples `[S]`
-
-### Build-in-Public
-- [ ] Blog post: "How we achieved < 200ms voice latency"
-- [ ] YouTube demo: Real-time conversation with metrics overlay
-- [ ] Hacker News launch: "Show HN: Open-source voice agent with sub-200ms latency"
-
-## 🔬 Phase 2: AG-UI Experimentation (Milestone: Experiment harness live)
-
-**Goal:** Leverage AG-UI for human-like conversational experiences.
-**Success Criteria:** Extract and analyze 100+ conversation sessions, identify optimization patterns.
-**Public Milestone:** "Teaching AI to talk like humans"
-
-### AG-UI Integration
-- [ ] Full AG-UI transfer protocol implementation `[M]`
-- [ ] Activity events for STT/TTS/LLM progress `[S]`
-- [ ] Raw session log extraction APIs `[S]`
-- [ ] Conversation replay system `[M]`
-- [ ] A/B testing framework with AG-UI events `[M]`
-
-### Human-Likeness Experiments
-- [ ] Overlap strategies (repair-first vs continuity-first) `[M]`
-- [ ] Micro-backchannel injection ("mm-hmm", "certo" for pt-BR) `[S]`
-- [ ] Prosody shaping with pause patterns `[S]`
-- [ ] **UltraVAD integration** for natural turn-taking `[M]` 🔥
-- [ ] **Ultravox exploration** for end-to-end speech LLM `[L]` 🔥
-- [ ] VAD model comparison (WebRTC vs UltraVAD vs pyannote) `[M]`
-- [ ] Hybrid approach: UltraVAD + Ultravox pipeline `[L]`
-- [ ] Connection quality perception monitoring (production insight) `[S]`
-
-### Analytics Pipeline
-- [ ] Session recording with timing data `[S]`
-- [ ] Automated metric extraction `[S]`
-- [ ] Human-likeness scoring rubric `[S]`
-- [ ] Performance regression detection `[S]`
-
-### Build-in-Public
-- [ ] Weekly metrics dashboard updates
-- [ ] Open dataset: 100 annotated conversations
-- [ ] Community challenge: "Beat our latency benchmark"
-- [ ] Technical deep-dive: "AG-UI protocol for voice agents"
-
-## 🎨 Phase 3: Management Plane (Milestone: Enterprise interfaces shipped)
-
-**Goal:** Full ElevenLabs API compatibility for enterprise adoption.
-**Success Criteria:** 100% API coverage, multi-tenant support, production stability.
-**Public Milestone:** "Enterprise-ready voice platform"
-
-### Management APIs
-- [ ] Agent CRUD operations (REST API) `[M]`
-- [ ] Agent versioning and snapshots `[S]`
-- [ ] Conversation management APIs `[M]`
-- [ ] Knowledge base and RAG support `[M]`
-- [ ] Tool management (client/server/system) `[M]`
-- [ ] Test suite management `[S]`
-- [ ] Webhook delivery system `[S]`
-
-### Infrastructure
-- [ ] PostgreSQL metadata store `[M]`
-- [ ] Redis session cache `[S]`
-- [ ] S3-compatible audio storage `[S]`
-- [ ] Multi-tenant isolation `[M]`
-- [ ] Rate limiting and quotas `[S]`
-
-### Build-in-Public
-- [ ] Partnership announcements
-- [ ] Enterprise pilot case studies
-- [ ] API documentation site launch
-- [ ] Community SDK contributions
-
-## 🌍 Phase 4: Public Launch (Milestone: GA launch readiness)
-
-**Goal:** General availability with cloud offering and self-host options.
-**Success Criteria:** 1000+ developers, 10k+ daily conversations, < 100ms P50 latency.
-**Public Milestone:** "The world's fastest open-source voice platform"
-
-### Production Features
-- [ ] Global edge deployment (multi-region) `[L]`
-- [ ] Auto-scaling and load balancing `[M]`
-- [ ] Observability (OpenTelemetry, Grafana) `[M]`
-- [ ] Zero-downtime deployments `[M]`
-- [ ] Backup and disaster recovery `[M]`
-
-### Developer Ecosystem
-- [ ] Official SDKs (Python, JS/TS, Go, Rust) `[L]`
-- [ ] Terraform modules `[M]`
-- [ ] Kubernetes operators `[M]`
-- [ ] Integration templates (Twilio, Vonage, etc.) `[M]`
-- [ ] Community marketplace for agents `[L]`
-
-### Advanced Features
-- [ ] Multi-voice support `[M]`
-- [ ] Language auto-detection `[S]`
-- [ ] Custom LLM endpoints `[M]`
-- [ ] MCP (Model Context Protocol) `[S]`
-- [ ] Batch calling orchestration `[M]`
-
-### Build-in-Public
-- [ ] ProductHunt launch
-- [ ] Open-source sustainability model announcement
-- [ ] Conference talks and demos
-- [ ] "Voice Agent Cookbook" publication
-
-## 🚀 Phase 5: Beyond Human Parity (Milestone: Research frontier)
-
-**Goal:** Push boundaries of voice interaction technology.
-**Success Criteria:** Evaluator score ≥ 9/10, indistinguishable from human conversation.
-**Public Milestone:** "AI that sounds more human than humans"
-
-### Research & Innovation
-- [ ] Emotion-aware prosody generation `[L]`
-- [ ] Predictive speaking (anticipatory responses) `[L]`
-- [ ] Multi-party conversation support `[XL]`
-- [ ] On-device inference options `[L]`
-- [ ] RLHF fine-tuning pipeline `[XL]`
-- [ ] Neural codec integration `[L]`
-
-### Platform Evolution
-- [ ] Visual workflow builder `[XL]`
-- [ ] Success evaluation analytics `[M]`
-- [ ] Compliance features (GDPR, HIPAA) `[L]`
-- [ ] White-label solutions `[L]`
-- [ ] Voice cloning integration `[M]`
-
-### Build-in-Public
-- [ ] Research paper publications
-- [ ] Open benchmark suite
-- [ ] Annual community conference
-- [ ] Innovation challenges with prizes
-
-## Build-in-Public Strategy
-
-### Weekly Cadence
-- **Monday**: Architecture decision posts
-- **Wednesday**: Performance metrics update
-- **Friday**: Demo video or code walkthrough
-
-### Content Channels
-- **GitHub**: All code, issues, discussions
-- **Twitter/X**: Daily updates, metrics screenshots
-- **YouTube**: Weekly demos, technical deep-dives
-- **Blog**: Detailed technical posts, learnings
-- **Discord**: Community chat, real-time support
-
-### Success Metrics
-- GitHub stars progression
-- Community contributors
-- Production deployments
-- Latency benchmarks
-- User testimonials
+## Success Metrics (Customize)
+- Task completion rates
+- Code quality improvements
+- Time to deployment
+- {{METRICS}} targets achieved
+- Team adoption rate
 
 ### Key Milestones Timeline
-- Milestone 1: First voice conversation recorded and shared
-- Milestone 2: MVP demonstrating < 300ms P99 latency
-- Milestone 3: 100-conversation dataset released for community review
-- Milestone 4: Enterprise API launch announcement
-- Milestone 5: Public cloud offering opened to early adopters
-- Milestone 6: Human-parity evaluator score ≥ 9/10
+- Milestone 1: First successful agent workflow executed
+- Milestone 2: Core workflow complete with evidence capture
+- Milestone 3: 100+ successful executions documented
+- Milestone 4: Enterprise deployment guide published
+- Milestone 5: Community adoption milestone reached
+- Milestone 6: Framework maturity benchmarks met
 
-## ☎️ Phase 6: Telephony (SIP) Integration (Post-GA)
+## Phase 6: Advanced Features (Post-GA)
 
-Goal: Add reliable PSTN connectivity via SIP with agent handoff while preserving low-latency agent behavior.
+Goal: Extend framework with advanced capabilities based on {{DOMAIN}} requirements.
 
 Success Criteria:
-- Inbound calls route to rooms via SIP dispatch rules; agent auto-dispatch joins within < 150 ms.
-- DTMF support for IVR-like navigation; event mapping to our WS/strategy layer.
-- Warm/cold transfer flows working end-to-end with contextual summaries.
-
-Scope (informed by LiveKit docs)
-- SIP trunking: inbound/outbound trunks; secure trunking; HD voice.
-- Dispatch rules: map DID → room naming + explicit agent dispatch metadata.
-- SIP participant: bridge PSTN audio to room; surface DTMF events.
-- Transfers: agent-assisted warm transfer; cold transfer; return-to-agent on failure.
+- Custom integrations with {{APIS}}
+- Performance metrics meeting {{METRICS}} targets
+- Full compatibility with {{TECH_STACK}}
 
 Tasks
-- [ ] Evaluate using LiveKit SIP service vs. building minimal bridge `[M]`
-- [ ] Implement dispatch rule mapping → room + agent dispatch `[S]`
-- [ ] Inbound trunk quickstart (provider: Twilio/Telnyx) `[S]`
-- [ ] Outbound dialing from agent tools (click-to-call) `[S]`
-- [ ] DTMF → tool events; IVR policy scaffolding `[S]`
-- [ ] Warm transfer workflow: supervisor consult + merge `[M]`
-- [ ] Cold transfer workflow `[S]`
-- [ ] Monitoring and retries (carrier errors) `[S]`
-
-References (local archive)
-- docs/livekit/all/sip/dispatch-rule.md
-- docs/livekit/all/sip/trunk-inbound.md, trunk-outbound.md, secure-trunking.md
-- docs/livekit/all/sip/dtmf.md, sip-participant.md
-- docs/livekit/all/sip/transfer-warm.md, transfer-cold.md
-- docs/livekit/all/sip/accepting-calls.md, making-calls.md, outbound-calls.md
+- [ ] Design integration architecture `[M]`
+- [ ] Implement core connectors `[L]`
+- [ ] Build monitoring dashboard `[M]`
+- [ ] Create performance benchmarks `[S]`
+- [ ] Document best practices `[S]`
 
 ## Technical Effort Scale
 - **XS**: < 1 day
@@ -273,9 +64,8 @@ References (local archive)
 ## Dependencies by Phase
 
 ### Phase 0-1
-- ElevenLabs API key
-- Groq API key
-- Basic cloud infrastructure
+- {{PROVIDER}} API keys
+- Basic infrastructure
 
 ### Phase 2-3
 - PostgreSQL, Redis

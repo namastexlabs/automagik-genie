@@ -212,55 +212,105 @@ function renderKeyValueNode(node: KeyValueNode): React.ReactElement {
 function renderTableNode(node: TableNode): React.ReactElement {
   const { Box: InkBox, Text: InkText } = useInk();
   const columns = node.columns;
-  const widths = columns.map((col) => Math.max(col.label.length, col.width ?? 0));
+  const MAX_COL_WIDTH = 40;
+  const MIN_COL_WIDTH = 6;
+  const sanitized = (value: string) => value.replace(/\s+/g, ' ').trim();
+  const truncate = (value: string, width: number) => {
+    if (value.length <= width) return value;
+    if (width <= 1) return value.slice(0, 1);
+    return value.slice(0, width - 1) + '…';
+  };
+  const clampWidth = (length: number) => Math.max(MIN_COL_WIDTH, Math.min(MAX_COL_WIDTH, length));
+  const termWidth = typeof process !== 'undefined' && process.stdout && Number.isFinite(process.stdout.columns)
+    ? Math.max(40, Math.min(process.stdout.columns - 6, 140))
+    : 80;
+  const gapSize = 2;
+  const baseWidths = columns.map((col) => clampWidth(col.label.length));
   node.rows.forEach((row) => {
     columns.forEach((col, idx) => {
-      const value = row[col.key] ?? '';
-      widths[idx] = Math.max(widths[idx], value.length);
+      const raw = row[col.key];
+      const value = raw == null ? '' : String(raw);
+      baseWidths[idx] = Math.max(baseWidths[idx], clampWidth(sanitized(value).length));
     });
   });
+  const totalBase = sumWithGaps(baseWidths, gapSize);
+  const allowedWidth = Math.max(sumWithGaps(baseWidths.map(() => MIN_COL_WIDTH), gapSize), Math.min(termWidth, totalBase));
+  const widths = squeezeWidths(baseWidths.slice(), gapSize, allowedWidth, MIN_COL_WIDTH);
+  const tableWidth = sumWithGaps(widths, gapSize);
 
   const renderRow = (row: Record<string, string>, isHeader = false) => (
-    <InkText>
-      {' '}
-      {columns
-        .map((col, idx) => {
-          const raw = isHeader ? col.label : row[col.key] ?? '';
-          const width = widths[idx];
-          const aligned = alignCell(raw, width, col.align ?? 'left');
-          return aligned;
-        })
-        .join(' │ ')}
-    </InkText>
-  );
-
-  const borderTop = '┌' + widths.map((w) => '─'.repeat(w + 2)).join('┬') + '┐';
-  const borderMid = '├' + widths.map((w) => '─'.repeat(w + 2)).join('┼') + '┤';
-  const borderBottom = '└' + widths.map((w) => '─'.repeat(w + 2)).join('┴') + '┘';
-
-  return (
-    <InkBox flexDirection="column">
-      <InkText>{borderTop}</InkText>
-      {renderRow(Object.fromEntries(columns.map((c) => [c.key, c.label])), true)}
-      <InkText>{borderMid}</InkText>
-      {node.rows.length === 0 && node.emptyText ? (
-        <InkText color={palette.foreground.placeholder}>{` ${node.emptyText}`}</InkText>
-      ) : (
-        node.rows.map((row, idx) => <Fragment key={`row-${idx}`}>{renderRow(row)}</Fragment>)
-      )}
-      <InkText>{borderBottom}</InkText>
+    <InkBox flexDirection="row">
+      {columns.map((col, idx) => {
+        const raw = isHeader ? col.label : row[col.key] ?? '';
+        const prepared = truncate(sanitized(String(raw)), widths[idx]);
+        const aligned = alignCell(prepared, widths[idx], col.align ?? 'left');
+        const color = isHeader ? accentToColor('secondary') : palette.foreground.default;
+        return (
+          <InkBox key={`${col.key}-${idx}`} width={widths[idx]} marginRight={idx < columns.length - 1 ? gapSize : 0}>
+            <InkText color={color} bold={isHeader}>
+              {aligned}
+            </InkText>
+          </InkBox>
+        );
+      })}
     </InkBox>
   );
+
+  return (
+    <InkBox flexDirection="column" borderStyle="round" borderColor={accentToColor('muted')} paddingX={1} paddingY={1}>
+      {renderRow(Object.fromEntries(columns.map((c) => [c.key, c.label])), true)}
+      {node.rows.length === 0 && node.emptyText ? (
+        <InkBox marginTop={1}>
+          <InkText color={palette.foreground.placeholder}>{node.emptyText}</InkText>
+        </InkBox>
+      ) : (
+        <Fragment>
+          <InkBox marginY={1}>
+            <InkText color={accentToColor('muted')} dimColor>
+              {'─'.repeat(tableWidth)}
+            </InkText>
+          </InkBox>
+          {node.rows.map((row, idx) => (
+            <InkBox key={`row-${idx}`} marginBottom={idx < node.rows.length - 1 ? 1 : 0}>
+              {renderRow(row)}
+            </InkBox>
+          ))}
+        </Fragment>
+      )}
+    </InkBox>
+  );
+
+  function alignCell(text: string, width: number, align: 'left' | 'right' | 'center'): string {
+    const padLeft = (count: number) => (count > 0 ? ' '.repeat(count) : '');
+    if (align === 'right') return text.padStart(width);
+    if (align === 'center') {
+      const left = Math.floor((width - text.length) / 2);
+      const right = width - text.length - left;
+      return padLeft(left) + text + padLeft(right);
+    }
+    return text.padEnd(width);
+  }
 }
 
-function alignCell(text: string, width: number, align: 'left' | 'right' | 'center'): string {
-  if (align === 'right') return text.padStart(width);
-  if (align === 'center') {
-    const left = Math.floor((width - text.length) / 2);
-    const right = width - text.length - left;
-    return ' '.repeat(left) + text + ' '.repeat(right);
+function squeezeWidths(widths: number[], gapSize: number, targetWidth: number, minWidth: number): number[] {
+  const total = () => sumWithGaps(widths, gapSize);
+  if (total() <= targetWidth) return widths;
+
+  const shrinkable = () => widths.some((width) => width > minWidth);
+  while (total() > targetWidth && shrinkable()) {
+    let largestIdx = 0;
+    for (let i = 1; i < widths.length; i += 1) {
+      if (widths[i] > widths[largestIdx]) largestIdx = i;
+    }
+    if (widths[largestIdx] <= minWidth) break;
+    widths[largestIdx] -= 1;
   }
-  return text.padEnd(width);
+  return widths;
+}
+
+function sumWithGaps(widths: number[], gapSize: number): number {
+  if (!widths.length) return 0;
+  return widths.reduce((sum, width, idx) => sum + width + (idx < widths.length - 1 ? gapSize : 0), 0);
 }
 
 function renderDividerNode(node: DividerNode): React.ReactElement {

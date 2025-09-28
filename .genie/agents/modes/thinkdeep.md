@@ -1,5 +1,5 @@
 ---
-name: genie-thinkdeep
+name: thinkdeep
 description: ThinkDeep subgeny to timebox deep reasoning with explicit step outline and scoped exploration.
 color: indigo
 genie:

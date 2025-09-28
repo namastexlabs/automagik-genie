@@ -3,6 +3,18 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.buildBackgroundStartView = buildBackgroundStartView;
 exports.buildRunCompletionView = buildRunCompletionView;
 function buildBackgroundStartView(params) {
+    const hasSession = Boolean(params.sessionId);
+    const viewHint = hasSession
+        ? `View logs → ./genie view ${params.sessionId}`
+        : 'View logs → session pending (run `./genie runs --status running` to fetch the session id).';
+    const sessionLine = hasSession
+        ? `sessionid: ${params.sessionId}`
+        : 'sessionid: pending (run `./genie runs --status running`).';
+    const actionLines = (params.actions && params.actions.length)
+        ? params.actions
+        : hasSession
+            ? [`• Watch: ./genie view ${params.sessionId}`]
+            : ['• Watch: session pending – run `./genie runs --status running` then `./genie view <sessionId>`'];
     return {
         style: params.style,
         title: `Detached: ${params.agentName}`,
@@ -17,14 +29,11 @@ function buildBackgroundStartView(params) {
                     tone: 'success',
                     title: 'Background session started',
                     body: compact([
-                        `Log → ${params.logPath}`,
-                        params.sessionId ? `Session ID → ${params.sessionId}` : null,
-                        params.note ?? 'Use `./genie view <sessionId>` to stream output.'
+                        viewHint,
+                        sessionLine,
+                        ...actionLines
                     ])
-                },
-                params.context && params.context.length
-                    ? { type: 'list', items: params.context, tone: 'muted' }
-                    : null
+                }
             ].filter(Boolean)
         }
     };
@@ -36,6 +45,10 @@ function buildRunCompletionView(params) {
         : params.outcome === 'warning'
             ? `${params.agentName} completed with warnings`
             : `${params.agentName} failed`;
+    const hasSession = Boolean(params.sessionId);
+    const viewHint = hasSession
+        ? `View logs → ./genie view ${params.sessionId}`
+        : 'View logs → session pending (run `./genie runs --status running` to fetch the session id).';
     return {
         style: params.style,
         title,
@@ -49,8 +62,8 @@ function buildRunCompletionView(params) {
                     type: 'callout',
                     tone,
                     body: compact([
-                        `Log → ${params.logPath}`,
-                        params.sessionId ? `Session → ${params.sessionId}` : null,
+                        viewHint,
+                        hasSession ? `Session → ${params.sessionId}` : 'Session → pending (check `./genie runs --status running`).',
                         params.exitCode !== undefined && params.exitCode !== null ? `Exit code → ${params.exitCode}` : null,
                         params.executorKey ? `Executor → ${params.executorKey}` : null,
                         params.durationMs ? `Runtime → ${(params.durationMs / 1000).toFixed(1)}s` : null

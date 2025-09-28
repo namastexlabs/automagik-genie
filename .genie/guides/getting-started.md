@@ -40,7 +40,7 @@ set -a && source .env && set +a
 
 ```bash
 ./genie help
-./genie run plan "[Discovery] quick repo scan [Implementation] outline wish [Verification] list next steps" --no-background
+./genie agent run plan "[Discovery] quick repo scan [Implementation] outline wish [Verification] list next steps"
 ```
 
 ## 5. Start Your First Wish
@@ -48,11 +48,9 @@ set -a && source .env && set +a
 Use the plan → wish → forge flow. Store evidence under `.genie/wishes/<slug>/` as your project requires (no defaults).
 
 ```bash
-mkdir -p .genie/wishes/sample/qa
-./genie run wish "Create a wish for onboarding Genie template to {{PROJECT_NAME}}."
+mkdir -p .genie/wishes/sample
+./genie agent run wish "Create a wish for onboarding Genie template to {{PROJECT_NAME}}."
 ```
-
-Run the quick metrics checks (TTFB averages, ASR confidence counts) to ensure the transcript matches expectations.
 
 ## 6. Project Context
 
@@ -62,6 +60,7 @@ Run the quick metrics checks (TTFB averages, ASR confidence counts) to ensure th
 ## 7. Next Steps
 
 - Add/adjust agents as needed under `.genie/agents/`.
+- Customize `.genie/agents/specialists/*.md` with your project’s personas (implementor, qa, polish, tests, self-learn, bug-reporter).
 - Keep AGENTS.md synchronized with your Local Agent Map.
 
 ## Troubleshooting

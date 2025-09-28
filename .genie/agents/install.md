@@ -18,7 +18,8 @@ genie:
 2. [Implementation] Install template and configure Genie CLI
    - Copy/populate selected template files
    - Configure Genie CLI for project context
-   - Set up project-specific agent configurations
+   - Customize `.genie/agents/specialists/*.md` with project personas and workflows
+   - Confirm `.genie/agents/modes/*.md` remain aligned with default Genie behaviours
    - Initialize workspace structure
 
 3. [Verification] Validate installation and CLI functionality

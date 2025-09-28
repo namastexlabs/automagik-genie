@@ -1,5 +1,5 @@
 ---
-name: genie-docgen
+name: docgen
 description: Documentation generation subgeny to produce outlines and draft bullets for target audiences.
 color: gray
 genie:

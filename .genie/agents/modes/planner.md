@@ -1,5 +1,5 @@
 ---
-name: genie-planner
+name: planner
 description: Planning subgeny to build step-by-step plans with branching, revision, and reflection gates.
 color: gold
 genie:

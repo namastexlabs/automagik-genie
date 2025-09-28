@@ -12,7 +12,7 @@ GENIE is a self-contained framework for managing AI agent conversations, wishes,
 ├── wishes/          # Structured development wishes
 ├── reports/         # Death Testaments and execution reports
 ├── cli/            # Command-line tools
-│   └── agent.js    # Universal agent conversation manager
+│   └── genie.ts    # Universal agent conversation manager
 ├── templates/      # Wish and report templates
 └── knowledge/      # Shared knowledge base
 ```
@@ -23,17 +23,17 @@ GENIE is a self-contained framework for managing AI agent conversations, wishes,
 
 Start a conversation with any agent:
 ```bash
-./.genie/cli/agent.js chat forge-coder "implement authentication"
+./genie run template-implementor "implement authentication"
 ```
 
 Continue the conversation:
 ```bash
-./.genie/cli/agent.js continue forge-coder "add OAuth support"
+./genie continue <sessionId> "add OAuth support"
 ```
 
 List active sessions:
 ```bash
-./.genie/cli/agent.js list
+./genie runs
 ```
 
 ### Available Agents
@@ -47,7 +47,7 @@ List active sessions:
 - **forge-self-learn** - Behavioral learning and improvement
 
 #### Local agents in this repo
-- **evaluator** – Voice evaluation rubric and scoring prompt (`.genie/agents/evaluator.md`)
+- **evaluator** – {{DOMAIN}} evaluation rubric and scoring prompt (`.genie/agents/evaluator.md`)
 - **refactorer** – Prompt refactoring specialist (`.genie/agents/refactorer.md`)
 - **rules-integrator** – Minimal, non-destructive rules updater (`.genie/agents/rules-integrator.md`)
 
@@ -57,10 +57,10 @@ Instead of using one-shot Task tools, use the CLI for full conversations:
 
 ```bash
 # Start implementing a wish
-./.genie/cli/agent.js chat forge-coder "@.genie/wishes/auth-wish.md implement Group A"
+./genie run template-implementor "@.genie/wishes/auth-wish.md implement Group A"
 
 # Continue with error handling
-./.genie/cli/agent.js continue forge-coder "tests failing, debug the issue"
+./genie continue <sessionId> "tests failing, debug the issue"
 ```
 
 ## Conventions

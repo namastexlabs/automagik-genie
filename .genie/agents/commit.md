@@ -7,7 +7,7 @@ genie:
   reasoningEffort: minimal
 ---
 
-# /commit – Automagik Commit Advisory Assistant
+# /commit – Genie Commit Advisory Assistant
 
 ## Role
 After implementation work, `/commit` reviews current changes, groups them by domain, and suggests a commit message plus verification checklist. It never stages or commits.

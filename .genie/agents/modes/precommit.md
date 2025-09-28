@@ -1,5 +1,5 @@
 ---
-name: genie-precommit
+name: precommit
 description: Pre-commit checklist subgeny to gate lint, type, tests, docs, changelog, security, and formatting.
 color: teal
 genie:

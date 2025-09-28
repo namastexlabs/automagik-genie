@@ -4,15 +4,15 @@ export interface RunRow {
   agent: string;
   status: string;
   sessionId: string | null;
-  lastUsed: string | null;
+  updated: string;
+  updatedIso: string | null;
   log: string | null;
 }
 
 export interface RunsPagerInfo {
   page: number;
   per: number;
-  nextHint: string;
-  actionHint: string;
+  hints: string[];
 }
 
 interface RunsOverviewParams {
@@ -50,10 +50,10 @@ export function buildRunsOverviewView(params: RunsOverviewParams): ViewEnvelope 
           gap: 2,
           children: [
             { type: 'badge', text: `Page ${pager.page}`, tone: 'info' },
-            { type: 'text', text: `per ${pager.per}`, tone: 'muted' }
+            { type: 'text', text: `Showing ${pager.per} per page`, tone: 'muted' }
           ]
         },
-        actionBar([pager.nextHint, pager.actionHint]),
+        hintList(pager.hints),
         params.warnings && params.warnings.length
           ? {
               type: 'callout',
@@ -91,10 +91,10 @@ export function buildRunsScopedView(params: RunsScopedParams): ViewEnvelope {
           gap: 2,
           children: [
             { type: 'badge', text: `Page ${pager.page}`, tone: 'info' },
-            { type: 'text', text: `per ${pager.per}`, tone: 'muted' }
+            { type: 'text', text: `Showing ${pager.per} per page`, tone: 'muted' }
           ]
         },
-        actionBar([pager.nextHint, pager.actionHint]),
+        hintList(pager.hints),
         params.warnings && params.warnings.length
           ? {
               type: 'callout',
@@ -115,6 +115,7 @@ export function buildRunsScopedView(params: RunsScopedParams): ViewEnvelope {
 }
 
 function sectionWithTable(title: string, rows: RunRow[], emptyText: string): ViewNode {
+  const logItems = rows.filter((row) => Boolean(row.log)).map((row) => `${row.agent}: ${truncateLogPath(row.log!)}`);
   return {
     type: 'layout' as const,
     direction: 'column' as const,
@@ -126,19 +127,27 @@ function sectionWithTable(title: string, rows: RunRow[], emptyText: string): Vie
           { key: 'agent', label: 'Agent' },
           { key: 'status', label: 'Status' },
           { key: 'sessionId', label: 'Session' },
-          { key: 'lastUsed', label: 'Last Activity' },
-          { key: 'log', label: 'Log' }
+          { key: 'updated', label: 'Updated' }
         ],
         rows: rows.map((row) => ({
           agent: row.agent,
           status: decorateStatus(row.status),
           sessionId: row.sessionId ?? 'n/a',
-          lastUsed: row.lastUsed ?? 'n/a',
-          log: row.log ?? 'n/a'
+          updated: row.updated || 'n/a'
         })),
         emptyText
-      }
-    ]
+      },
+      logItems.length
+        ? {
+            type: 'layout' as const,
+            direction: 'column' as const,
+            children: [
+              { type: 'text', text: 'Logs:', tone: 'muted' },
+              { type: 'list', tone: 'muted', items: logItems }
+            ]
+          }
+        : null
+    ].filter(Boolean) as ViewNode[]
   };
 }
 
@@ -157,11 +166,16 @@ function statusEmoji(status: string): string {
   return '⌛️';
 }
 
-function actionBar(items: string[]): ViewNode {
+function hintList(items: string[]): ViewNode {
   return {
-    type: 'layout' as const,
-    direction: 'row' as const,
-    gap: 2,
-    children: items.map((item) => ({ type: 'text' as const, text: item, tone: 'muted' }))
+    type: 'list' as const,
+    tone: 'muted',
+    items: items.filter((item) => typeof item === 'string' && item.trim().length)
   };
+}
+
+function truncateLogPath(value: string): string {
+  const max = 56;
+  if (value.length <= max) return value;
+  return `…${value.slice(-max + 1)}`;
 }

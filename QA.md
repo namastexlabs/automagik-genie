@@ -25,7 +25,7 @@ Run each command in three styles to verify theming:
 - `./genie runs --status running`
 - `./genie runs --status running --json`
 - Paging smoke: `./genie runs --page 2 --per 2` (expect empty page, pager hints update).
-- Alias parity: `./genie list` (should match default runs view).
+- Default runs view: `./genie runs` (should show recent sessions).
 
 ### 3. Log Viewing
 Use a known session ID (update if fresh runs exist):
@@ -41,9 +41,9 @@ Use a known session ID (update if fresh runs exist):
 - Verify JSON envelope: append `--json` on one of the above.
 
 ### 5. Background Detach Preview
-Pick an agent with lightweight prompt (e.g., `template-quality`):
-- `./genie run template-quality "[Discovery] sanity ping" --no-background`
-- `./genie run template-quality "[Discovery] background" --background`
+Pick a specialist agent with a lightweight prompt (e.g., `polish`):
+- `./genie agent run polish "[Discovery] sanity ping" --no-background`
+- `./genie agent run polish "[Discovery] background" --background`
   - Ensure detach callout displays log path + session id.
 - `./genie continue <sessionId> "[Verification] follow-up" --background`
 - `./genie runs --status running` should briefly show `🟢` during execution.
@@ -62,11 +62,11 @@ For each command above, capture both human render and JSON output; confirm `meta
 - Confirm CLI option still overrides env: `GENIE_CLI_STYLE=plain ./genie help --style art` (should produce art gradient).
 
 ### 9. Executor Log Viewer Envelope
-- Locate a recent log (`.genie/state/agents/logs/...`), run `./genie view <sessionId> --json` and check `meta.assistantMessages`, `meta.reasoningItems`, and `meta.tokens` fields populate as expected.
+- Locate a recent session with `./genie runs`, run `./genie view <sessionId>` to verify output displays correctly.
 
 ### 10. Smoke `--json` for Stop/List/Help
 - `./genie stop 99999 --json`
-- `./genie list --json`
+- `./genie runs --json`
 - `./genie help --json`
 
 ## Post-QA Cleanup
