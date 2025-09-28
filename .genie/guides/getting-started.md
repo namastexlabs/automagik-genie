@@ -1,48 +1,33 @@
-# Getting Started with Automagik Hello
+# Getting Started with the Genie Template
 
-This guide walks through the minimum setup required to run latency experiments and interact with the Automagik Hello research artifacts. Follow the steps in order; each section links back to the canonical references so changes stay in sync with the rest of the repo.
+This guide explains how to install and use the Genie template in any repository. It focuses on agents, workflows, and non-destructive guardrails — not any particular domain.
 
 ## 1. Prerequisites
 
-- **Rust toolchain**: `rustup` with Rust `1.80` or newer (`rustc --version`).
-  - Install components we use in CI: `rustup component add clippy rustfmt`.
-- **Node.js (optional)**: Required only if you plan to run Genie CLI agents from the submodules.
-- **API keys**: export the provider keys documented in [Environment Configuration](../product/environment.md). At a minimum you will need:
-  - `ELEVENLABS_API_KEY`
-  - `GROQ_API_KEY`
-- **Tooling**: `git`, `curl`, `jq`, and `awk` for artifact downloads and quick metrics.
+- Node.js (for the CLI) and git
+- Optional: language toolchains used by your target project (Rust, TS, etc.)
 
-## 2. Clone the Repository
+## 2. Install the Template into a Repo
 
-```bash
-git clone https://github.com/<your-org>/pags-11labs-voiceagent.git
-cd pags-11labs-voiceagent
-git submodule update --init --recursive
+In your target repository (blank or existing), copy the following folders/files from this template:
+
+```text
+.genie/
+.claude/commands/
+AGENTS.md
+README.md (optional; merge relevant sections)
 ```
 
-The submodules under `vendors/` provide LiveKit and Hume reference materials used in the research docs.
+Commit them on a feature branch, e.g., `chore/add-genie-template`.
 
-## 3. Create a Local Environment File
+## 3. Optional: Local Environment File
 
-Copy the sample below into `.env` (kept out of version control) and fill in your keys. Refer back to [Environment Configuration](../product/environment.md) for the complete list of toggles and evidence links.
+Create `.env` in your project if agents/scripts need local configuration. Use placeholders specific to your domain. Example:
 
 ```env
 APP_ENV=dev
-SERVER_PORT=8080
 LOG_LEVEL=debug
-
-ELEVENLABS_API_KEY=replace_me
-GROQ_API_KEY=replace_me
-ASR_PROVIDER=groq
-TTS_MODEL_ID=eleven_flash_v2_5
-ASR_MODEL_ID=whisper-large-v3-turbo
-
-VAD_STRATEGY=webrtc
-OVERLAP_POLICY=overlap_aware
-CANCEL_TAIL_TIMEOUT_MS=80
-
-WISH_ID=baseline-voice
-ARTIFACTS_DIR=.genie/wishes/baseline-voice/qa
+PROJECT_NAME={{PROJECT_NAME}}
 ```
 
 Load the variables into your shell when working locally:
@@ -51,75 +36,42 @@ Load the variables into your shell when working locally:
 set -a && source .env && set +a
 ```
 
-## 4. Verify Provider Connectivity
-
-Before running any pipeline code, confirm both external services are reachable from your machine.
-
-### ElevenLabs TTS Smoke Test
+## 4. Verify the CLI
 
 ```bash
-curl -sS \
-  -H "xi-api-key: $ELEVENLABS_API_KEY" \
-  https://api.elevenlabs.io/v1/models | jq '.[].name' | head -n 5
+./genie help
+./genie run plan "[Discovery] quick repo scan [Implementation] outline wish [Verification] list next steps" --no-background
 ```
 
-You should see a list of voices or models. A 401/403 indicates the key is missing or invalid.
+## 5. Start Your First Wish
 
-### Groq Whisper Availability
-
-```bash
-curl -sS \
-  -H "Authorization: Bearer $GROQ_API_KEY" \
-  https://api.groq.com/openai/v1/models | jq '.data[].id' | head -n 5
-```
-
-If the request fails due to networking restrictions, stop and resolve the issue before moving on—low-latency goals depend on stable provider RTT.
-
-## 5. Prep Wish Artifacts (Baseline Voice)
-
-We track evaluation data in `.genie/wishes/<wish-slug>/qa/`. Populate the folder using the workflow described in [AGENTS.md](../../AGENTS.md) once you have a conversation ID from ElevenLabs:
+Use the plan → wish → forge flow. Store evidence under `.genie/wishes/<slug>/` as your project requires (no defaults).
 
 ```bash
-mkdir -p .genie/wishes/baseline-voice/qa
-curl -sS "https://api.elevenlabs.io/v1/convai/conversations/<CONV_ID>" \
-  -H "xi-api-key: $ELEVENLABS_API_KEY" \
-  -o .genie/wishes/baseline-voice/qa/conversation.json
-
-jq -r '.transcript' .genie/wishes/baseline-voice/qa/conversation.json \
-  > .genie/wishes/baseline-voice/qa/transcript_raw.txt
+mkdir -p .genie/wishes/sample/qa
+./genie run wish "Create a wish for onboarding Genie template to {{PROJECT_NAME}}."
 ```
 
 Run the quick metrics checks (TTFB averages, ASR confidence counts) to ensure the transcript matches expectations.
 
-## 6. Align With Latency Targets
+## 6. Project Context
 
-Every doc now references the shared latency targets (200 ms P50 / 300 ms P99). Keep them in mind while you build.
+- Define your own metrics and validation hooks in each wish/forge plan.
+- Customize `.genie/product/*` to your project’s needs (mission, roadmap, environment).
 
-- Read the [technical blueprint](../../docs/research.md) for architecture context.
-- Review the [metrics definitions](../product/metrics.md) so your instrumentation matches the evaluator schema.
-- Use the [roadmap](../product/roadmap.md) to see how Phase 0 and Phase 1 milestones map to gating criteria.
+## 7. Next Steps
 
-## 7. Next Steps (When Code Lands)
-
-As the Rust server crates are checked in, the typical workflow will be:
-
-1. `cargo run -p server` — start the WebSocket gateway locally.
-2. Point a local client or the LiveKit POC at `ws://localhost:8080/v1/convai/conversation`.
-3. Record metrics to `.genie/wishes/<wish-slug>/qa/metrics.json` using the shared schema.
-
-Those commands will be documented in `server/README.md` once the crate is published. Until then, focus on environment readiness and artifact handling.
+- Add/adjust agents as needed under `.genie/agents/`.
+- Keep AGENTS.md synchronized with your Local Agent Map.
 
 ## Troubleshooting
 
-- **Provider 401 errors**: Double-check that your `.env` is loaded and the keys are active for API access.
-- **High RTT during curl tests**: Consider VPN/region placement; review [Operational Guidance](../../docs/research.md#operational-guidance-brazil-focus).
-- **Missing system packages**: Install `build-essential` (Linux) or Xcode command line tools (macOS) before running Rust builds.
+- **Permissions**: If a run fails due to rollout recorder permissions, rerun with `--preset careful` or adjust write paths.
+- **Missing system packages**: Ensure runtime/toolchains for your project are installed.
 
 ## Additional Resources
 
 - [Environment Configuration](../product/environment.md)
 - [Technical Stack](../product/tech-stack.md)
-- [Production Insights](../../docs/elevenlabs/production-insights.md)
-- [WebSocket Protocol](../../docs/websocket-protocol.md)
 
 Stay within these references so the documentation remains the single source of truth.

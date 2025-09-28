@@ -1,4 +1,4 @@
-# Automagik Framework Overview
+# Genie Template Overview
 
 ## Repository Self-Awareness
 - **Purpose**: Provide Genie agent templates and CLI orchestration usable in any codebase. Replace product-specific branding with placeholders (e.g., `{{PROJECT_NAME}}`, `{{DOMAIN}}`).
@@ -7,8 +7,8 @@
   - `@.genie/product/tech-stack.md`
   - `@.genie/product/roadmap.md`
   - `@.genie/product/environment.md`
-  - `@docs/research.md` (architecture notes)
-- **External dependencies**: ElevenLabs TTS (Flash v2.5 / Turbo / optional v3 alpha), Groq Whisper-large-v3-turbo STT, optional WhisperX/faster-whisper fallback. Environment variables detailed in `@.genie/product/environment.md`.
+  - (Optional) project-specific docs referenced by wishes, if present in target repos.
+- **External dependencies**: Template repo is domain-agnostic. Declare any provider dependencies in your project’s wish/forge plan.
 
 ## Unified Agent Stack
 The Genie workflow lives in `.genie/agents/` and is surfaced via CLI wrappers in `.claude/commands/`:
@@ -289,7 +289,7 @@ Keep this document synced when introducing new agents, changing folder layouts, 
 - Command outputs for failures and fixes.
 - Screenshots/logs for QA flows.
 - Git diff reviews prior to human handoff.
-- Voice metrics: TTFB, ASR confidence, overlap behavior, TTS artifacts.
+- Metrics examples (customize per project): latency budgets, throughput, accuracy, quality.
 </execution_patterns>
 
 <wish_document_management>

@@ -80,7 +80,7 @@ export function buildHelpView(params: HelpViewParams): ViewEnvelope {
       gap: 1,
       children: [
         { type: 'heading', level: 1, text: 'GENIE CLI', accent: 'primary', align: 'center' },
-        { type: 'text', text: 'Automagik Hello :: Command Palette Quickstart', tone: 'muted', align: 'center' },
+        { type: 'text', text: 'Genie Template :: Command Palette Quickstart', tone: 'muted', align: 'center' },
         { type: 'divider', variant: 'double', accent: 'primary' },
         {
           type: 'layout',

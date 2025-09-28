@@ -51,9 +51,7 @@ CLAUDE.md            # AI assistant guidelines
 
 ## Submodules (Vendors)
 
-- `vendors/livekit-agents` — LiveKit Agents (Python) examples and SDK
 - `vendors/hume-evi-next-js-starter` — Hume EVI Next.js starter
-- `vendors/swift` — Swift (Next.js) voice UI
 
 Update your checkout:
 

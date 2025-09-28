@@ -8,7 +8,7 @@ This is the single source of truth for all environment variables. Define them be
 - Scope: [required], [optional], [experimental]
 
 ## Core Application
-- APP_NAME [optional]: default `automagik-hello`
+- APP_NAME [optional]: default `{{PROJECT_NAME}}`
 - APP_ENV [optional]: `dev|staging|prod` (default `dev`)
 - SERVER_HOST [optional]: default `0.0.0.0`
 - SERVER_PORT [optional]: default `8080`
@@ -27,8 +27,8 @@ This is the single source of truth for all environment variables. Define them be
 - PROMETHEUS_BIND_ADDR [optional]: e.g., `0.0.0.0:9464`
 - TRACE_SAMPLE_RATE [optional]: `0.0–1.0` (default `0.1`)
 
-## ElevenLabs TTS
-- ELEVENLABS_API_KEY [required]: API key
+## Providers (examples — replace as needed)
+- PROVIDER_API_KEY [optional]: API key
 - TTS_MODEL_ID [optional]: default `eleven_flash_v2_5` (use `eleven_turbo_v2_5` for quality)
 - TTS_VOICE_ID [optional]: provider voice ID
 - TTS_VOICE_TYPE [optional]: `default|ivc|pvc` (default voices are fastest)
@@ -50,8 +50,8 @@ This is the single source of truth for all environment variables. Define them be
 - EXPERIMENTAL_TTS_V3 [experimental]: `0|1` (default `0`) — enable v3 alpha (not for real-time)
 - EXPERIMENTAL_MULTI_CONTEXT [experimental]: `0|1` (default `0`) — use multi‑context WS for overlap experiments
 
-## ASR (Speech‑to‑Text)
-- ASR_PROVIDER [optional]: `groq|local` (default `groq`)
+## Service Selection (examples)
+- PRIMARY_PROVIDER [optional]: `providerA|providerB|local` (default project-specific)
 - GROQ_API_KEY [required if ASR_PROVIDER=groq]: API key
 - ASR_MODEL_ID [optional]: default `whisper-large-v3-turbo` (216x speed, $0.04/hr)
 - ASR_MODEL_FALLBACK [optional]: `whisper-large-v3` ($0.111/hr, higher accuracy)
@@ -61,7 +61,7 @@ This is the single source of truth for all environment variables. Define them be
 - ASR_PARTIAL_TRIGGER_CONF [optional]: default `0.6` — begin TTS on partial hypothesis at or above this confidence
 - LOCAL_WHISPER_MODEL [optional]: default `base` — for whisper.cpp fallback
 
-## Turn‑Taking & Overlap
+## Feature Flags (examples)
 - VAD_STRATEGY [optional]: `webrtc|pyannote|silero|heuristics` (default `webrtc`) — `heuristics` keeps simple energy/threshold gating without external models
 - VAD_AGGRESSIVENESS [optional]: `0|1|2|3` (default `2`) — WebRTC VAD aggressiveness
 - VAD_FRAME_SIZE_MS [optional]: `10|20|30` (default `20`) — WebRTC constraint
@@ -76,7 +76,7 @@ This is the single source of truth for all environment variables. Define them be
 - BACKCHANNEL_MIN_INTERVAL_MS [optional]: default `2000` — minimum ms between micro‑acknowledgements
 - BACKCHANNEL_MAX_INTERVAL_MS [optional]: default `4000` — maximum ms between micro‑acknowledgements
 
-## Region & Networking
+## Region & Networking (examples)
 - REGION [optional]: deployment region hint (e.g., `sa-east-1` for Brazil focus, or `us-east` for global)
 - PIN_TTS_REGION [optional]: explicit TTS region pin (e.g., `us|eu`) — use when provider exposes regional endpoints
 - PIN_ASR_REGION [optional]: explicit ASR region pin — use if ASR provider supports it
@@ -97,7 +97,7 @@ This is the single source of truth for all environment variables. Define them be
 - RATE_LIMIT_ASR_TPS [optional]: default `20`
 - REDACT_PII [optional]: `0|1` (default `1`)
 
-## Audio Pipeline
+## Tool Integration (examples)
 - AUDIO_INPUT_FORMAT [required]: `pcm_16000` — user audio format (16kHz PCM)
 - AUDIO_OUTPUT_FORMAT [optional]: `pcm_44100|pcm_24000` (default `pcm_44100`) — TTS output format
 - AUDIO_FRAME_SIZE_MS [optional]: default `20` — audio frame size in ms
@@ -108,7 +108,7 @@ This is the single source of truth for all environment variables. Define them be
 - TOOL_RETRY_MAX [optional]: default `2` — max retries for failed tool calls
 - TOOL_CONCURRENT_MAX [optional]: default `3` — max concurrent tool executions
 
-## Demo UI (optional)
+## UI (optional)
 - DEMO_UI_PORT [optional]: default `3000`
 - DEMO_AUDIO_SAMPLE_RATE [optional]: `24000|44100` (default `24000`)
 
@@ -118,46 +118,15 @@ APP_ENV=dev
 SERVER_PORT=8080
 LOG_LEVEL=debug
 
-ELEVENLABS_API_KEY=your_xi_key
-TTS_MODEL_ID=eleven_flash_v2_5
-TTS_VOICE_ID=voice_XXXXXXXX
-TTS_PARTIAL_FLUSH_MS=120
-TTS_CHUNK_MS=160
-TTS_KEEPALIVE_INTERVAL_MS=15000
-TTS_FLUSH_ON_TURN_END=1
-# Leave unset to use provider defaults; set to tighten TTFB at slight quality cost
-# TTS_CHUNK_LENGTH_SCHEDULE=50,120,160,290
-EXPERIMENTAL_TTS_V3=0
-# EXPERIMENTAL_MULTI_CONTEXT=0
+PROVIDER_API_KEY=your_key
+PRIMARY_PROVIDER=providerA
+FEATURE_FLAG_X=0
 
-ASR_PROVIDER=groq
-GROQ_API_KEY=your_groq_key
-ASR_MODEL_ID=whisper-large-v3-turbo
-ASR_MIN_CONFIDENCE=0.6
-ASR_PARTIAL_TRIGGER_CONF=0.6
+WISH_SLUG=onboarding-genie
+ARTIFACTS_DIR=.genie/wishes/onboarding-genie/qa
 
-VAD_STRATEGY=heuristics
-VAD_SILENCE_MS_MIN=300
-VAD_SILENCE_MS_MAX=500
-BARGE_IN_ENABLED=1
-CANCEL_TAIL_TIMEOUT_MS=80
-OVERLAP_POLICY=overlap_aware
-CANCEL_TAIL_MODE=soft
-CANCEL_TAIL_FADE_MS=60
-BACKCHANNEL_MIN_INTERVAL_MS=2000
-BACKCHANNEL_MAX_INTERVAL_MS=4000
-
-WISH_ID=baseline-voice
-ARTIFACTS_DIR=.genie/wishes/baseline-voice/qa
-
-# Region
-REGION=sa-east-1
-# PIN_TTS_REGION=us
-# PIN_ASR_REGION=us
-
-# Audio Pipeline
-AUDIO_INPUT_FORMAT=pcm_16000
-AUDIO_OUTPUT_FORMAT=pcm_44100
+# Region (optional)
+REGION=us-east
 AUDIO_FRAME_SIZE_MS=20
 AUDIO_BUFFER_CHUNKS=5
 
