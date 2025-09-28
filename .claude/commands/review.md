@@ -1,1 +1,1 @@
-@.genie/agents/review.md
+@.genie/agents/core/review.md

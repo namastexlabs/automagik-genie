@@ -1,4 +1,4 @@
-import { ViewStyle, Tone, HeadingAccent } from './view-model';
+import { Tone, HeadingAccent } from './view-model';
 
 export const palette = {
   accent: {
@@ -43,8 +43,4 @@ export function accentToColor(accent?: HeadingAccent): string | undefined {
   if (accent === 'secondary') return palette.accent.secondary;
   if (accent === 'muted') return palette.accent.muted;
   return palette.foreground.default;
-}
-
-export function isArtStyle(style: ViewStyle): boolean {
-  return style === 'art';
 }

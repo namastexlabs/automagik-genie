@@ -1,8 +1,10 @@
-import { ViewEnvelope, ViewStyle } from '../view';
+import { ViewEnvelope } from '../view';
 
-export function buildErrorView(style: ViewStyle, title: string, message: string): ViewEnvelope {
+const GENIE_STYLE = 'genie';
+
+export function buildErrorView(title: string, message: string): ViewEnvelope {
   return {
-    style,
+    style: GENIE_STYLE,
     title,
     body: {
       type: 'callout',
@@ -13,9 +15,9 @@ export function buildErrorView(style: ViewStyle, title: string, message: string)
   };
 }
 
-export function buildWarningView(style: ViewStyle, title: string, messages: string[]): ViewEnvelope {
+export function buildWarningView(title: string, messages: string[]): ViewEnvelope {
   return {
-    style,
+    style: GENIE_STYLE,
     title,
     body: {
       type: 'callout',
@@ -26,9 +28,9 @@ export function buildWarningView(style: ViewStyle, title: string, messages: stri
   };
 }
 
-export function buildInfoView(style: ViewStyle, title: string, messages: string[]): ViewEnvelope {
+export function buildInfoView(title: string, messages: string[]): ViewEnvelope {
   return {
-    style,
+    style: GENIE_STYLE,
     title,
     body: {
       type: 'callout',

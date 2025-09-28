@@ -53,7 +53,7 @@ Phase 1: Template sweep in progress (neutralizing project-specific content).
 
 ```
 .genie/product/      # Mission, roadmap, environment
-.genie/agents/       # Core agents plus modes/ and specialists/
+.genie/agents/       # Portable prompts under core/ and repo-specific prompts under specialized/
 .genie/wishes/       # Wish blueprints and status logs
  .genie/state/        # CLI-managed session data (inspect via ./genie commands)
 vendors/             # External reference repos

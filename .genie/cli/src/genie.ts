@@ -47,15 +47,8 @@ interface CLIOptions {
   backgroundRunner: boolean;
   preset?: string;
   executor?: string;
-  prefix: string | null;
-  json: boolean;
-  style: ViewStyle;
-  status: string | null;
   requestHelp?: boolean;
-  lines: number;
-  page: number;
-  per: number;
-  log?: string;
+  full: boolean;
 }
 
 interface ParsedCommand {
@@ -250,14 +243,10 @@ function parseArguments(argv: string[]): ParsedCommand {
     background: false,
     backgroundExplicit: false,
     backgroundRunner: false,
-    prefix: null,
     executor: undefined,
-    json: false,
-    style: 'compact',
-    status: null,
-    lines: 60,
-    page: 1,
-    per: 10
+    preset: undefined,
+    requestHelp: undefined,
+    full: false
   };
 
   const filtered: string[] = [];
@@ -292,49 +281,13 @@ function parseArguments(argv: string[]): ParsedCommand {
       options.requestHelp = true;
       continue;
     }
-    if (token === '--prefix') {
-      if (i + 1 >= raw.length) throw new Error('Missing value for --prefix');
-      options.prefix = raw[++i];
-      continue;
-    }
-    if (token === '--json') {
-      options.json = true;
+    if (token === '--full') {
+      options.full = true;
       continue;
     }
     if (token === '--') {
       filtered.push(...raw.slice(i + 1));
       break;
-    }
-    if (token === '--style') {
-      if (i + 1 >= raw.length) throw new Error('Missing value for --style');
-      options.style = coerceStyle(raw[++i]);
-      continue;
-    }
-    if (token === '--status') {
-      if (i + 1 >= raw.length) throw new Error('Missing value for --status');
-      options.status = raw[++i];
-      continue;
-    }
-    if (token === '--lines') {
-      if (i + 1 >= raw.length) throw new Error('Missing value for --lines');
-      const n = parseInt(raw[++i], 10);
-      if (!Number.isFinite(n) || n <= 0) throw new Error('Invalid --lines value');
-      options.lines = n;
-      continue;
-    }
-    if (token === '--page') {
-      if (i + 1 >= raw.length) throw new Error('Missing value for --page');
-      const n = parseInt(raw[++i], 10);
-      if (!Number.isFinite(n) || n <= 0) throw new Error('Invalid --page value');
-      options.page = n;
-      continue;
-    }
-    if (token === '--per') {
-      if (i + 1 >= raw.length) throw new Error('Missing value for --per');
-      const n = parseInt(raw[++i], 10);
-      if (!Number.isFinite(n) || n <= 0) throw new Error('Invalid --per value');
-      options.per = n;
-      continue;
     }
     filtered.push(token);
   }
@@ -342,22 +295,15 @@ function parseArguments(argv: string[]): ParsedCommand {
   return { command, commandArgs: filtered, options };
 }
 
-function coerceStyle(input?: string | null): ViewStyle {
-  const token = (input || '').toLowerCase();
-  if (token === 'art') return 'art';
-  if (token === 'plain') return 'plain';
-  return 'compact';
-}
-
 async function emitView(
   envelope: ViewEnvelope,
   options: CLIOptions,
   opts: { stream?: NodeJS.WriteStream; forceJson?: boolean } = {}
 ): Promise<void> {
-  const style = options.style || 'compact';
+  const style: ViewStyle = 'art';
   const styledEnvelope: ViewEnvelope = { ...envelope, style };
   await renderEnvelope(styledEnvelope, {
-    json: opts.forceJson ?? options.json,
+    json: opts.forceJson ?? false,
     stream: opts.stream,
     style
   });

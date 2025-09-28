@@ -1,1 +1,7 @@
-@.genie/agents/modes/secaudit.md
+---
+name: secaudit
+description: Security audit and vulnerability assessment agent
+model: inherit
+---
+
+@.genie/agents/core/secaudit.md

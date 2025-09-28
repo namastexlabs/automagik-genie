@@ -19,7 +19,7 @@ import {
   RenderOptions,
   RenderResult
 } from './view-model';
-import { toneToColor, accentToColor, palette, isArtStyle } from './theme';
+import { toneToColor, accentToColor, palette } from './theme';
 
 type InkModule = any;
 let inkModule: InkModule | null = null;
@@ -40,7 +40,7 @@ function useInk(): InkModule {
 
 export async function renderEnvelope(envelope: ViewEnvelope, options: RenderOptions = {}): Promise<RenderResult> {
   const targetStream = options.stream ?? process.stdout;
-  const finalStyle: ViewStyle = options.style ?? envelope.style ?? 'compact';
+  const finalStyle: ViewStyle = envelope.style ?? 'genie';
 
   if (options.json) {
     const payload = JSON.stringify(envelope, null, 2);
@@ -142,7 +142,7 @@ function gapSpacer(direction: 'row' | 'column', size: number, key: string): Reac
 function renderHeadingNode(node: HeadingNode, style: ViewStyle): React.ReactElement {
   const { Box: InkBox, Text: InkText } = useInk();
   const color = accentToColor(node.accent);
-  if (node.level === 1 && isArtStyle(style)) {
+  if (node.level === 1) {
     const text = gradient([palette.accent.primary, palette.accent.secondary])(node.text);
     return (
       <InkBox flexDirection="column" alignItems={node.align === 'center' ? 'center' : 'flex-start'}>

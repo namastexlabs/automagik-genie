@@ -35,8 +35,8 @@ genie
 │   └── sessions       # shows active table + 10 most recent completions
 ├── resume <session> "<prompt>"
 │   └── no runtime flags (reuses session’s stored execution posture)
-├── log <session>
-│   └── no runtime flags (renderer fixed to `art`)
+├── view <session> [--full]
+│   └── no runtime flags (renderer fixed to `art`; `--full` shows the entire run)
 ├── stop <session>
 └── help [command]
 ```

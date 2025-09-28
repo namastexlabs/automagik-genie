@@ -123,7 +123,7 @@ export type ViewNode =
   | TimelineNode
   | SpaceNode;
 
-export type ViewStyle = 'compact' | 'art' | 'plain';
+export type ViewStyle = 'genie';
 
 export interface ViewEnvelope {
   style: ViewStyle;
