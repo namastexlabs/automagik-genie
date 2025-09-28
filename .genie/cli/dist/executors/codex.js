@@ -46,6 +46,7 @@ const defaults = {
         fullAuto: true,
         model: 'gpt-5-codex',
         sandbox: 'workspace-write',
+        approvalPolicy: 'on-failure',
         profile: null,
         includePlanTool: false,
         search: false,
@@ -56,7 +57,7 @@ const defaults = {
         cd: null,
         outputSchema: null,
         outputLastMessage: null,
-        reasoningEffort: null,
+        reasoningEffort: 'low',
         additionalArgs: [],
         images: []
     },
@@ -178,6 +179,8 @@ function collectExecOptions(execConfig) {
         options.push('-m', String(execConfig.model));
     if (execConfig.sandbox)
         options.push('-s', String(execConfig.sandbox));
+    if (execConfig.approvalPolicy)
+        options.push('-c', `approval-policy="${execConfig.approvalPolicy}"`);
     if (execConfig.profile)
         options.push('-p', String(execConfig.profile));
     if (execConfig.includePlanTool)

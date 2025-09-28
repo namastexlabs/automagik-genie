@@ -9,6 +9,13 @@ import os from 'os';
 import { spawn, SpawnOptionsWithoutStdio } from 'child_process';
 import { loadExecutors, DEFAULT_EXECUTOR_KEY } from './executors';
 import type { Executor, ExecutorCommand } from './executors/types';
+import { renderEnvelope, ViewEnvelope, ViewStyle } from './view';
+import { buildHelpView } from './views/help';
+import { buildRunsOverviewView, buildRunsScopedView, RunRow } from './views/runs';
+import { buildBackgroundStartView, buildRunCompletionView } from './views/background';
+import { buildStopView, StopEvent } from './views/stop';
+import { buildErrorView, buildWarningView, buildInfoView } from './views/common';
+import { buildLogTailView } from './views/log-tail';
 import BackgroundManager, {
   INTERNAL_BACKGROUND_ENV,
   INTERNAL_START_TIME_ENV,
@@ -41,7 +48,7 @@ interface CLIOptions {
   executor?: string;
   prefix: string | null;
   json: boolean;
-  style: string;
+  style: ViewStyle;
   status: string | null;
   requestHelp?: boolean;
   lines: number;
@@ -96,6 +103,17 @@ if (!EXECUTORS[DEFAULT_EXECUTOR_KEY]) {
 const SCRIPT_DIR = path.dirname(__filename);
 const CONFIG_PATH = path.join(SCRIPT_DIR, 'config.yaml');
 const backgroundManager = new BackgroundManager();
+
+const startupWarnings: string[] = [];
+const runtimeWarnings: string[] = [];
+
+function recordStartupWarning(message: string): void {
+  startupWarnings.push(message);
+}
+
+function recordRuntimeWarning(message: string): void {
+  runtimeWarnings.push(message);
+}
 
 const BASE_CONFIG: GenieConfig = {
   defaults: {
@@ -160,9 +178,9 @@ const BASE_CONFIG: GenieConfig = {
 
 const DEFAULT_CONFIG: GenieConfig = buildDefaultConfig();
 
-main();
+void main();
 
-function main(): void {
+async function main(): Promise<void> {
   try {
     const parsed = parseArguments(process.argv.slice(2));
     const envIsBackground = process.env[INTERNAL_BACKGROUND_ENV] === '1';
@@ -177,41 +195,45 @@ function main(): void {
     const paths = resolvePaths(config.paths || {});
     prepareDirectories(paths);
 
+    await flushStartupWarnings(parsed.options);
+
     switch (parsed.command) {
       case 'run':
-        runChat(parsed, config, paths);
+        await runChat(parsed, config, paths);
         break;
       case 'mode':
-        runMode(parsed, config, paths);
+        await runMode(parsed, config, paths);
         break;
       case 'continue':
-        runContinue(parsed, config, paths);
+        await runContinue(parsed, config, paths);
         break;
       case 'view':
-        runView(parsed, config, paths);
+        await runView(parsed, config, paths);
         break;
       case 'runs':
-        runRuns(parsed, config, paths);
+        await runRuns(parsed, config, paths);
         break;
       case 'list':
-        runList(config, paths);
+        await runList(parsed, config, paths);
         break;
       case 'stop':
-        runStop(parsed, config, paths);
+        await runStop(parsed, config, paths);
         break;
       case 'help':
       case undefined:
-        runHelp(config, paths);
+        await runHelp(parsed, config, paths);
         break;
-      default:
-        console.error(`Unknown command: ${parsed.command}`);
-        runHelp(config, paths);
+      default: {
+        await emitView(buildErrorView(parsed.options.style, 'Unknown command', `Unknown command: ${parsed.command}`), parsed.options, { stream: process.stderr });
+        await runHelp(parsed, config, paths);
         process.exitCode = 1;
         break;
+      }
     }
+    await flushRuntimeWarnings(parsed.options);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error('❌', message);
+    await emitEmergencyError(message);
     process.exitCode = 1;
   }
 }
@@ -282,7 +304,7 @@ function parseArguments(argv: string[]): ParsedCommand {
     }
     if (token === '--style') {
       if (i + 1 >= raw.length) throw new Error('Missing value for --style');
-      options.style = raw[++i];
+      options.style = coerceStyle(raw[++i]);
       continue;
     }
     if (token === '--status') {
@@ -317,6 +339,46 @@ function parseArguments(argv: string[]): ParsedCommand {
   return { command, commandArgs: filtered, options };
 }
 
+function coerceStyle(input?: string | null): ViewStyle {
+  const token = (input || '').toLowerCase();
+  if (token === 'art') return 'art';
+  if (token === 'plain') return 'plain';
+  return 'compact';
+}
+
+async function emitView(
+  envelope: ViewEnvelope,
+  options: CLIOptions,
+  opts: { stream?: NodeJS.WriteStream; forceJson?: boolean } = {}
+): Promise<void> {
+  const style = options.style || 'compact';
+  const styledEnvelope: ViewEnvelope = { ...envelope, style };
+  await renderEnvelope(styledEnvelope, {
+    json: opts.forceJson ?? options.json,
+    stream: opts.stream,
+    style
+  });
+}
+
+async function emitEmergencyError(message: string): Promise<void> {
+  const envelope = buildErrorView('compact', 'Fatal error', message);
+  await renderEnvelope(envelope, { json: false, stream: process.stderr, style: 'compact' });
+}
+
+async function flushStartupWarnings(options: CLIOptions): Promise<void> {
+  if (!startupWarnings.length) return;
+  const envelope = buildWarningView(options.style, 'Configuration warnings', [...startupWarnings]);
+  await emitView(envelope, options);
+  startupWarnings.length = 0;
+}
+
+async function flushRuntimeWarnings(options: CLIOptions): Promise<void> {
+  if (!runtimeWarnings.length) return;
+  const envelope = buildWarningView(options.style, 'Runtime warnings', [...runtimeWarnings]);
+  await emitView(envelope, options);
+  runtimeWarnings.length = 0;
+}
+
 function applyDefaults(options: CLIOptions, defaults?: GenieConfig['defaults']): void {
   if (!options.backgroundExplicit) {
     options.background = Boolean(defaults?.background);
@@ -326,6 +388,10 @@ function applyDefaults(options: CLIOptions, defaults?: GenieConfig['defaults']):
   }
   if (!options.executor && defaults?.executor) {
     options.executor = defaults.executor;
+  }
+  const envStyle = process.env.GENIE_CLI_STYLE;
+  if (envStyle && options.style === 'compact') {
+    options.style = coerceStyle(envStyle);
   }
 }
 
@@ -349,7 +415,7 @@ function loadConfig(overrides: string[]): GenieConfig {
             parsed = parseSimpleYaml(file);
           } catch (fallbackError) {
             const message = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
-            console.warn(`[genie] Failed to parse ${path.basename(configFilePath)} without yaml module:`, message);
+            recordStartupWarning(`[genie] Failed to parse ${path.basename(configFilePath)} without yaml module: ${message}`);
             parsed = {};
           }
         }
@@ -554,7 +620,7 @@ function prepareDirectories(paths: Required<ConfigPaths>): void {
   });
 }
 
-function runChat(parsed: ParsedCommand, config: GenieConfig, paths: Required<ConfigPaths>): void {
+async function runChat(parsed: ParsedCommand, config: GenieConfig, paths: Required<ConfigPaths>): Promise<void> {
   const [agentName, ...promptParts] = parsed.commandArgs;
   if (!agentName) {
     throw new Error('Usage: genie run <agent> "<prompt>"');
@@ -609,9 +675,14 @@ function runChat(parsed: ParsedCommand, config: GenieConfig, paths: Required<Con
     entry.runnerPid = runnerPid;
     entry.status = 'running';
     saveSessions(paths as SessionPathsConfig, store);
-    console.log(`🧞 Background conversation started: ${agentName}`);
-    console.log(`   Log: ${formatPathRelative(logFile, paths.baseDir || '.')}`);
-    console.log('   Watch: ./genie view <sessionId>');
+    const envelope = buildBackgroundStartView({
+      style: parsed.options.style,
+      agentName,
+      logPath: formatPathRelative(logFile, paths.baseDir || '.'),
+      sessionId: entry.sessionId,
+      context: ['Watch: ./genie view <sessionId>', 'Resume: ./genie continue <sessionId> "<prompt>"']
+    });
+    await emitView(envelope, parsed.options);
     return;
   }
 
@@ -621,7 +692,7 @@ function runChat(parsed: ParsedCommand, config: GenieConfig, paths: Required<Con
     prompt
   });
 
-  executeRun({
+  await executeRun({
     agentName,
     command,
     executorKey,
@@ -636,7 +707,8 @@ function runChat(parsed: ParsedCommand, config: GenieConfig, paths: Required<Con
     startTime,
     logFile,
     background: parsed.options.background,
-    runnerPid: parsed.options.backgroundRunner ? process.pid : null
+    runnerPid: parsed.options.backgroundRunner ? process.pid : null,
+    cliOptions: parsed.options
   });
 }
 
@@ -657,6 +729,7 @@ interface ExecuteRunArgs {
   logFile: string;
   background: boolean;
   runnerPid: number | null;
+  cliOptions: CLIOptions;
 }
 
 function resolveExecutorKey(options: CLIOptions, config: GenieConfig, presetName: string): string {
@@ -732,7 +805,7 @@ function extractExecutorOverrides(agentGenie: any, executorKey: string): any {
   return overrides;
 }
 
-function executeRun(args: ExecuteRunArgs): void {
+function executeRun(args: ExecuteRunArgs): Promise<void> {
   const {
     agentName,
     command,
@@ -747,7 +820,8 @@ function executeRun(args: ExecuteRunArgs): void {
     startTime,
     logFile,
     background,
-    runnerPid
+    runnerPid,
+    cliOptions
   } = args;
 
   if (!command || typeof command.command !== 'string' || !Array.isArray(command.args)) {
@@ -807,19 +881,46 @@ function executeRun(args: ExecuteRunArgs): void {
     if (proc.stderr) proc.stderr.pipe(process.stderr);
   }
 
+  let settled = false;
+  let resolvePromise: () => void = () => {};
+  const settle = () => {
+    if (!settled) {
+      settled = true;
+      logStream.end();
+      resolvePromise();
+    }
+  };
+
+  const promise = new Promise<void>((resolve) => {
+    resolvePromise = resolve;
+  });
+
   proc.on('error', (error) => {
     entry.status = 'failed';
     entry.error = error instanceof Error ? error.message : String(error);
     entry.lastUsed = new Date().toISOString();
     saveSessions(paths as SessionPathsConfig, store);
-    logStream.end();
+    const message = error instanceof Error ? error.message : String(error);
     if (!background) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.error(`\n❌ Failed to launch ${executorKey} for ${agentName}: ${message}`);
+      const envelope = buildRunCompletionView({
+        style: cliOptions.style,
+        agentName,
+        outcome: 'failure',
+        logPath: formatPathRelative(logFile, paths.baseDir || '.'),
+        sessionId: entry.sessionId,
+        executorKey,
+        exitCode: null,
+        durationMs: Date.now() - startTime,
+        extraNotes: [`Launch error: ${message}`]
+      });
+      void emitView(envelope, cliOptions, { stream: process.stderr }).finally(settle);
+    } else {
+      settle();
     }
   });
 
   proc.on('exit', (code, signal) => {
+    if (settled) return;
     const finishedAt = new Date().toISOString();
     entry.lastUsed = finishedAt;
     entry.exitCode = code;
@@ -829,7 +930,7 @@ function executeRun(args: ExecuteRunArgs): void {
     logStream.end();
 
     const logViewer = executor.logViewer;
-  const sessionFromLog = logViewer?.readSessionIdFromLog?.(logFile) ?? null;
+    const sessionFromLog = logViewer?.readSessionIdFromLog?.(logFile) ?? null;
     const resolvedSessionId = sessionFromLog || entry.sessionId || null;
     if (entry.sessionId !== resolvedSessionId) {
       entry.sessionId = resolvedSessionId;
@@ -838,12 +939,22 @@ function executeRun(args: ExecuteRunArgs): void {
     }
 
     if (!background) {
-      const outcome = code === 0 ? `✅ ${executorKey} run completed` : `⚠️ ${executorKey} exited with code ${code}`;
-      console.log(`\n${outcome} (${agentName})`);
-      if (entry.sessionId) {
-        console.log(`Session ID: ${entry.sessionId}`);
-      }
-      console.log(`Log: ${formatPathRelative(logFile, paths.baseDir || '.')}`);
+      const outcome = code === 0 ? 'success' : 'failure';
+      const notes = signal ? [`Signal: ${signal}`] : [];
+      const envelope = buildRunCompletionView({
+        style: cliOptions.style,
+        agentName,
+        outcome,
+        logPath: formatPathRelative(logFile, paths.baseDir || '.'),
+        sessionId: entry.sessionId,
+        executorKey,
+        exitCode: code,
+        durationMs: Date.now() - startTime,
+        extraNotes: notes
+      });
+      void emitView(envelope, cliOptions).finally(settle);
+    } else {
+      settle();
     }
   });
 
@@ -864,15 +975,14 @@ function executeRun(args: ExecuteRunArgs): void {
         entry.sessionId = sessionId;
         entry.lastUsed = new Date().toISOString();
         saveSessions(paths as SessionPathsConfig, store);
-        if (!background) {
-          console.log(`\n✅ Session saved for ${agentName} (${sessionId})`);
-        }
       }
     }, sessionDelay);
   }
+
+  return promise;
 }
 
-function runMode(parsed: ParsedCommand, config: GenieConfig, paths: Required<ConfigPaths>): void {
+async function runMode(parsed: ParsedCommand, config: GenieConfig, paths: Required<ConfigPaths>): Promise<void> {
   const [modeName, ...promptParts] = parsed.commandArgs;
   if (!modeName) {
     throw new Error('Usage: genie mode <genie-mode> "<prompt>"');
@@ -887,7 +997,7 @@ function runMode(parsed: ParsedCommand, config: GenieConfig, paths: Required<Con
       rawArgs: [...parsed.options.rawArgs]
     }
   };
-  runChat(cloned, config, paths);
+  await runChat(cloned, config, paths);
 }
 
 function loadAgentSpec(name: string): AgentSpec {
@@ -946,9 +1056,9 @@ function formatPathRelative(targetPath: string, baseDir: string): string {
   }
 }
 
-function runContinue(parsed: ParsedCommand, config: GenieConfig, paths: Required<ConfigPaths>): void {
+async function runContinue(parsed: ParsedCommand, config: GenieConfig, paths: Required<ConfigPaths>): Promise<void> {
   if (parsed.options.requestHelp) {
-    runHelp(config, paths);
+    await runHelp(parsed, config, paths);
     return;
   }
 
@@ -1012,13 +1122,19 @@ function runContinue(parsed: ParsedCommand, config: GenieConfig, paths: Required
     session.runnerPid = runnerPid;
     session.status = 'running';
     saveSessions(paths as SessionPathsConfig, store);
-    console.log(`🧞 Background resume started: ${agentName}`);
-    console.log(`   Log: ${formatPathRelative(logFile, paths.baseDir || '.')}`);
-    console.log('   Watch: ./genie view <sessionId>');
+    const envelope = buildBackgroundStartView({
+      style: parsed.options.style,
+      agentName,
+      logPath: formatPathRelative(logFile, paths.baseDir || '.'),
+      sessionId: session.sessionId,
+      note: 'Background session resumed',
+      context: ['Watch: ./genie view <sessionId>', 'Stop: ./genie stop <sessionId>']
+    });
+    await emitView(envelope, parsed.options);
     return;
   }
 
-  executeRun({
+  await executeRun({
     agentName,
     command,
     executorKey,
@@ -1033,84 +1149,116 @@ function runContinue(parsed: ParsedCommand, config: GenieConfig, paths: Required
     startTime,
     logFile,
     background: parsed.options.background,
-    runnerPid: parsed.options.backgroundRunner ? process.pid : null
+    runnerPid: parsed.options.backgroundRunner ? process.pid : null,
+    cliOptions: parsed.options
   });
 }
 
-function runList(config: GenieConfig, paths: Required<ConfigPaths>): void {
-  runRuns({ options: parseArguments([]).options, commandArgs: [], command: 'runs' }, config, paths);
+async function runList(parsed: ParsedCommand, config: GenieConfig, paths: Required<ConfigPaths>): Promise<void> {
+  await runRuns(parsed, config, paths);
 }
 
-function runRuns(parsed: ParsedCommand, config: GenieConfig, paths: Required<ConfigPaths>): void {
-  const store = loadSessions(paths as SessionPathsConfig, config as SessionLoadConfig, DEFAULT_CONFIG as any);
+async function runRuns(parsed: ParsedCommand, config: GenieConfig, paths: Required<ConfigPaths>): Promise<void> {
+  const warnings: string[] = [];
+  const store = loadSessions(
+    paths as SessionPathsConfig,
+    config as SessionLoadConfig,
+    DEFAULT_CONFIG as any,
+    { onWarning: (message) => warnings.push(message) }
+  );
   const entries = Object.entries(store.agents);
-  const dataAll = entries.map(([agent, d]) => ({
+  const dataAll = entries.map(([agent, entry]) => ({
     agent,
-    status: resolveDisplayStatus(d),
-    sessionId: d.sessionId || null,
-    log: d.logFile || null,
-    lastUsed: d.lastUsed || d.created || null,
-    runnerPid: d.runnerPid || null,
-    executor: d.executor || config.defaults?.executor || DEFAULT_EXECUTOR_KEY,
-    executorPid: d.executorPid || null
+    status: resolveDisplayStatus(entry),
+    sessionId: entry.sessionId || null,
+    log: entry.logFile || null,
+    lastUsed: entry.lastUsed || entry.created || null
   }));
 
   const want = parsed.options.status;
   const page = parsed.options.page || 1;
   const per = parsed.options.per || 5;
 
-  const byStatus = (status: string) => dataAll.filter(r => (r.status || '').toLowerCase().startsWith(status));
+  const byStatus = (status: string) => dataAll.filter((row) => (row.status || '').toLowerCase().startsWith(status));
   const sortByTimeDesc = (arr: typeof dataAll) => arr.slice().sort((a, b) => {
     const aTime = a.lastUsed ? new Date(a.lastUsed).getTime() : 0;
     const bTime = b.lastUsed ? new Date(b.lastUsed).getTime() : 0;
     return bTime - aTime;
   });
   const paginate = (arr: typeof dataAll) => arr.slice((page - 1) * per, (page - 1) * per + per);
+  const formatRow = (row: typeof dataAll[number]): RunRow => ({
+    agent: row.agent,
+    status: row.status,
+    sessionId: row.sessionId,
+    lastUsed: row.lastUsed ? new Date(row.lastUsed).toLocaleString() : null,
+    log: row.log ? formatPathRelative(row.log, paths.baseDir || '.') : null
+  });
+
+  const pagerBaseHint = 'Use: genie view <sessionId>   •   Resume: genie continue <sessionId> "<prompt>"   •   Stop: genie stop <sessionId>';
 
   if (want && want !== 'default') {
     let pool;
     if (want === 'all') pool = sortByTimeDesc([...dataAll]);
     else if (want === 'running') pool = sortByTimeDesc([...byStatus('running'), ...byStatus('pending-completion')]);
-    else pool = sortByTimeDesc(dataAll.filter(r => (r.status || '').toLowerCase().startsWith(want)));
-    const pageRows = paginate(pool);
-    if (parsed.options.json) { console.log(JSON.stringify(pageRows, null, 2)); return; }
-    console.log('\nRuns:');
-    if (!pageRows.length) console.log('  (none)'); else fmt(pageRows);
-    console.log(`\nPage ${page} • per ${per} • Next: genie runs --status ${want} --page ${page+1} --per ${per}`);
-    console.log('Use: genie view <sessionId>   •   Resume: genie continue <sessionId> "<prompt>"   •   Stop: genie stop <sessionId>');
+    else pool = sortByTimeDesc(dataAll.filter((row) => (row.status || '').toLowerCase().startsWith(want)));
+    const pageRows = paginate(pool).map(formatRow);
+    const pager = {
+      page,
+      per,
+      nextHint: `Next: genie runs --status ${want} --page ${page + 1} --per ${per}`,
+      actionHint: pagerBaseHint
+    };
+    const envelope = buildRunsScopedView({
+      style: parsed.options.style,
+      scopeTitle: `Runs • ${want}`,
+      rows: pageRows,
+      pager,
+      warnings
+    });
+    await emitView(envelope, parsed.options);
     return;
   }
 
   const activePool = sortByTimeDesc([...byStatus('running'), ...byStatus('pending-completion')]);
-  const recentPool = sortByTimeDesc(dataAll.filter(r => !['running','pending-completion'].includes((r.status || '').toLowerCase())));
-  const activeRows = paginate(activePool);
-  const recentRows = paginate(recentPool);
-  if (parsed.options.json) { console.log(JSON.stringify({ active: activeRows, recent: recentRows }, null, 2)); return; }
-  console.log('\nActive:'); if (!activeRows.length) console.log('  (none)'); else fmt(activeRows);
-  console.log('\nRecent:'); if (!recentRows.length) console.log('  (none)'); else fmt(recentRows);
-  console.log(`\nPage ${page} • per ${per} • Next: genie runs --page ${page+1} --per ${per} • Focus: genie runs --status completed`);
-  console.log('Use: genie view <sessionId>   •   Resume: genie continue <sessionId> "<prompt>"   •   Stop: genie stop <sessionId>');
-}
+  const recentPool = sortByTimeDesc(
+    dataAll.filter((row) => !['running', 'pending-completion'].includes((row.status || '').toLowerCase()))
+  );
+  const activeRows = paginate(activePool).map(formatRow);
+  const recentRows = paginate(recentPool).map(formatRow);
+  const pager = {
+    page,
+    per,
+    nextHint: `Next: genie runs --page ${page + 1} --per ${per} • Focus: genie runs --status completed`,
+    actionHint: pagerBaseHint
+  };
 
-function fmt(rows: Array<{ agent: string; status: string | null; sessionId: string | null; lastUsed: string | null; log: string | null }>): void {
-  const pad = (s: string | number | null, len: number) => (String(s || '') + ' '.repeat(len)).slice(0, len);
-  rows.forEach((r) => {
-    const when = r.lastUsed ? new Date(r.lastUsed).toLocaleString() : 'n/a';
-    const logRel = r.log || 'n/a';
-    console.log(`  ${pad(r.agent, 18)} ${pad(r.status || 'unknown', 12)} ${pad(r.sessionId || 'n/a', 36)} ${pad(when, 20)} ${logRel}`);
+  const envelope = buildRunsOverviewView({
+    style: parsed.options.style,
+    active: activeRows,
+    recent: recentRows,
+    pager,
+    warnings
   });
+  await emitView(envelope, parsed.options);
 }
 
-function runView(parsed: ParsedCommand, config: GenieConfig, paths: Required<ConfigPaths>): void {
+async function runView(parsed: ParsedCommand, config: GenieConfig, paths: Required<ConfigPaths>): Promise<void> {
   const [sessionId] = parsed.commandArgs;
   if (!sessionId) {
-    console.log('Usage: genie view <sessionId> [--lines N]');
+    await emitView(buildInfoView(parsed.options.style, 'View usage', ['Usage: genie view <sessionId> [--lines N]']), parsed.options);
     return;
   }
-  const store = loadSessions(paths as SessionPathsConfig, config as SessionLoadConfig, DEFAULT_CONFIG as any);
+
+  const warnings: string[] = [];
+  const store = loadSessions(
+    paths as SessionPathsConfig,
+    config as SessionLoadConfig,
+    DEFAULT_CONFIG as any,
+    { onWarning: (message) => warnings.push(message) }
+  );
   const found = findSessionEntry(store, sessionId, paths);
   if (!found) {
-    console.error(`❌ No run found with session id '${sessionId}'`);
+    await emitView(buildErrorView(parsed.options.style, 'Run not found', `No run found with session id '${sessionId}'`), parsed.options, { stream: process.stderr });
     return;
   }
   const { entry } = found;
@@ -1119,16 +1267,16 @@ function runView(parsed: ParsedCommand, config: GenieConfig, paths: Required<Con
   const logViewer = executor.logViewer;
   const logFile = entry.logFile;
   if (!logFile || !fs.existsSync(logFile)) {
-    console.error('❌ Log not found for this run');
+    await emitView(buildErrorView(parsed.options.style, 'Log missing', '❌ Log not found for this run'), parsed.options, { stream: process.stderr });
     return;
   }
+
+  const raw = fs.readFileSync(logFile, 'utf8');
   if (parsed.options.json) {
-    const raw = fs.readFileSync(logFile, 'utf8');
     process.stdout.write(raw);
     return;
   }
-  const content = fs.readFileSync(logFile, 'utf8');
-  const allLines = content.split(/\r?\n/);
+  const allLines = raw.split(/\r?\n/);
 
   if (!entry.sessionId && logViewer?.extractSessionIdFromContent) {
     const sessionFromLog = logViewer.extractSessionIdFromContent(allLines);
@@ -1140,32 +1288,76 @@ function runView(parsed: ParsedCommand, config: GenieConfig, paths: Required<Con
 
   const jsonl: Array<Record<string, any>> = [];
   for (const line of allLines) {
-    const t = line.trim();
-    if (!t) continue;
-    try { jsonl.push(JSON.parse(t)); } catch { /* skip */ }
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    if (!trimmed.startsWith('{')) continue;
+    try { jsonl.push(JSON.parse(trimmed)); } catch { /* skip */ }
   }
-  if (jsonl.length && logViewer?.renderJsonlView) {
-    logViewer.renderJsonlView({ entry, jsonl, raw: content }, parsed, paths, store, saveSessions, formatPathRelative);
-  } else {
-    renderTextView({ entry, lines: allLines }, parsed, paths);
+
+  if (jsonl.length && logViewer?.buildJsonlView) {
+    const envelope = logViewer.buildJsonlView({
+      render: { entry, jsonl, raw },
+      parsed,
+      paths,
+      store,
+      save: saveSessions,
+      formatPathRelative,
+      style: parsed.options.style
+    });
+    await emitView(envelope, parsed.options);
+    if (warnings.length) {
+      await emitView(buildWarningView(parsed.options.style, 'Session warnings', warnings), parsed.options);
+    }
+    return;
+  }
+
+  const lastN = parsed.options.lines && parsed.options.lines > 0 ? parsed.options.lines : 60;
+  const instructions: string[] = entry.lastPrompt ? [entry.lastPrompt] : [];
+  const errorLines = allLines.filter((line) => /error/i.test(line)).slice(-5);
+  const envelope = buildLogTailView({
+    style: parsed.options.style,
+    agent: entry.agent ?? 'unknown',
+    sessionId: entry.sessionId ?? null,
+    logPath: formatPathRelative(logFile, paths.baseDir || '.'),
+    instructions,
+    errors: errorLines,
+    totalLines: allLines.length,
+    lastN,
+    tailLines: allLines.slice(-lastN)
+  });
+  await emitView(envelope, parsed.options);
+  if (warnings.length) {
+    await emitView(buildWarningView(parsed.options.style, 'Session warnings', warnings), parsed.options);
   }
 }
 
-function runStop(parsed: ParsedCommand, config: GenieConfig, paths: Required<ConfigPaths>): void {
+async function runStop(parsed: ParsedCommand, config: GenieConfig, paths: Required<ConfigPaths>): Promise<void> {
   const [target] = parsed.commandArgs;
   if (!target) {
     throw new Error('Usage: genie stop <sessionId|pid>');
   }
 
-  const store = loadSessions(paths as SessionPathsConfig, config as SessionLoadConfig, DEFAULT_CONFIG as any);
+  const warnings: string[] = [];
+  const store = loadSessions(
+    paths as SessionPathsConfig,
+    config as SessionLoadConfig,
+    DEFAULT_CONFIG as any,
+    { onWarning: (message) => warnings.push(message) }
+  );
   const found = findSessionEntry(store, target, paths);
+  const events: StopEvent[] = [];
+  let summary = '';
+  const appendWarningView = async () => {
+    if (warnings.length) {
+      await emitView(buildWarningView(parsed.options.style, 'Session warnings', warnings), parsed.options);
+    }
+  };
 
   if (!found) {
     const numericPid = Number(target);
     if (Number.isInteger(numericPid)) {
       const ok = backgroundManager.stop(numericPid);
       if (ok) {
-        console.log(`Sent SIGTERM to pid ${numericPid}.`);
         for (const entry of Object.values(store.agents || {})) {
           if (entry.runnerPid === numericPid || entry.executorPid === numericPid) {
             entry.status = 'stopped';
@@ -1176,12 +1368,24 @@ function runStop(parsed: ParsedCommand, config: GenieConfig, paths: Required<Con
             break;
           }
         }
+        events.push({ label: `PID ${numericPid}`, detail: 'SIGTERM sent', status: 'done' });
+        summary = `Sent SIGTERM to pid ${numericPid}.`;
       } else {
-        console.error(`❌ No running process found for pid ${numericPid}`);
+        events.push({ label: `PID ${numericPid}`, detail: 'No running process', status: 'failed' });
+        summary = `No running process found for pid ${numericPid}.`;
       }
     } else {
-      console.error(`❌ No run found with session id '${target}'`);
+      events.push({ label: target, status: 'failed', message: 'Session id not found' });
+      summary = `No run found with session id '${target}'.`;
     }
+    const envelope = buildStopView({
+      style: parsed.options.style,
+      target,
+      events,
+      summary
+    });
+    await emitView(envelope, parsed.options);
+    await appendWarningView();
     return;
   }
 
@@ -1189,54 +1393,39 @@ function runStop(parsed: ParsedCommand, config: GenieConfig, paths: Required<Con
   const identifier = entry.sessionId || agentName;
   const alivePids = [entry.runnerPid, entry.executorPid].filter((pid) => backgroundManager.isAlive(pid)) as number[];
 
-  alivePids.forEach((pid) => {
-    try {
-      const ok = backgroundManager.stop(pid);
-      if (ok !== false) {
-        console.log(`Sent SIGTERM to pid ${pid} for ${identifier}.`);
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.error(`⚠️ Failed to stop pid ${pid}: ${message}`);
-    }
-  });
-
   if (!alivePids.length) {
-    console.log(`No active process found for ${identifier}.`);
+    events.push({ label: identifier, detail: 'No active process', status: 'pending' });
+    summary = `No active process found for ${identifier}.`;
+  } else {
+    alivePids.forEach((pid) => {
+      try {
+        const ok = backgroundManager.stop(pid);
+        if (ok !== false) {
+          events.push({ label: `${identifier}`, detail: `PID ${pid} stopped`, status: 'done' });
+        } else {
+          events.push({ label: `${identifier}`, detail: `PID ${pid} not running`, status: 'failed' });
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        events.push({ label: `${identifier}`, detail: `PID ${pid}`, status: 'failed', message });
+      }
+    });
+    summary = `Stop signal handled for ${identifier}`;
+    entry.status = 'stopped';
+    entry.lastUsed = new Date().toISOString();
+    entry.signal = entry.signal || 'SIGTERM';
+    if (entry.exitCode === undefined) entry.exitCode = null;
+    saveSessions(paths as SessionPathsConfig, store);
   }
 
-  entry.status = 'stopped';
-  entry.lastUsed = new Date().toISOString();
-  entry.signal = entry.signal || 'SIGTERM';
-  if (entry.exitCode === undefined) entry.exitCode = null;
-  saveSessions(paths as SessionPathsConfig, store);
-
-  console.log(`✅ Stop signal handled for ${identifier}`);
-}
-
-function renderTextView(src: { entry: SessionEntry; lines: string[] }, parsed: ParsedCommand, paths: Required<ConfigPaths>): void {
-  const { entry, lines } = src;
-  const lastN = parsed.options.lines && parsed.options.lines > 0 ? parsed.options.lines : 60;
-  let lastInstructionsIdx = -1;
-  for (let i = lines.length - 1; i >= 0; i--) {
-    if ((lines[i] || '').includes('User instructions:')) { lastInstructionsIdx = i; break; }
-  }
-  const instructions: string[] = [];
-  if (lastInstructionsIdx !== -1) {
-    for (let i = lastInstructionsIdx; i < Math.min(lines.length, lastInstructionsIdx + 20); i++) {
-      instructions.push(lines[i]);
-      if (i > lastInstructionsIdx && (lines[i] || '').trim() === '') break;
-    }
-  }
-  const errorLines = lines.filter(l => /\bERROR\b|\bError:\b|\bFailed\b/i.test(l || '')).slice(-10);
-  console.log(`\nView: ${entry.agent} | session:${entry.sessionId || 'n/a'} | log:${formatPathRelative(entry.logFile || 'n/a', paths.baseDir || '.')}`);
-  if (instructions.length) { console.log('\nLast Instructions:'); instructions.forEach(l => console.log('  ' + l)); }
-  if (errorLines.length) { console.log('\nRecent Errors:'); errorLines.forEach(l => console.log('  ' + l)); }
-  console.log('\nStats:');
-  console.log('  Errors           ' + errorLines.length);
-  console.log('  Lines            ' + lines.length);
-  console.log(`\nTail (${lastN} lines):`);
-  lines.slice(-lastN).forEach(l => console.log('  ' + l));
+  const envelope = buildStopView({
+    style: parsed.options.style,
+    target,
+    events,
+    summary
+  });
+  await emitView(envelope, parsed.options);
+  await appendWarningView();
 }
 
 function findSessionEntry(
@@ -1268,7 +1457,7 @@ function findSessionEntry(
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      console.warn(`[genie] Failed to scan log ${logFile}: ${message}`);
+      recordRuntimeWarning(`[genie] Failed to scan log ${logFile}: ${message}`);
     }
   }
   return null;
@@ -1299,88 +1488,74 @@ function resolveDisplayStatus(entry: SessionEntry): string {
   return baseStatus;
 }
 
-function runHelp(config: GenieConfig, paths: Required<ConfigPaths>): void {
+async function runHelp(parsed: ParsedCommand, config: GenieConfig, paths: Required<ConfigPaths>): Promise<void> {
   const agents = listAgents();
+  const modeAgents = agents.filter((agent) => agent.id.startsWith('genie-'));
+  const standardAgents = agents.filter((agent) => !agent.id.startsWith('genie-'));
   const presetsEntries = Object.entries(config.presets || {});
   const backgroundDefault = Boolean(config.defaults && config.defaults.background);
   const runDesc = backgroundDefault ? 'Start a run (background default)' : 'Start a run (foreground default)';
-  const rows = [
-    { cmd: 'run', args: '<agent> "<prompt>"', desc: runDesc },
-    { cmd: 'mode', args: '<genie-mode> "<prompt>"', desc: 'Run a Genie Mode (maps to genie-<mode>)' },
-    { cmd: 'continue', args: '<sessionId> "<prompt>"', desc: 'Continue run by session id' },
-    { cmd: 'view', args: '<sessionId> [--lines N]', desc: 'View run output (friendly)' },
-    { cmd: 'stop', args: '<sessionId>', desc: 'Send SIGTERM to a running session' },
-    { cmd: 'runs', args: '[--status <s>] [--json]', desc: 'List runs with status; manage background tasks' },
-    { cmd: 'list', args: '', desc: 'Show active/completed sessions' },
-    { cmd: 'help', args: '', desc: 'Show this help' }
+  const commandRows = [
+    { command: 'run', args: '<agent> "<prompt>"', description: runDesc },
+    { command: 'mode', args: '<genie-mode> "<prompt>"', description: 'Trigger a Genie Mode (maps to genie-<mode>)' },
+    { command: 'continue', args: '<sessionId> "<prompt>"', description: 'Continue a background session' },
+    { command: 'view', args: '<sessionId> [--lines N]', description: 'Stream the latest output' },
+    { command: 'stop', args: '<sessionId>', description: 'Gracefully end a session' },
+    { command: 'runs', args: '[--status <s>] [--json]', description: 'Show background activity' },
+    { command: 'list', args: '', description: 'List recent sessions' },
+    { command: 'help', args: '', description: 'Open this panel' }
   ];
-  const presets = presetsEntries.map(([name, info]) => ({
+
+  const optionRows = [
+    { flag: '--preset <name>', description: 'Switch execution posture (default: default)' },
+    { flag: '-c, --config <key=value>', description: 'Temporarily override a config key' },
+    { flag: '--no-background', description: 'Stay in foreground streaming output' },
+    { flag: 'runs -> --status <s>', description: 'Filter by running|completed|failed|stopped' },
+    { flag: 'runs -> --json', description: 'Emit JSON instead of the formatted table' }
+  ];
+
+  const presetsRows = presetsEntries.map(([name, info]) => ({
     name,
-    desc: (info && info.description) ? info.description : 'no description'
+    description: (info && info.description) ? info.description : 'no description provided'
   }));
 
-  const hdr = 'GENIE CLI — Helper';
-  const usage = 'Usage: genie <command> [options]';
-  const bg = backgroundDefault
-    ? 'Background: ON by default (use --no-background for foreground)'
-    : 'Background: OFF by default (use --background to detach)';
-
-  const commandTable = renderTable(['Command', 'Arguments', 'Description'], rows.map((r) => [r.cmd, r.args, r.desc]));
-
-  const globalOptsData = [
-    { flag: '--preset <name>', desc: 'Select preset (default: default)' },
-    { flag: '-c, --config <key=value>', desc: 'Override config key (repeatable)' },
-    { flag: '--no-background', desc: 'Run in foreground (stream output)' }
-  ];
-  const runsOptsData = [
-    { flag: '--status <s>', desc: 'Filter: running|completed|failed|stopped' },
-    { flag: '--json', desc: 'JSON output' }
-  ];
-
-  const flagWidth = Math.max(
-    ...globalOptsData.map((o) => o.flag.length),
-    ...runsOptsData.map((o) => o.flag.length)
-  );
-  const renderOptions = (items: { flag: string; desc: string }[]) =>
-    items
-      .map((o) => `  ${o.flag.padEnd(flagWidth)}  ${o.desc}`)
-      .join('\n');
-  const globalOpts = renderOptions(globalOptsData);
-  const runsOpts = renderOptions(runsOptsData);
-
-  const presetNameWidth = Math.max(16, ...presets.map((p) => p.name.length));
-  const presetsBlock = presets
-    .map((p) => `  ${p.name.padEnd(presetNameWidth)}  ${p.desc}`)
-    .join('\n');
-
-  const promptSkeleton = (
-    '[Discovery] Load @files; identify objectives, constraints, gaps.\n' +
-    '[Implementation] Apply per @.genie/agents/<agent>.md; edit files or produce artifacts.\n' +
-    '[Verification] Summarize outputs, evidence, sections changed, open questions.'
-  );
-
-  const examples = [
-    'genie mode planner "[Discovery] @vendors/... [Implementation] … [Verification] …"',
-    'genie run hello-coder "[Discovery] Review repo @README.md [Implementation] …"'
-  ];
-
-  console.log(`\n${hdr}`);
-  console.log(usage);
-  console.log(bg);
-  console.log('\nCommands:');
-  commandTable.forEach((line) => console.log(line));
-  console.log('\nGlobal Options:\n' + globalOpts);
-  console.log('\nRuns Options:\n' + runsOpts);
-  console.log('\nPresets:\n' + presetsBlock);
-  console.log('\nPrompt Skeleton:\n' + promptSkeleton);
-  console.log('\nExamples:');
-  examples.forEach((ex) => console.log('  ' + ex));
-  console.log('\nAgents:');
-  agents.forEach((a) => {
-    console.log(`  ${a.id} | model:${resolveAgentModel(a.meta)} | ${a.meta?.description || ''}`);
-    console.log(`    ${promptHint(a.id)}`);
+  const modeRows = modeAgents.map((agent) => {
+    const modeName = agent.id.replace(/^genie-/, '');
+    const description = truncateText((agent.meta?.description || '').replace(/\s+/g, ' ').trim(), 56);
+    return {
+      mode: modeName,
+      invoke: `genie mode ${modeName} "<prompt>"`,
+      focus: description
+    };
   });
-  console.log('');
+
+  const agentRows = standardAgents.map((agent) => ({
+    id: agent.id,
+    model: resolveAgentModel(agent.meta),
+    description: truncateText((agent.meta?.description || '').replace(/\s+/g, ' ').trim(), 68)
+  }));
+
+  const envelope = buildHelpView({
+    style: parsed.options.style,
+    backgroundDefault,
+    defaultPreset: config.defaults?.preset,
+    commandRows,
+    optionRows,
+    presets: presetsRows,
+    promptFramework: [
+      'Discovery -> load @ context, surface goals, spot blockers early.',
+      'Implementation -> follow the target agent playbook with evidence-first outputs.',
+      'Verification -> capture validation commands, metrics, and open questions.'
+    ],
+    examples: [
+      'genie mode planner "[Discovery] mission @.genie/product/mission.md ..."',
+      'genie run hello-coder "[Discovery] Review @README.md ..."'
+    ],
+    modes: modeRows,
+    agents: agentRows
+  });
+
+  await emitView(envelope, parsed.options);
 }
 
 function listAgents(): Array<{ id: string; meta: any }> {
@@ -1397,10 +1572,6 @@ function listAgents(): Array<{ id: string; meta: any }> {
 
 function resolveAgentModel(meta: any): string {
   return meta?.model || meta?.genie?.model || 'unknown';
-}
-
-function promptHint(id: string): string {
-  return `Usage: genie run ${id} "[Discovery] Load @files & context. [Implementation] Apply per @.genie/agents/${id}.md. [Verification] Summarize edits, evidence, open questions."`;
 }
 
 function renderTable(headers: string[], rows: Array<string[]>): string[] {
@@ -1430,4 +1601,36 @@ function renderTable(headers: string[], rows: Array<string[]>): string[] {
   const bottom = line('└', '─', '┴', '┘');
 
   return [top, header, separator, ...body, bottom];
+}
+
+function renderHero(title: string, subtitle: string): string[] {
+  const width = Math.max(title.length, subtitle.length) + 8;
+  const top = `╔${'═'.repeat(width - 2)}╗`;
+  const pad = (text: string) => `║ ${text.padEnd(width - 4)} ║`;
+  const bottom = `╚${'═'.repeat(width - 2)}╝`;
+  return [top, pad(title), pad(subtitle), bottom];
+}
+
+function renderKeyValueLines(pairs: Array<{ label: string; value: string }>): string[] {
+  if (pairs.length === 0) return [];
+  const labelWidth = Math.max(...pairs.map((pair) => pair.label.length));
+  return pairs.map((pair) => ` ${pair.label.padEnd(labelWidth)}  ${pair.value}`);
+}
+
+function renderSectionHeading(title: string): string {
+  const width = 76;
+  const label = ` ${title.toUpperCase()} `;
+  const filler = '─'.repeat(Math.max(0, width - label.length));
+  return `╭${label}${filler}`;
+}
+
+function renderBulletList(items: string[]): string[] {
+  return items.map((item) => `  - ${item}`);
+}
+
+function truncateText(text: string, maxLength = 64): string {
+  if (!text) return '';
+  if (text.length <= maxLength) return text;
+  const sliceLength = Math.max(0, maxLength - 3);
+  return text.slice(0, sliceLength).trimEnd() + '...';
 }

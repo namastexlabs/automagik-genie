@@ -113,6 +113,85 @@ To integrate another backend (e.g., a Rust binary or different AI service):
 
 * The CLI still contains Codex-biased help text and prompts; consider moving these into executor metadata for easier reuse.
 
+## Codex Parameters
+
+The CLI supports all standard Codex execution parameters. These can be configured via defaults in `config.yaml`, presets, or runtime overrides:
+
+### Core Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| **prompt** | string | - | The initial user prompt to start the conversation (required) |
+| **base-instructions** | string | - | Custom instructions loaded from agent files, overrides defaults |
+| **model** | string | `gpt-5-codex` | Model to use (e.g., `o3`, `o4-mini`) |
+| **sandbox** | string | `workspace-write` | Sandbox mode: `read-only`, `workspace-write`, `danger-full-access` |
+| **approval-policy** | string | `on-failure` | Shell command approval: `untrusted`, `on-failure`, `on-request`, `never` |
+| **profile** | string | null | Configuration profile from config.toml |
+| **cwd** | string | - | Working directory (passed as `cd` option) |
+
+### Feature Flags
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| **include-plan-tool** | boolean | false | Whether to include the plan tool |
+| **search** | boolean | false | Enable search capabilities |
+| **skip-git-repo-check** | boolean | false | Skip git repository verification |
+| **json** | boolean | false | Output in JSON format |
+| **experimental-json** | boolean | true | Use experimental JSON streaming |
+| **full-auto** | boolean | true | Run without user interaction (sets workspace-write + on-failure) |
+
+### Advanced Options
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| **output-schema** | string | null | Schema for structured output |
+| **output-last-message** | string | null | Path to save last message |
+| **reasoning-effort** | string | `low` | Reasoning effort: `low`, `medium`, `high` |
+| **color** | string | `auto` | Color output mode |
+| **images** | array | [] | Image paths to include |
+| **additional-args** | array | [] | Extra arguments to pass through |
+
+### Configuration Priority
+1. Command-line arguments (highest priority)
+2. Preset configuration (from `config.yaml`)
+3. Default values in `codex.ts` (lowest priority)
+
+## Approval Modes & Sandbox Settings
+
+### Approval Policy Options
+| Mode | Flag | Description |
+|------|------|-------------|
+| **never** | `--ask-for-approval never` | No approval prompts (works with all sandbox modes) |
+| **on-failure** | `--ask-for-approval on-failure` | Ask for approval when sandboxed commands fail |
+| **on-request** | `--ask-for-approval on-request` | Ask for approval for risky operations |
+| **untrusted** | `--ask-for-approval untrusted` | Ask for approval for all operations |
+
+### Sandbox Modes
+| Mode | Flag | Description |
+|------|------|-------------|
+| **read-only** | `--sandbox read-only` | Can only read files, no edits or commands |
+| **workspace-write** | `--sandbox workspace-write` | Can edit files and run commands in workspace |
+| **danger-full-access** | `--sandbox danger-full-access` | Full system access (use with caution) |
+
+### Common Combinations
+| Intent | Flags | Effect |
+|--------|-------|--------|
+| **Safe browsing** | `--sandbox read-only --ask-for-approval on-request` | Read files only, ask before edits/commands |
+| **Read-only CI** | `--sandbox read-only --ask-for-approval never` | Read only, never escalates |
+| **Auto mode** | `--full-auto` | Equivalent to `--sandbox workspace-write --ask-for-approval on-failure` |
+| **Edit repo, ask if risky** | `--sandbox workspace-write --ask-for-approval on-request` | Edit workspace, ask for risky operations |
+| **YOLO (not recommended)** | `--dangerously-bypass-approvals-and-sandbox` | No sandbox, no prompts (alias: `--yolo`) |
+
+### Default Behavior
+- **Version-controlled folders**: Auto mode (workspace-write + on-failure approvals)
+- **Non-version-controlled folders**: Read-only mode recommended
+- **Network access**: Disabled by default in workspace-write unless enabled in config
+- **Workspace scope**: Current directory + temporary directories (/tmp)
+
+### Fine-tuning in config.toml
+Network access can be enabled for workspace-write mode:
+```toml
+[sandbox_workspace_write]
+network_access = true
+```
+
 ## Enhancement / Cleanup Ideas
 
 1. **Modularise CLI Concerns** – break `genie.js` into smaller files (argument parsing, command handlers, output rendering) for maintainability.

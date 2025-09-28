@@ -1,5 +1,6 @@
 import { SpawnOptionsWithoutStdio } from 'child_process';
 import { SessionStore } from '../session-store';
+import type { ViewEnvelope, ViewStyle } from '../view';
 
 export interface ExecutorCommand {
   command: string;
@@ -24,6 +25,17 @@ export interface ExecutorLogViewer {
     saveSessions: typeof import('../session-store').saveSessions,
     formatPathRelative: (targetPath: string, baseDir: string) => string
   ): void;
+  buildJsonlView?(
+    context: {
+      render: ExecutorLogViewerRenderArgs;
+      parsed: any;
+      paths: any;
+      store: SessionStore;
+      save: typeof import('../session-store').saveSessions;
+      formatPathRelative: (targetPath: string, baseDir: string) => string;
+      style: ViewStyle;
+    }
+  ): ViewEnvelope;
 }
 
 export interface ExecutorDefaults {

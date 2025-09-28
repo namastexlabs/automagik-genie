@@ -116,6 +116,7 @@ Routing keys map to agent files. Keep this updated as new agents are added.
 - quality → `.genie/agents/hello-quality.md`
 - tests → `.genie/agents/hello-tests.md`
 - self-learn → `.genie/agents/hello-self-learn.md`
+- bug-reporter → `.genie/agents/hello-bug-reporter.md`
 - task-master → `.genie/agents/forge-master.md`
 - planner → `.genie/agents/forge-master.md`
 - twin → `.genie/agents/genie-twin.md`

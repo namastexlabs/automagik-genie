@@ -10,6 +10,7 @@ const defaults: ExecutorDefaults = {
     fullAuto: true,
     model: 'gpt-5-codex',
     sandbox: 'workspace-write',
+    approvalPolicy: 'on-failure',
     profile: null,
     includePlanTool: false,
     search: false,
@@ -20,7 +21,7 @@ const defaults: ExecutorDefaults = {
     cd: null,
     outputSchema: null,
     outputLastMessage: null,
-    reasoningEffort: null,
+    reasoningEffort: 'low',
     additionalArgs: [],
     images: []
   },
@@ -141,6 +142,7 @@ function collectExecOptions(execConfig: Record<string, any>) {
   if (execConfig.fullAuto) options.push('--full-auto');
   if (execConfig.model) options.push('-m', String(execConfig.model));
   if (execConfig.sandbox) options.push('-s', String(execConfig.sandbox));
+  if (execConfig.approvalPolicy) options.push('-c', `approval-policy="${execConfig.approvalPolicy}"`);
   if (execConfig.profile) options.push('-p', String(execConfig.profile));
   if (execConfig.includePlanTool) options.push('--include-plan-tool');
   if (execConfig.search) options.push('--search');

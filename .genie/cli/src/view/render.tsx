@@ -1,0 +1,389 @@
+import React, { Fragment } from 'react';
+import gradient from 'gradient-string';
+import {
+  ViewEnvelope,
+  ViewNode,
+  ViewStyle,
+  LayoutNode,
+  HeadingNode,
+  TextNode,
+  KeyValueNode,
+  TableNode,
+  DividerNode,
+  CalloutNode,
+  ListNode,
+  BadgeNode,
+  LogNode,
+  TimelineNode,
+  SpaceNode,
+  RenderOptions,
+  RenderResult
+} from './view-model';
+import { toneToColor, accentToColor, palette, isArtStyle } from './theme';
+
+type InkModule = any;
+let inkModule: InkModule | null = null;
+
+async function ensureInk(): Promise<InkModule> {
+  if (!inkModule) {
+    inkModule = await import('ink');
+  }
+  return inkModule;
+}
+
+function useInk(): InkModule {
+  if (!inkModule) {
+    throw new Error('Ink module not loaded');
+  }
+  return inkModule;
+}
+
+export async function renderEnvelope(envelope: ViewEnvelope, options: RenderOptions = {}): Promise<RenderResult> {
+  const targetStream = options.stream ?? process.stdout;
+  const finalStyle: ViewStyle = options.style ?? envelope.style ?? 'compact';
+
+  if (options.json) {
+    const payload = JSON.stringify(envelope, null, 2);
+    targetStream.write(payload + '\n');
+    return { text: payload };
+  }
+
+  const { render: inkRender } = await ensureInk();
+
+  const instance = inkRender(<EnvelopeRoot envelope={envelope} style={finalStyle} />, {
+    stdout: targetStream,
+    stderr: options.stream === process.stderr ? process.stderr : undefined,
+    exitOnCtrlC: false
+  });
+  await instance.waitUntilExit();
+  return {};
+}
+
+function EnvelopeRoot({ envelope, style }: { envelope: ViewEnvelope; style: ViewStyle }): React.ReactElement {
+  const { Box: InkBox } = useInk();
+  return (
+    <InkBox flexDirection="column">
+      {renderNode(envelope.body, style)}
+    </InkBox>
+  );
+}
+
+function renderNode(node: ViewNode, style: ViewStyle, keyPrefix = 'node'): React.ReactElement | null {
+  switch (node.type) {
+    case 'layout':
+      return renderLayoutNode(node, style, keyPrefix);
+    case 'heading':
+      return renderHeadingNode(node, style);
+    case 'text':
+      return renderTextNode(node);
+    case 'keyValue':
+      return renderKeyValueNode(node);
+    case 'table':
+      return renderTableNode(node);
+    case 'divider':
+      return renderDividerNode(node);
+    case 'callout':
+      return renderCalloutNode(node);
+    case 'list':
+      return renderListNode(node);
+    case 'badge':
+      return renderBadgeNode(node);
+    case 'log':
+      return renderLogNode(node);
+    case 'timeline':
+      return renderTimelineNode(node);
+    case 'space': {
+      const { Text: InkText } = useInk();
+      return <InkText key={`${keyPrefix}-space`}>{'\n'.repeat(Math.max(0, node.size))}</InkText>;
+    }
+    default:
+      return null;
+  }
+}
+
+function renderLayoutNode(node: LayoutNode, style: ViewStyle, keyPrefix: string): React.ReactElement {
+  const { Box: InkBox, Text: InkText } = useInk();
+  const direction = node.direction ?? 'column';
+  const padding = node.padding ?? [0, 0, 0, 0];
+  const children: React.ReactNode[] = [];
+  node.children.forEach((child, index) => {
+    const key = `${keyPrefix}-${index}`;
+    children.push(
+      <Fragment key={key}>
+        {renderNode(child, style, key)}
+        {index < node.children.length - 1 && node.gap ? gapSpacer(direction, node.gap, key) : null}
+      </Fragment>
+    );
+  });
+
+  return (
+    <InkBox
+      flexDirection={direction}
+      paddingTop={padding[0]}
+      paddingRight={padding[1]}
+      paddingBottom={padding[2]}
+      paddingLeft={padding[3]}
+      alignItems={node.alignItems}
+      justifyContent={node.justifyContent}
+    >
+      {children}
+    </InkBox>
+  );
+}
+
+function gapSpacer(direction: 'row' | 'column', size: number, key: string): React.ReactElement {
+  const { Text: InkText } = useInk();
+  if (direction === 'column') {
+    return <InkText key={`${key}-gap`}>{'\n'.repeat(size)}</InkText>;
+  }
+  return <InkText key={`${key}-gap`}>{' '.repeat(size)}</InkText>;
+}
+
+function renderHeadingNode(node: HeadingNode, style: ViewStyle): React.ReactElement {
+  const { Box: InkBox, Text: InkText } = useInk();
+  const color = accentToColor(node.accent);
+  if (node.level === 1 && isArtStyle(style)) {
+    const text = gradient([palette.accent.primary, palette.accent.secondary])(node.text);
+    return (
+      <InkBox flexDirection="column" alignItems={node.align === 'center' ? 'center' : 'flex-start'}>
+        <InkText>{text}</InkText>
+      </InkBox>
+    );
+  }
+  const levelStyles: Record<number, { bold?: boolean; uppercase?: boolean }> = {
+    1: { bold: true },
+    2: { bold: true },
+    3: { bold: false }
+  };
+  const styleInfo = levelStyles[node.level];
+  const textContent = styleInfo.uppercase ? node.text.toUpperCase() : node.text;
+  return (
+    <InkBox justifyContent={node.align === 'center' ? 'center' : 'flex-start'}>
+      <InkText color={color} bold={styleInfo.bold}>
+        {textContent}
+      </InkText>
+    </InkBox>
+  );
+}
+
+function renderTextNode(node: TextNode): React.ReactElement {
+  const { Text: InkText } = useInk();
+  const color = toneToColor(node.tone ?? 'default');
+  return (
+    <InkText color={color} dimColor={node.dim} italic={node.italic}>
+      {node.text}
+    </InkText>
+  );
+}
+
+function renderKeyValueNode(node: KeyValueNode): React.ReactElement {
+  const { Box: InkBox, Text: InkText } = useInk();
+  type KeyValueItem = KeyValueNode['items'][number];
+  const columnsPerRow = node.columns ?? 1;
+  const rows: KeyValueItem[][] = [];
+  node.items.forEach((item, index) => {
+    const rowIndex = Math.floor(index / columnsPerRow);
+    if (!rows[rowIndex]) rows[rowIndex] = [];
+    rows[rowIndex]!.push(item);
+  });
+
+  const labelWidth = node.items.length ? Math.max(...node.items.map((item) => item.label.length)) : 0;
+
+  return (
+    <InkBox flexDirection="column">
+      {rows.map((row, idx) => (
+        <InkBox key={`kv-row-${idx}`} flexDirection="row">
+          {row.map((item, colIndex) => (
+            <InkBox key={`kv-${idx}-${colIndex}`} flexDirection="row" marginRight={4}>
+              <InkText color={palette.accent.muted}>
+                {item.label.padEnd(labelWidth)}
+              </InkText>
+              <InkText color={toneToColor(item.tone ?? 'default')} dimColor={item.dim}>
+                {'  ' + item.value}
+              </InkText>
+            </InkBox>
+          ))}
+        </InkBox>
+      ))}
+    </InkBox>
+  );
+}
+
+function renderTableNode(node: TableNode): React.ReactElement {
+  const { Box: InkBox, Text: InkText } = useInk();
+  const columns = node.columns;
+  const widths = columns.map((col) => Math.max(col.label.length, col.width ?? 0));
+  node.rows.forEach((row) => {
+    columns.forEach((col, idx) => {
+      const value = row[col.key] ?? '';
+      widths[idx] = Math.max(widths[idx], value.length);
+    });
+  });
+
+  const renderRow = (row: Record<string, string>, isHeader = false) => (
+    <InkText>
+      {' '}
+      {columns
+        .map((col, idx) => {
+          const raw = isHeader ? col.label : row[col.key] ?? '';
+          const width = widths[idx];
+          const aligned = alignCell(raw, width, col.align ?? 'left');
+          return aligned;
+        })
+        .join(' │ ')}
+    </InkText>
+  );
+
+  const borderTop = '┌' + widths.map((w) => '─'.repeat(w + 2)).join('┬') + '┐';
+  const borderMid = '├' + widths.map((w) => '─'.repeat(w + 2)).join('┼') + '┤';
+  const borderBottom = '└' + widths.map((w) => '─'.repeat(w + 2)).join('┴') + '┘';
+
+  return (
+    <InkBox flexDirection="column">
+      <InkText>{borderTop}</InkText>
+      {renderRow(Object.fromEntries(columns.map((c) => [c.key, c.label])), true)}
+      <InkText>{borderMid}</InkText>
+      {node.rows.length === 0 && node.emptyText ? (
+        <InkText color={palette.foreground.placeholder}>{` ${node.emptyText}`}</InkText>
+      ) : (
+        node.rows.map((row, idx) => <Fragment key={`row-${idx}`}>{renderRow(row)}</Fragment>)
+      )}
+      <InkText>{borderBottom}</InkText>
+    </InkBox>
+  );
+}
+
+function alignCell(text: string, width: number, align: 'left' | 'right' | 'center'): string {
+  if (align === 'right') return text.padStart(width);
+  if (align === 'center') {
+    const left = Math.floor((width - text.length) / 2);
+    const right = width - text.length - left;
+    return ' '.repeat(left) + text + ' '.repeat(right);
+  }
+  return text.padEnd(width);
+}
+
+function renderDividerNode(node: DividerNode): React.ReactElement {
+  const { Text: InkText } = useInk();
+  const variant = node.variant ?? 'solid';
+  const accentColor = accentToColor(node.accent ?? 'muted');
+  const char = variant === 'double' ? '═' : variant === 'dashed' ? '┄' : '─';
+  return (
+    <InkText color={accentColor}>{char.repeat(72)}</InkText>
+  );
+}
+
+function renderCalloutNode(node: CalloutNode): React.ReactElement {
+  const { Box: InkBox, Text: InkText } = useInk();
+  const toneColor = toneToColor(node.tone);
+  const icon = node.icon || deriveCalloutIcon(node.tone);
+  const border = node.tone === 'danger' ? 'double' : 'round';
+  return (
+    <InkBox flexDirection="column" borderStyle={border as any} borderColor={toneColor} paddingX={1} paddingY={0}>
+      {node.title ? (
+        <InkText color={toneColor} bold>
+          {icon ? `${icon} ` : ''}{node.title}
+        </InkText>
+      ) : null}
+      {node.body.map((line, idx) => (
+        <InkText key={`callout-line-${idx}`} color={palette.foreground.default}>
+          {line}
+        </InkText>
+      ))}
+    </InkBox>
+  );
+}
+
+function deriveCalloutIcon(tone: CalloutNode['tone']): string {
+  switch (tone) {
+    case 'success':
+      return '✅';
+    case 'warning':
+      return '⚠️';
+    case 'danger':
+      return '❌';
+    case 'info':
+    default:
+      return 'ℹ️';
+  }
+}
+
+function renderListNode(node: ListNode): React.ReactElement {
+  const { Box: InkBox, Text: InkText } = useInk();
+  return (
+    <InkBox flexDirection="column">
+      {node.items.map((item, idx) => (
+        <InkText key={`list-${idx}`} color={toneToColor(node.tone ?? 'default')}>
+          {node.ordered ? `${idx + 1}. ${item}` : `• ${item}`}
+        </InkText>
+      ))}
+    </InkBox>
+  );
+}
+
+function renderBadgeNode(node: BadgeNode): React.ReactElement {
+  const { Box: InkBox, Text: InkText } = useInk();
+  const color = toneToColor(node.tone === 'muted' ? 'muted' : node.tone);
+  return (
+    <InkBox borderStyle="round" borderColor={color} paddingX={1} paddingY={0}>
+      <InkText color={color}>{node.text}</InkText>
+    </InkBox>
+  );
+}
+
+function renderLogNode(node: LogNode): React.ReactElement {
+  const { Box: InkBox, Text: InkText } = useInk();
+  const lines = node.maxLines ? node.lines.slice(-node.maxLines) : node.lines;
+  return (
+    <InkBox flexDirection="column">
+      {lines.map((line, idx) => (
+        <InkText key={`log-${idx}`} color={toneToColor(line.tone ?? 'default')} bold={line.emphasis}>
+          {line.text}
+        </InkText>
+      ))}
+    </InkBox>
+  );
+}
+
+function renderTimelineNode(node: TimelineNode): React.ReactElement {
+  const { Box: InkBox, Text: InkText } = useInk();
+  return (
+    <InkBox flexDirection="column">
+      {node.items.map((item, idx) => {
+        const isLast = idx === node.items.length - 1;
+        const statusIcon = resolveTimelineIcon(item.status);
+        return (
+          <InkBox key={`timeline-${idx}`} flexDirection="row">
+            <InkBox flexDirection="column" marginRight={1}>
+              <InkText>{statusIcon}</InkText>
+              {!isLast ? <InkText>│</InkText> : <InkText> </InkText>}
+            </InkBox>
+            <InkBox flexDirection="column">
+              <InkText color={palette.foreground.default} bold>
+                {item.title}
+              </InkText>
+              {item.subtitle ? (
+                <InkText color={palette.foreground.muted}>{item.subtitle}</InkText>
+              ) : null}
+              {item.meta ? (
+                <InkText color={palette.foreground.placeholder}>{item.meta}</InkText>
+              ) : null}
+            </InkBox>
+          </InkBox>
+        );
+      })}
+    </InkBox>
+  );
+}
+
+function resolveTimelineIcon(status: TimelineNode['items'][number]['status']): string {
+  switch (status) {
+    case 'done':
+      return '●';
+    case 'failed':
+      return '✖';
+    case 'pending':
+    default:
+      return '○';
+  }
+}

@@ -7,11 +7,11 @@ exports._internals = void 0;
 exports.loadSessions = loadSessions;
 exports.saveSessions = saveSessions;
 const fs_1 = __importDefault(require("fs"));
-function loadSessions(paths = {}, config = {}, defaults = {}) {
+function loadSessions(paths = {}, config = {}, defaults = {}, callbacks = {}) {
     const storePath = paths.sessionsFile;
     let store;
     if (storePath && fs_1.default.existsSync(storePath)) {
-        store = normalizeSessionStore(readJson(storePath));
+        store = normalizeSessionStore(readJson(storePath, callbacks));
     }
     else {
         store = { version: 1, agents: {} };
@@ -25,7 +25,7 @@ function saveSessions(paths = {}, store) {
     const payload = JSON.stringify(store, null, 2);
     fs_1.default.writeFileSync(paths.sessionsFile, payload);
 }
-function readJson(filePath) {
+function readJson(filePath, callbacks) {
     const content = fs_1.default.readFileSync(filePath, 'utf8');
     if (!content.trim().length)
         return {};
@@ -34,7 +34,7 @@ function readJson(filePath) {
     }
     catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        console.error(`⚠️ Could not parse JSON from ${filePath}: ${message}`);
+        callbacks.onWarning?.(`Could not parse JSON from ${filePath}: ${message}`);
         return {};
     }
 }

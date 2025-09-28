@@ -43,13 +43,14 @@ export interface SessionDefaults {
 export function loadSessions(
   paths: SessionPathsConfig = {},
   config: SessionLoadConfig = {},
-  defaults: SessionDefaults = {}
+  defaults: SessionDefaults = {},
+  callbacks: { onWarning?: (message: string) => void } = {}
 ): SessionStore {
   const storePath = paths.sessionsFile;
   let store: SessionStore;
 
   if (storePath && fs.existsSync(storePath)) {
-    store = normalizeSessionStore(readJson(storePath));
+    store = normalizeSessionStore(readJson(storePath, callbacks));
   } else {
     store = { version: 1, agents: {} };
   }
@@ -64,14 +65,14 @@ export function saveSessions(paths: SessionPathsConfig = {}, store: SessionStore
   fs.writeFileSync(paths.sessionsFile, payload);
 }
 
-function readJson(filePath: string): unknown {
+function readJson(filePath: string, callbacks: { onWarning?: (message: string) => void }): unknown {
   const content = fs.readFileSync(filePath, 'utf8');
   if (!content.trim().length) return {};
   try {
     return JSON.parse(content);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error(`⚠️ Could not parse JSON from ${filePath}: ${message}`);
+    callbacks.onWarning?.(`Could not parse JSON from ${filePath}: ${message}`);
     return {};
   }
 }
