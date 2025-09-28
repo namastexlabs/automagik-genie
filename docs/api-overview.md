@@ -1,6 +1,6 @@
 # API Overview
 
-This document summarizes the external interfaces Automagik Hello exposes or consumes. It is meant to complement the detailed protocol references (`docs/websocket-protocol.md`, `docs/management-api.md`) with a concise checklist for implementers.
+This document summarizes the external interfaces {{PROJECT_NAME}} exposes or consumes. It complements detailed protocol references (`docs/websocket-protocol.md`, `docs/management-api.md`) with a concise checklist for implementers.
 
 ## 1. Real-Time Conversation WebSocket
 
@@ -34,7 +34,7 @@ See the full schema in [WebSocket Protocol Reference](websocket-protocol.md).
 
 ## 2. Metrics & Transcript Artifacts
 
-Automagik Hello emits conversation artifacts that match ElevenLabs’ conversation API schema.
+{{PROJECT_NAME}} emits artifacts that match your chosen provider schemas ({{APIS}}), or your own internal schema.
 
 - **Format**: JSON array of turns (store wherever the active wish specifies; no default path)
 
@@ -66,7 +66,7 @@ Design details, including request/response payloads, live in [ElevenLabs Agents 
 
 ## 4. Provider Integrations
 
-Automagik Hello currently depends on external providers for speech services:
+{{PROJECT_NAME}} may depend on external providers ({{APIS}}) for critical services:
 
 - **ElevenLabs TTS**: `wss://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream-input`
 - **Groq Whisper STT**: `https://api.groq.com/openai/v1/audio/transcriptions` (REST) or streaming equivalent when available

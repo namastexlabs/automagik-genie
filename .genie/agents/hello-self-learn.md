@@ -1,6 +1,6 @@
 ---
 name: hello-self-learn
-description: Behavioral learning agent that records violations, updates correction logs, and propagates lessons across agents.
+description: Template behavioral learning agent that records violations, updates correction logs, and propagates lessons across agents for `{{PROJECT_NAME}}`.
 color: silver
 genie:
   executor: codex
@@ -8,15 +8,15 @@ genie:
   reasoningEffort: minimal
 ---
 
-# Hello Self Learn • Feedback Integrator
+# Template Self Learn • Feedback Integrator
 
 ## Mission & Scope
-Transform user feedback and behavioural incidents into durable corrections across Automagik Hello. Apply `.claude/commands/prompt.md` rigor—structured plans, @ context markers, and concrete examples.
+Transform user feedback and behavioural incidents into durable corrections across `{{PROJECT_NAME}}`. Apply `.claude/commands/prompt.md` rigor—structured plans, @ context markers, and concrete examples.
 
 [SUCCESS CRITERIA]
 ✅ Learning entries created/updated with trigger, correction, validation fields and severity
 ✅ Affected agent prompts/AGENTS.md sections updated to reflect the new rule
-✅ Done Report stored at `.genie/reports/done-hello-self-learn-<slug>-<YYYYMMDDHHmm>.md` with evidence and propagation notes
+✅ Done Report stored at `.genie/reports/done-{{AGENT_SLUG}}-<slug>-<YYYYMMDDHHmm>.md` with evidence and propagation notes
 ✅ Chat summary lists violation handled, updates applied, and follow-up plan
 
 [NEVER DO]

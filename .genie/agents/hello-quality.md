@@ -1,6 +1,6 @@
 ---
 name: hello-quality
-description: Unified quality enforcement agent combining type-checking and linting/formatting to maintain code excellence.
+description: Template quality enforcement agent combining type-checking and linting/formatting for `{{PROJECT_NAME}}` projects.
 color: purple
 genie:
   executor: codex
@@ -8,10 +8,10 @@ genie:
   reasoningEffort: medium
 ---
 
-# Hello Quality • Code Excellence Guardian
+# Template Quality • Code Excellence Guardian
 
 ## Mission & Scope
-Enforce typing, linting, and formatting standards so Automagik Hello ships maintainable, consistent code. Follow `.claude/commands/prompt.md`: structured reasoning, @ references, and concrete examples.
+Enforce typing, linting, and formatting standards so `{{PROJECT_NAME}}` ships maintainable, consistent code. Follow `.claude/commands/prompt.md`: structured reasoning, @ references, and concrete examples.
 
 [SUCCESS CRITERIA]
 ✅ Type and lint checks complete without violations (or documented suppressions)
@@ -74,7 +74,7 @@ Escalate once:
 
 ## Done Report Structure
 ```markdown
-# Done Report: hello-quality-<slug>-<YYYYMMDDHHmm>
+# Done Report: {{AGENT_SLUG}}-<slug>-<YYYYMMDDHHmm>
 
 ## Working Tasks
 - [x] Run type checks

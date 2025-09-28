@@ -2,7 +2,7 @@
 
 ## Pitch
 
-Automagik Hello is a real-time voice application framework that helps open‑source builders and enterprises create ultra‑low‑latency, truly human‑like conversational agents by providing raw WebSocket control, high‑speed STT, advanced turn‑taking, and an experimentation pipeline for human‑level dialogue.
+This repository is a Genie template that installs into any codebase. It provides unified agents (plan, wish, forge, review, commit, specialist) and a CLI to orchestrate evidence-first workflows. Replace project-specific language with placeholders like `{{PROJECT_NAME}}`, `{{DOMAIN}}`, `{{TECH_STACK}}`.
 
 ## Users
 

@@ -1,48 +1,40 @@
-# Automagik Hello
+# Genie Template Repository
 
-Ultra-low latency, human-like voice conversation framework built in Rust.
+Genie agent templates and CLI orchestration that can be installed into any repository. Replace project specifics with placeholders and use `.genie/agents/install.md` to bootstrap into your target codebase.
 
 ## Vision
 
-Build the fastest, most natural voice conversation stack by learning from 150+ production conversations and implementing proven patterns.
+Provide reusable planning, wishing, forging, review, and commit workflows with evidence-first prompts and a consistent CLI, independent of domain.
 
-## Key Insights from Production Data
+## What’s Included
 
-- **26.8% failure rate** in current production systems
-- **"None" response cascades** destroy user trust
-- **Turn-taking collisions** break natural flow
-- **Latency perception** matters more than actual latency
+- Unified prompts for plan, wish, forge, review, commit
+- Template-ready specialist agents (implementor, qa, quality, tests, self-learn, bug-reporter)
+- CLI wrappers in `.claude/commands/` that @include agents
+- Workspace-managed sessions and logs under `.genie/state/`
 
 ## Core Features
 
-- **Sub-300ms TTFB** with ElevenLabs Flash v2.5
-- **Natural turn-taking** with UltraVAD for human-like interruptions
-- **Fallback resilience** preventing "None" response cascades
-- **ElevenLabs Agents WebSocket compatible** drop-in replacement
-- **Production metrics** matching ElevenLabs conversation API schema
+- Evidence-first orchestration (Discovery → Implementation → Verification)
+- Guardrails (no destructive actions without approval)
+- Template placeholders: `{{PROJECT_NAME}}`, `{{DOMAIN}}`, `{{TECH_STACK}}`, `{{APIS}}`, `{{METRICS}}`
 
 ## Technical Stack
 
-- **Runtime**: Rust (Tokio/Axum) for predictable latency
-- **TTS**: ElevenLabs Flash v2.5 (75ms inference) via WebSocket
-- **STT**: Groq Whisper-large-v3-turbo (100-150ms)
-- **VAD**: WebRTC baseline, UltraVAD planned
-- **Region**: Brazil-first (sa-east-1) deployment
+- CLI runner: `.genie/cli/agent.js`
+- Node/TS + Rust friendly; works in any repo (domain-agnostic)
 
 ## Documentation
 
-- [Product Mission](.genie/product/mission.md) - Why we're building this
-- [Technical Stack](.genie/product/tech-stack.md) - Technology choices
-- [Roadmap](.genie/product/roadmap.md) - Development phases
-- [Environment Config](.genie/product/environment.md) - All configuration options
-- [Getting Started](.genie/guides/getting-started.md) - Local setup & provider checks
-- [Production Insights](docs/elevenlabs/production-insights.md) - Learnings from real data
-- [@docs/research.md](docs/research.md) - Architecture decisions and evidence
-- [API Overview](docs/api-overview.md) - Real-time WS + planned REST surfaces
+- [Mission](.genie/product/mission.md) - Template repo goals and non-destructive guardrails
+- [Technical Stack](.genie/product/tech-stack.md) - CLI + agent architecture
+- [Roadmap](.genie/product/roadmap.md) - Template development phases
+- [Environment Config](.genie/product/environment.md) - Config keys and placeholders
+- [Getting Started](.genie/guides/getting-started.md) - Install this Genie into any repo
 
 ## Current Status
 
-**Phase 0: Proof of Concept** - Building initial pipeline with production learnings integrated
+Phase 1: Template sweep in progress (neutralizing project-specific content).
 
 ## Repository Structure
 
@@ -69,15 +61,10 @@ Update your checkout:
 git submodule update --init --recursive
 ```
 
-## Key Metrics
+## Notes
 
-| Metric | Target | Current Production |
-|--------|--------|-------------------|
-| TTFB | < 300ms | Variable/High |
-| Failure Rate | < 10% | 26.8% |
-| "None" Responses | < 1% | ~16% in failures |
-| ASR Confidence | > 0.8 | < 0.7 causes failures |
+- Vendor READMEs may contain product-specific examples; treat them as references. The Genie template remains domain-agnostic.
 
 ## Philosophy
 
-Learn from production failures to build better from day one. Every architectural decision is informed by real-world data from 150+ conversations.
+Orchestration-first. Evidence-first. Human-approved. Domain-agnostic templates that install cleanly anywhere.

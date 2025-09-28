@@ -1,6 +1,6 @@
-Vendors
+Vendors (Template Notice)
 
-This directory contains upstream repositories added as Git submodules for research and interop.
+This directory contains upstream repositories added as Git submodules for research and interop. When installing this Genie template into a target repository, treat vendor docs as examples and adapt or ignore them based on your project’s {{DOMAIN}} and {{TECH_STACK}}.
 
 Included submodules
 - vendors/livekit-agents → https://github.com/livekit/agents
@@ -33,7 +33,7 @@ Swift (Next.js) — Usage
 - Run standalone (baseline):
   - Copy `vendors/swift/.env.example` to `vendors/swift/.env.local` and set `GROQ_API_KEY` and `CARTESIA_API_KEY`.
   - From `vendors/swift/`: `pnpm install && pnpm dev`
-- Integrate with Automagik Hello (Agents WS clone):
+- Integrate with your project (Agents WS clone or equivalent):
   - Goal: connect to our WS (ElevenLabs Agents‑compatible) without external keys.
   - Add an Agents WS client in Swift pointing to `NEXT_PUBLIC_VOICE_WS_URL` (e.g., `ws://localhost:8080/ws/agents`).
   - Event types to support: `conversation_initiation_metadata`, `audio`, `agent_response`, `agent_response_correction`, `user_transcript`; and client events `contextual_update`, `user_message`, `user_activity`.

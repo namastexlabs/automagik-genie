@@ -1,7 +1,7 @@
 # Automagik Framework Overview
 
 ## Repository Self-Awareness
-- **Purpose**: Build Automagik Hello, a Rust-first real-time voice application stack focused on ultra-low latency and human-likeness.
+- **Purpose**: Provide Genie agent templates and CLI orchestration usable in any codebase. Replace product-specific branding with placeholders (e.g., `{{PROJECT_NAME}}`, `{{DOMAIN}}`).
 - **Primary references** (all under `.genie/` now):
   - `@.genie/product/mission.md` / `mission-lite.md`
   - `@.genie/product/tech-stack.md`
@@ -11,7 +11,7 @@
 - **External dependencies**: ElevenLabs TTS (Flash v2.5 / Turbo / optional v3 alpha), Groq Whisper-large-v3-turbo STT, optional WhisperX/faster-whisper fallback. Environment variables detailed in `@.genie/product/environment.md`.
 
 ## Unified Agent Stack
-The Automagik workflow lives in `.genie/agents/` and is surfaced via CLI wrappers in `.claude/commands/`:
+The Genie workflow lives in `.genie/agents/` and is surfaced via CLI wrappers in `.claude/commands/`:
 - `plan.md` – orchestrates discovery, roadmap sync, context ledger, branch guidance
 - `wish.md` – converts planning brief into a wish with inline `<spec_contract>`
 - `forge-master.md` – breaks approved wish into execution groups + validation hooks (includes planner mode)
@@ -48,7 +48,7 @@ All commands in `.claude/commands/` simply `@include` the corresponding `.genie/
 
 ## Testing & Evaluation
 - Evaluator tooling is optional. If `@.genie/agents/evaluator.md` is present, `/review` or `/plan` can reference it for scoring; otherwise, evaluation steps default to manual validation.
-- Typical voice metrics: TTFB, ASR confidence, overlap behaviour, TTS artifacts (see `@.genie/product/metrics.md`).
+- Typical metrics: `{{METRICS}}` such as latency or quality. Domain-specific metrics should be added per project in the wish/forge plan.
 - Validation hooks should be captured in wishes/forge plans (e.g., `pnpm test`, `cargo test`, metrics scripts).
 
 ## Prompting Standards
@@ -111,12 +111,12 @@ Twin prompt patterns (run through any agent, typically `plan`):
 
 ## Local Agent Map
 Routing keys map to agent files. Keep this updated as new agents are added.
-- implementor → `.genie/agents/hello-coder.md`
-- qa → `.genie/agents/hello-qa-tester.md`
-- quality → `.genie/agents/hello-quality.md`
-- tests → `.genie/agents/hello-tests.md`
-- self-learn → `.genie/agents/hello-self-learn.md`
-- bug-reporter → `.genie/agents/hello-bug-reporter.md`
+- implementor → `.genie/agents/hello-coder.md` (template implementor)
+- qa → `.genie/agents/hello-qa-tester.md` (template QA)
+- quality → `.genie/agents/hello-quality.md` (template quality)
+- tests → `.genie/agents/hello-tests.md` (template tests)
+- self-learn → `.genie/agents/hello-self-learn.md` (template self-learn)
+- bug-reporter → `.genie/agents/hello-bug-reporter.md` (template bug reporter)
 - task-master → `.genie/agents/forge-master.md`
 - planner → `.genie/agents/forge-master.md`
 - twin → `.genie/agents/genie-twin.md`
@@ -181,7 +181,7 @@ Keep this document synced when introducing new agents, changing folder layouts, 
 
 <context>
 [CONTEXT]
-- You are GENIE for Automagik Hello: human-centric, orchestration-first, evidence-driven.
+- You are GENIE for `{{PROJECT_NAME}}`: human-centric, orchestration-first, evidence-driven.
 
 [SUCCESS CRITERIA]
 ✅ Humans approve wish plans, task breakdowns, and outcomes.

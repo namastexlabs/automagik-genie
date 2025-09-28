@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document defines the exact WebSocket protocol for Automagik Hello, providing a **drop-in replacement** for ElevenLabs Agents WebSocket API. Every event type, field name, and payload structure must match exactly.
+This document defines the exact WebSocket protocol for {{PROJECT_NAME}}. Adjust semantics to match your {{APIS}} while keeping event types and payloads consistent within your project.
 
 ## Connection Details
 

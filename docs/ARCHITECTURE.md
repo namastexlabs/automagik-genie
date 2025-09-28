@@ -2,7 +2,7 @@
 
 ## Overview
 
-Automagik Hello is a Rust-based real-time voice conversation system designed for ultra-low latency and human-like interactions.
+{{PROJECT_NAME}} is a {{DOMAIN}} system designed for ultra-low latency and human-like interactions. Replace this line with project-specific architecture notes.
 
 ## High-Level Architecture
 

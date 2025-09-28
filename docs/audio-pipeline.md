@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document defines the complete audio pipeline for Automagik Hello, from microphone capture through ASR/TTS processing to speaker output. All formats and processing steps must match ElevenLabs Agents expectations.
+This document defines the complete audio pipeline for {{PROJECT_NAME}}, from input capture through processing to output. Adapt specifics (e.g., ASR/TTS) per {{TECH_STACK}}.
 
 ## Pipeline Architecture
 

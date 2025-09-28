@@ -14,3 +14,6 @@
 [submodule "vendors/zen-mcp-server"]
 	path = vendors/zen-mcp-server
 	url = https://github.com/BeehiveInnovations/zen-mcp-server
+[submodule "vendors/agent-os"]
+	path = vendors/agent-os
+	url = https://github.com/buildermethods/agent-os
