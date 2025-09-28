@@ -701,6 +701,39 @@ function executeRun(args) {
         proc.stdout.pipe(logStream);
     if (proc.stderr)
         proc.stderr.pipe(logStream);
+    const updateSessionFromLine = (line) => {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('{'))
+            return;
+        try {
+            const data = JSON.parse(trimmed);
+            if (data && typeof data === 'object' && data.type === 'session.created') {
+                const sessionId = data.session_id || data.sessionId;
+                if (sessionId && !entry.sessionId) {
+                    entry.sessionId = sessionId;
+                    entry.lastUsed = new Date().toISOString();
+                    (0, session_store_1.saveSessions)(paths, store);
+                }
+            }
+        }
+        catch {
+            // ignore malformed JSON lines
+        }
+    };
+    if (proc.stdout) {
+        let buffer = '';
+        proc.stdout.on('data', (chunk) => {
+            const text = chunk instanceof Buffer ? chunk.toString('utf8') : chunk;
+            buffer += text;
+            let index = buffer.indexOf('\n');
+            while (index !== -1) {
+                const line = buffer.slice(0, index);
+                buffer = buffer.slice(index + 1);
+                updateSessionFromLine(line);
+                index = buffer.indexOf('\n');
+            }
+        });
+    }
     if (!background) {
         if (proc.stdout)
             proc.stdout.pipe(process.stdout);
@@ -1071,6 +1104,17 @@ function runStop(parsed, config, paths) {
             const ok = backgroundManager.stop(numericPid);
             if (ok) {
                 console.log(`Sent SIGTERM to pid ${numericPid}.`);
+                for (const entry of Object.values(store.agents || {})) {
+                    if (entry.runnerPid === numericPid || entry.executorPid === numericPid) {
+                        entry.status = 'stopped';
+                        entry.lastUsed = new Date().toISOString();
+                        entry.signal = entry.signal || 'SIGTERM';
+                        if (entry.exitCode === undefined)
+                            entry.exitCode = null;
+                        (0, session_store_1.saveSessions)(paths, store);
+                        break;
+                    }
+                }
             }
             else {
                 console.error(`❌ No running process found for pid ${numericPid}`);

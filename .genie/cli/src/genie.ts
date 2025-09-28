@@ -775,6 +775,39 @@ function executeRun(args: ExecuteRunArgs): void {
   if (proc.stdout) proc.stdout.pipe(logStream);
   if (proc.stderr) proc.stderr.pipe(logStream);
 
+  const updateSessionFromLine = (line: string) => {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith('{')) return;
+    try {
+      const data = JSON.parse(trimmed);
+      if (data && typeof data === 'object' && data.type === 'session.created') {
+        const sessionId = data.session_id || data.sessionId;
+        if (sessionId && !entry.sessionId) {
+          entry.sessionId = sessionId;
+          entry.lastUsed = new Date().toISOString();
+          saveSessions(paths as SessionPathsConfig, store);
+        }
+      }
+    } catch {
+      // ignore malformed JSON lines
+    }
+  };
+
+  if (proc.stdout) {
+    let buffer = '';
+    proc.stdout.on('data', (chunk: Buffer | string) => {
+      const text = chunk instanceof Buffer ? chunk.toString('utf8') : chunk;
+      buffer += text;
+      let index = buffer.indexOf('\n');
+      while (index !== -1) {
+        const line = buffer.slice(0, index);
+        buffer = buffer.slice(index + 1);
+        updateSessionFromLine(line);
+        index = buffer.indexOf('\n');
+      }
+    });
+  }
+
   if (!background) {
     if (proc.stdout) proc.stdout.pipe(process.stdout);
     if (proc.stderr) proc.stderr.pipe(process.stderr);
@@ -1144,6 +1177,16 @@ function runStop(parsed: ParsedCommand, config: GenieConfig, paths: Required<Con
       const ok = backgroundManager.stop(numericPid);
       if (ok) {
         console.log(`Sent SIGTERM to pid ${numericPid}.`);
+        for (const entry of Object.values(store.agents || {})) {
+          if (entry.runnerPid === numericPid || entry.executorPid === numericPid) {
+            entry.status = 'stopped';
+            entry.lastUsed = new Date().toISOString();
+            entry.signal = entry.signal || 'SIGTERM';
+            if (entry.exitCode === undefined) entry.exitCode = null;
+            saveSessions(paths as SessionPathsConfig, store);
+            break;
+          }
+        }
       } else {
         console.error(`❌ No running process found for pid ${numericPid}`);
       }
