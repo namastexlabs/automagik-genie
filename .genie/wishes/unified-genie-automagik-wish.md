@@ -34,10 +34,10 @@ Unify Genie, Claude templates, and Agent OS into one Automagik framework by dedi
 - Forge personas are duplicated across `.genie/agents/` and `.claude.template/agents/`.
 
 ## Target State & Guardrails
-- Move mission/roadmap/standards into `.genie/product/` & `.genie/standards/`, retire `.agent-os/`, and keep a single state manifest in `.genie/state/index.json`.
+- Move mission/roadmap/standards into `.genie/product/` & `.genie/standards/`, retire `.agent-os/`, and rely on CLI-managed state under `.genie/state/` (no manual index files).
 - Create `.genie/agents/plan.md` that encapsulates discovery, roadmap sync, context ledger management, branch decision prompts, and wish hand-off. Mirror it in `.claude/commands/plan.md` with a simple `@.genie/agents/plan.md` include.
 - Simplify `/wish` and `/review` to reference the shared agent prompts; stores outputs in wish-defined locations (no hard-coded experiments folders).
-- Keep `/forge` focused on reading the inline `<spec_contract>`; log external tracker IDs in `forge/tasks.json` only when needed.
+- Keep `/forge` focused on reading the inline `<spec_contract>`; record any forge-generated task IDs inside the wish Tracking section.
 - Document branch strategy options (dedicated branch, existing branch, micro-task via background personas) directly in wish template and supporting docs.
 - Remove evaluator prompts for now; reintroduce later if this repo gains code requiring automated QA guidance.
 
@@ -51,7 +51,7 @@ Unify Genie, Claude templates, and Agent OS into one Automagik framework by dedi
   - Repo free from `tasks/PSAP-*`, `experiments/AH-*` references.
 - **Evidence:** Diff checklist showing consolidated structure.
 - **Personas:** `forge-coder`, `forge-quality`.
-- **External task hook:** forge/tasks.json → {placeholder}
+- **Tracking hook:** capture forge task IDs in wish Tracking section once generated.
 
 ### Group B – plan-agent-and-wrappers
 - **Goal:** Implement `/plan` agent and replace legacy commands with thin wrappers.
@@ -62,7 +62,7 @@ Unify Genie, Claude templates, and Agent OS into one Automagik framework by dedi
   - CLI doc explaining how to trigger agents via `agent.js` (foreground/background).
 - **Evidence:** Sample transcript demonstrating `/plan` → `/wish` flow; search proving legacy commands removed.
 - **Personas:** `forge-coder`, `forge-self-learn`.
-- **External task hook:** forge/tasks.json → {placeholder}
+- **Tracking hook:** capture forge task IDs in wish Tracking section once generated.
 
 ### Group C – workflow-and-git-guidance
 - **Goal:** Document lifecycle (idea → `/plan` → wish → forge → review → commit/PR) and update git workflow to rely on wish metadata.
@@ -73,7 +73,7 @@ Unify Genie, Claude templates, and Agent OS into one Automagik framework by dedi
   - Documentation showing where to store validation artefacts (wish-defined `qa/` or inline logs).
 - **Evidence:** Example PR template referencing wish slug; updated wish template capturing branch choice.
 - **Personas:** `forge-master`, `forge-hooks`.
-- **External task hook:** forge/tasks.json → {placeholder}
+- **Tracking hook:** capture forge task IDs in wish Tracking section once generated.
 
 ## Verification Plan
 - Run `/plan` on a sample idea to ensure it auto-reads mission/roadmap/standards, records `@` references, queues background personas, and marks roadmap readiness.
@@ -89,7 +89,7 @@ Unify Genie, Claude templates, and Agent OS into one Automagik framework by dedi
   - `.agent-os/` removed and docs reside in `.genie/`.
   - `/plan`, `/wish`, `/review`, `/forge` operate via shared agents and wrappers only.
   - Git workflow references wish metadata; documentation clarifies lifecycle and storage conventions.
-- **External tasks:** forge/tasks.json placeholders to be populated when integrating with trackers.
+- **External tasks:** forge-generated IDs to be mirrored in the wish Tracking section when assigned.
 - **Dependencies:** `.genie/product/roadmap.md`, `.genie/cli/agent.js`, `.claude.template/commands/prompt.md`.
 </spec_contract>
 

@@ -261,7 +261,8 @@ Let's continue planning while that runs...
 for log in .genie/state/agents/logs/*-completed.log; do
   echo "=== $(basename $log) ==="
   tail -20 "$log" | grep -A10 "SUMMARY"
-done > .genie/wishes/<slug>/qa/background-summaries.md
+done > .genie/wishes/<slug>-background-summaries.md
+# Adjust the destination to match your wish’s evidence plan; no default summary file exists.
 ```
 
 ## Best Practices

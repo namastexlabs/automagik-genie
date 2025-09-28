@@ -31,11 +31,11 @@ Build the fastest, most natural voice conversation stack by learning from 150+ p
 
 ## Documentation
 
-- [Product Mission](.agent-os/product/mission.md) - Why we're building this
-- [Technical Stack](.agent-os/product/tech-stack.md) - Technology choices
-- [Roadmap](.agent-os/product/roadmap.md) - Development phases
-- [Environment Config](.agent-os/product/environment.md) - All configuration options
-- [Getting Started](.agent-os/guides/getting-started.md) - Local setup & provider checks
+- [Product Mission](.genie/product/mission.md) - Why we're building this
+- [Technical Stack](.genie/product/tech-stack.md) - Technology choices
+- [Roadmap](.genie/product/roadmap.md) - Development phases
+- [Environment Config](.genie/product/environment.md) - All configuration options
+- [Getting Started](.genie/guides/getting-started.md) - Local setup & provider checks
 - [Production Insights](docs/elevenlabs/production-insights.md) - Learnings from real data
 - [@docs/research.md](docs/research.md) - Architecture decisions and evidence
 - [API Overview](docs/api-overview.md) - Real-time WS + planned REST surfaces
@@ -47,11 +47,14 @@ Build the fastest, most natural voice conversation stack by learning from 150+ p
 ## Repository Structure
 
 ```
-.agent-os/product/       # Product documentation
-docs/                    # Technical documentation
-experiments/AH-XXX/      # Experiment tracking
-research.md              # Architecture research
-CLAUDE.md               # AI assistant guidelines
+.genie/product/      # Mission, roadmap, environment
+.genie/agents/       # Agent prompts and orchestration playbooks
+.genie/wishes/       # Wish blueprints and status logs
+.genie/state/        # CLI-managed session data (inspect via ./genie commands)
+docs/                # Technical documentation
+vendors/             # External reference repos
+AGENTS.md            # Framework overview & guardrails
+CLAUDE.md            # AI assistant guidelines
 ```
 
 ## Submodules (Vendors)

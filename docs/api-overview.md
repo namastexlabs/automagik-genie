@@ -36,7 +36,9 @@ See the full schema in [WebSocket Protocol Reference](websocket-protocol.md).
 
 Automagik Hello emits conversation artifacts that match ElevenLabs’ conversation API schema.
 
-- **Format**: JSON array of turns stored under `experiments/AH-XXX/qa/conversation.json`
+- **Format**: JSON array of turns (store wherever the active wish specifies; no default path)
+
+> Note: The repository does not currently persist conversation transcripts by default—capture them manually when needed.
 - **Schema**: Documented in [Transcript Schema](transcript-schema.md)
 - **Key Metrics**: `ttfb_ms`, `convai_asr_trailing_service_latency`, `asr_confidence`
 
@@ -84,10 +86,10 @@ curl -sS -H "xi-api-key: $ELEVENLABS_API_KEY" \
 curl -sS -H "Authorization: Bearer $GROQ_API_KEY" \
   https://api.groq.com/openai/v1/models | jq '.data[].id'
 
-# Download conversation artifact
+# Download conversation artifact (choose an appropriate destination)
 curl -sS "https://api.elevenlabs.io/v1/convai/conversations/<CONV_ID>" \
   -H "xi-api-key: $ELEVENLABS_API_KEY" \
-  -o experiments/AH-001/qa/conversation.json
+  -o artifacts/conversation.json
 ```
 
 Keep this overview in sync with the canonical protocol documents whenever endpoints evolve.

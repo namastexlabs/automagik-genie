@@ -27,7 +27,7 @@ All commands in `.claude/commands/` simply `@include` the corresponding `.genie/
 - `.genie/standards/` – coding rules, naming, language-specific style guides
 - `.genie/instructions/` – legacy Agent OS playbooks retained for reference
 - `.genie/guides/` – getting-started docs, onboarding
-- `.genie/state/` – session metadata (`index.json`, agent logs, forge plans, commit advisories)
+- `.genie/state/` – CLI-managed data (e.g., `agents/sessions.json` for session tracking, agent logs, forge plans, commit advisories). Inspect via `./genie runs|list|view` rather than manual edits.
 - `.genie/wishes/` – active wish contracts (`<slug>-wish.md`)
 - `.genie/templates/` – reserved for future wish/plan templates (currently empty)
 - `.genie/cli/agent.js` – CLI runner for agent conversations (supports `--background`)
@@ -35,15 +35,15 @@ All commands in `.claude/commands/` simply `@include` the corresponding `.genie/
 ## Workflow Summary
 1. **/plan** – single-entry agent for product mode. Loads mission/roadmap/standards, gathers context via `@` references, requests background personas via CLI, and decides if item is wish-ready.
 2. **/wish** – creates `.genie/wishes/<slug>-wish.md`, embedding context ledger, execution groups, inline `<spec_contract>`, branch/tracker strategy, and blocker protocol.
-3. **/forge** – generates `.genie/state/reports/forge-plan-<slug>-<timestamp>.md` with execution groups, evidence expectations, validation hooks, and external tracker placeholders (`forge/tasks.json`).
-4. **Implementation** – humans/agents follow forge plan, storing evidence where the wish specifies (e.g., `.genie/wishes/<slug>/qa/`). Specialist agents run via `./genie run <implementor-agent> "..."` (background by default). Replace `<implementor-agent>` using the Local Agent Map.
-5. **/review** (optional) – aggregates QA artefacts, replays validation commands, and writes `.genie/wishes/<slug>/qa/review-<timestamp>.md` with verdict/recommendations.
-6. **/commit** – groups diffs, recommends commit message/checklist, saves advisory in `.genie/state/reports/`.
-7. **Git workflow** – Branch names typically `feat/<wish-slug>`; alternatives logged in the wish. PRs reference the wish and forge plan, plus any tracker IDs stored in `forge/tasks.json`. Update roadmap status after merge.
+3. **/forge** – surfaces execution groups, evidence expectations, validation hooks, and pointers back to the wish for tracker updates (capture the plan summary inside the wish).
+4. **Implementation** – humans/agents follow forge plan, storing evidence exactly where the wish specifies (no default folders). Specialist agents run via `./genie run <implementor-agent> "..."` (background by default). Replace `<implementor-agent>` using the Local Agent Map.
+5. **/review** (optional) – aggregates QA artefacts, replays validation commands, and writes a review summary back into the wish (create a dedicated section or file path if needed).
+6. **/commit** – groups diffs, recommends commit message/checklist, and outputs a commit advisory (log highlights inside the wish or PR draft).
+7. **Git workflow** – Branch names typically `feat/<wish-slug>`; alternatives logged in the wish. PRs reference the wish and forge plan, and reuse tracker IDs recorded in the wish itself. Update roadmap status after merge.
 
 ## Evidence & Storage Conventions
-- Wishes define where artefacts live (recommended: `wishes/<slug>/qa/` for metrics, logs, reports). Avoid legacy `experiments/AH-*` structure unless maintaining historical data.
-- External trackers are recorded in `forge/tasks.json` (one entry per execution group or overall wish).
+- Wishes must declare where artefacts live; there is no default `qa/` directory. Capture metrics inline in the wish (e.g., tables under a **Metrics** section) or in clearly named companion files.
+- External tracker IDs live in the wish markdown (for example a **Tracking** section with `Forge task: FORGE-123`).
 - Background agent outputs are summarised in the wish context ledger; raw logs reside under `.genie/state/agents/logs/` when `--background` is used.
 
 ## Testing & Evaluation
@@ -62,10 +62,17 @@ All commands in `.claude/commands/` simply `@include` the corresponding `.genie/
 - **Dedicated branch** (`feat/<wish-slug>`) for medium/large changes.
 - **Existing branch** only with documented rationale (wish status log).
 - **Micro-task** for tiny updates; track in wish status and commit advisory.
-- Tracker IDs (Jira/Linear/etc.) should be added to `forge/tasks.json` when available.
+- Tracker IDs (from forge execution output) should be logged in the wish markdown once assigned. Capture them immediately after `/forge` reports IDs.
+
+A common snippet:
+
+```
+### Tracking
+- Forge task: FORGE-123
+```
 
 ## Blocker Protocol
-1. Pause execution and create `.genie/state/reports/blocker-<slug>-<timestamp>.md` describing findings.
+1. Log the blocker directly in the wish (timestamped entry with findings and status).
 2. Update the wish status log and notify stakeholders.
 3. Resume only after guidance is updated.
 
@@ -227,9 +234,9 @@ Keep this document synced when introducing new agents, changing folder layouts, 
 
 ### Path Conventions
 - Wishes: `.genie/wishes/<slug>-wish.md`.
-- Evidence: `.genie/wishes/<slug>/qa/`.
-- Forge plans: `.genie/state/reports/forge-plan-<slug>-<timestamp>.md`.
-- Blockers: `.genie/state/reports/blocker-<slug>-<timestamp>.md`.
+- Evidence: declared by each wish (pick a clear folder or append directly in-document).
+- Forge plans: recorded in CLI output—mirror essentials back into the wish.
+- Blockers: logged inside the wish under a **Blockers** or status section.
 - Reports: `.genie/reports/` (Death Testaments, etc.).
 </file_and_naming_rules>
 

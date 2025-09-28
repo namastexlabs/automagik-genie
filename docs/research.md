@@ -713,4 +713,4 @@ Scope: Port proven patterns from LiveKit into our Rust stack while mirroring Ele
   - Emit ElevenLabs events: `conversation_initiation_metadata`, `ping`, `audio`, `agent_response`, `agent_response_correction`, `user_transcript`, optional `vad_score`
   - Validate ordering and fields against client expectations
 
-Reference: @.agent-os/product/decisions/2025-09-learn-from-livekit.md
+Reference: @.genie/product/decisions/2025-09-learn-from-livekit.md

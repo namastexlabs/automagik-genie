@@ -89,7 +89,7 @@ created: {{now}}
 
 ## Branch & Tracker
 - Branch: micro-task on main; doc updates + submodule
-- Tracker: record IDs in `forge/tasks.json` if used later
+- Tracker: log any forge-generated task IDs under this wish's Tracking section when available
 
 ## Blocker Protocol
 1. Pause and write `.genie/state/reports/blocker-expand-genie-twin-zen-modes-<timestamp>.md`
@@ -102,4 +102,3 @@ created: {{now}}
 
 ## Status Log
 - {{now}} Approved by user to execute directly
-

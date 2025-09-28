@@ -1,59 +1,85 @@
-const fs = require('fs');
+import fs from 'fs';
+import { SessionStore, saveSessions } from '../session-store';
 
-function readSessionIdFromLog(logFile) {
+export interface RenderOptions {
+  entry: Record<string, any>;
+  jsonl: Array<Record<string, any>>;
+  raw: string;
+}
+
+export function readSessionIdFromLog(logFile: string): string | null {
   if (!logFile) return null;
   try {
     const content = fs.readFileSync(logFile, 'utf8');
     return extractSessionIdFromContent(content);
-  } catch (_) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`⚠️ Failed to read log '${logFile}': ${message}`);
     return null;
   }
 }
 
-function extractSessionIdFromContent(content) {
-  if (!content) return null;
+export function extractSessionIdFromContent(content: string | string[]): string | null {
   const lines = Array.isArray(content) ? content : String(content).split(/\r?\n/);
   for (let i = lines.length - 1; i >= 0; i -= 1) {
     const raw = lines[i];
     if (!raw) continue;
     const trimmed = raw.trim();
-    if (!trimmed || trimmed[0] !== '{') continue;
+    if (!trimmed.startsWith('{')) continue;
     try {
       const parsed = JSON.parse(trimmed);
       if (!parsed || typeof parsed !== 'object') continue;
-      const candidate = parsed.session_id
-        || parsed.sessionId
-        || (parsed.session && (parsed.session.id || parsed.session.session_id || parsed.session.sessionId))
-        || (parsed.data && (parsed.data.session_id || parsed.data.sessionId));
+      const candidate =
+        parsed.session_id ||
+        parsed.sessionId ||
+        (parsed.session && (parsed.session.id || parsed.session.session_id || parsed.session.sessionId)) ||
+        (parsed.data && (parsed.data.session_id || parsed.data.sessionId));
       if (candidate) return candidate;
       if (parsed.type === 'session.created' && parsed.id) {
         return parsed.id;
       }
-    } catch (_) {
-      // ignore malformed lines
+    } catch (error) {
+      continue;
     }
   }
   return null;
 }
 
-function renderJsonlView({ entry, jsonl, raw }, parsed, paths, store, saveSessions, formatPathRelative) {
+interface RenderContext {
+  parsed: any;
+  paths: any;
+  store: SessionStore;
+  formatPathRelative: (targetPath: string, baseDir: string) => string;
+}
+
+export function renderJsonlView(
+  src: RenderOptions,
+  parsed: any,
+  paths: any,
+  store: SessionStore,
+  save: typeof saveSessions,
+  formatPathRelative: (targetPath: string, baseDir: string) => string
+): void {
+  const { entry, jsonl, raw } = src;
   let meta = jsonl.find((e) => e.provider && e.model) || {};
   const promptObj = jsonl.find((e) => typeof e.prompt === 'string') || {};
   const prompt = promptObj.prompt || '';
-  const lastN = (parsed.options.lines && parsed.options.lines > 0) ? parsed.options.lines : 60;
+  const lastN = parsed.options.lines && parsed.options.lines > 0 ? parsed.options.lines : 60;
 
-  const byCall = new Map();
-  const execs = [];
-  const mcp = [];
+  const byCall = new Map<string, { cmd?: string; cwd?: string; mcp?: { server?: string; tool?: string } }>();
+  const execs: Array<{ cmd: string; exit: number | null | undefined; dur?: { secs: number; nanos?: number } }> = [];
+  const mcp: Array<{ server: string; tool: string; secs: number }>
+    = [];
   const patches = { add: 0, update: 0, move: 0, delete: 0 };
-  const errs = [];
-  const errorEvents = [];
-  const reasoningItems = [];
-  const assistantMessages = [];
-  const toolCallItems = [];
-  let tokenInfo = null;
-  let rateLimits = null;
-  let sessionIdFromEvents = null;
+  const errs: Array<Record<string, any>> = [];
+  const errorEvents: string[] = [];
+  const reasoningItems: string[] = [];
+  const assistantMessages: string[] & { _streamBuffer?: Map<string, string> } = [] as any;
+  const toolCallItems: Array<{ id: string | null; role: string; text: string }> = [];
+  type TokenInfo = { input_tokens?: number; output_tokens?: number; total_tokens?: number };
+  let tokenInfo: TokenInfo | null = null;
+  let rateLimits: any = null;
+  let sessionIdFromEvents: string | null = null;
 
   jsonl.forEach((ev) => {
     if (!meta.model && ev.model && ev.provider) {
@@ -62,6 +88,7 @@ function renderJsonlView({ entry, jsonl, raw }, parsed, paths, store, saveSessio
 
     const envelope = (ev && typeof ev === 'object') ? ev : {};
     const explicitType = envelope.type;
+
     if (explicitType === 'error') {
       const message = envelope.message || envelope.text || JSON.stringify(envelope);
       errorEvents.push(message);
@@ -92,10 +119,10 @@ function renderJsonlView({ entry, jsonl, raw }, parsed, paths, store, saveSessio
       return;
     }
 
-    const m = envelope.msg || envelope;
+    const m = (envelope as any).msg || envelope;
     const type = m && m.type;
-    const info = envelope.info || m.info;
-    const rate = envelope.rate_limits || m.rate_limits;
+    const info = (envelope as any).info || m.info;
+    const rate = (envelope as any).rate_limits || m.rate_limits;
 
     if (type === 'session.created') {
       const found = m.session_id || m.sessionId || (m.session && (m.session.id || m.session.session_id || m.session.sessionId));
@@ -125,28 +152,31 @@ function renderJsonlView({ entry, jsonl, raw }, parsed, paths, store, saveSessio
         execs.push({ cmd: rec.cmd || '(unknown)', exit: m.exit_code, dur: m.duration });
         break; }
       case 'mcp_tool_call_begin':
-        byCall.set(m.call_id, { mcp: { server: m.invocation && m.invocation.server, tool: m.invocation && m.invocation.tool } });
+        byCall.set(m.call_id, { mcp: { server: m.invocation?.server, tool: m.invocation?.tool } });
         break;
       case 'mcp_tool_call_end': {
         const rec = byCall.get(m.call_id) || { mcp: {} };
         const d = m.duration || {};
-        mcp.push({ server: (rec.mcp && rec.mcp.server) || '?', tool: (rec.mcp && rec.mcp.tool) || '?', secs: d.secs || 0 });
+        mcp.push({ server: rec.mcp?.server || '?', tool: rec.mcp?.tool || '?', secs: d.secs || 0 });
         break; }
       case 'patch_apply_begin': {
         const changes = m.changes || {};
-        Object.values(changes).forEach((chg) => {
+        Object.values(changes).forEach((chg: any) => {
           if (chg.add) patches.add += 1;
-          if (chg.update) { patches.update += 1; if (chg.update.move_path) patches.move += 1; }
+          if (chg.update) {
+            patches.update += 1;
+            if (chg.update.move_path) patches.move += 1;
+          }
           if (chg.delete) patches.delete += 1;
         });
         break; }
       case 'token_count': {
-        if (info && info.total_token_usage) tokenInfo = info.total_token_usage;
+        if (info?.total_token_usage) tokenInfo = info.total_token_usage;
         if (rate) rateLimits = rate;
         break; }
       case 'token.usage': {
         if (m.input_tokens || m.output_tokens || m.total_tokens) {
-          tokenInfo = {
+        tokenInfo = {
             input_tokens: m.input_tokens,
             output_tokens: m.output_tokens,
             total_tokens: m.total_tokens || ((m.input_tokens || 0) + (m.output_tokens || 0))
@@ -154,9 +184,9 @@ function renderJsonlView({ entry, jsonl, raw }, parsed, paths, store, saveSessio
         }
         break; }
       case 'response.usage': {
-        const usage = envelope.usage || m.usage || m;
+        const usage = (envelope as any).usage || m.usage || m;
         if (usage) {
-          tokenInfo = {
+        tokenInfo = {
             input_tokens: usage.input_tokens || usage.prompt_tokens || 0,
             output_tokens: usage.output_tokens || usage.completion_tokens || 0,
             total_tokens: usage.total_tokens || usage.usage || ((usage.input_tokens || 0) + (usage.output_tokens || 0))
@@ -164,9 +194,9 @@ function renderJsonlView({ entry, jsonl, raw }, parsed, paths, store, saveSessio
         }
         break; }
       case 'response.output_text.delta': {
-        const responseId = envelope.response_id || m.response_id;
+        const responseId = (envelope as any).response_id || m.response_id;
         if (!responseId) break;
-        const delta = envelope.delta || m.delta || '';
+        const delta = (envelope as any).delta || m.delta || '';
         if (!delta) break;
         if (!assistantMessages._streamBuffer) assistantMessages._streamBuffer = new Map();
         const buffer = assistantMessages._streamBuffer;
@@ -174,9 +204,9 @@ function renderJsonlView({ entry, jsonl, raw }, parsed, paths, store, saveSessio
         buffer.set(responseId, prev + delta);
         break; }
       case 'response.output_text.completed': {
-        const responseId = envelope.response_id || m.response_id;
-        if (responseId && assistantMessages._streamBuffer && assistantMessages._streamBuffer.has(responseId)) {
-          const text = assistantMessages._streamBuffer.get(responseId).trim();
+        const responseId = (envelope as any).response_id || m.response_id;
+        if (responseId && assistantMessages._streamBuffer?.has(responseId)) {
+          const text = assistantMessages._streamBuffer.get(responseId)?.trim();
           if (text) assistantMessages.push(text);
           assistantMessages._streamBuffer.delete(responseId);
         }
@@ -192,10 +222,8 @@ function renderJsonlView({ entry, jsonl, raw }, parsed, paths, store, saveSessio
         }
         break; }
       case 'response.refusal.delta': {
-        const delta = envelope.delta || m.delta;
-        if (delta) {
-          reasoningItems.push(`refusal: ${delta}`);
-        }
+        const delta = (envelope as any).delta || m.delta;
+        if (delta) reasoningItems.push(`refusal: ${delta}`);
         break; }
       default: {
         const s = JSON.stringify(m || envelope);
@@ -206,7 +234,7 @@ function renderJsonlView({ entry, jsonl, raw }, parsed, paths, store, saveSessio
 
   if (sessionIdFromEvents && !entry.sessionId) {
     entry.sessionId = sessionIdFromEvents;
-    if (store) saveSessions(paths, store);
+    save(paths, store);
   }
 
   if (assistantMessages._streamBuffer) {
@@ -248,7 +276,7 @@ function renderJsonlView({ entry, jsonl, raw }, parsed, paths, store, saveSessio
   if (toolCallItems.length) {
     console.log(`\nTool Items (${toolCallItems.length}):`);
     toolCallItems.slice(-5).forEach((item) => {
-      const summary = item.text.length > 160 ? item.text.slice(0, 160) + '…' : item.text;
+      const summary = item.text.length > 160 ? `${item.text.slice(0, 160)}…` : item.text;
       console.log(`  • ${item.role}${item.id ? `(${item.id})` : ''}: ${summary}`);
     });
   }
@@ -262,8 +290,8 @@ function renderJsonlView({ entry, jsonl, raw }, parsed, paths, store, saveSessio
   if (execs.length) {
     console.log(`\nExecs (last ${Math.min(3, execs.length)}):`);
     execs.slice(-3).forEach((e) => {
-      const ms = e.dur ? (e.dur.secs * 1000 + Math.round((e.dur.nanos || 0) / 1e6)) : null;
-      console.log(`  ${e.exit === 0 ? 'OK ' : 'ERR'} ${e.cmd}  (${ms || '?'} ms)`);
+      const ms = e.dur ? e.dur.secs * 1000 + Math.round((e.dur.nanos || 0) / 1e6) : null;
+      console.log(`  ${e.exit === 0 ? 'OK ' : 'ERR'} ${e.cmd}  (${ms ?? '?'} ms)`);
     });
   }
   if (errs.length) {
@@ -283,7 +311,7 @@ function renderJsonlView({ entry, jsonl, raw }, parsed, paths, store, saveSessio
   const okCount = execs.filter((e) => e.exit === 0).length;
   const errCount = execs.filter((e) => e.exit !== 0 && e.exit != null).length;
   console.log('\nStats:');
-  const pad = (s, n) => (String(s || '') + ' '.repeat(n)).slice(0, n);
+  const pad = (s: string, n: number) => (String(s || '') + ' '.repeat(n)).slice(0, n);
   console.log('  ' + pad('MCP', 16) + ` ${mcp.length}`);
   console.log('  ' + pad('Execs', 16) + ` total:${execs.length} ok:${okCount} err:${errCount}`);
   console.log('  ' + pad('Patches', 16) + ` add:${patches.add} update:${patches.update} move:${patches.move} delete:${patches.delete}`);
@@ -297,16 +325,17 @@ function renderJsonlView({ entry, jsonl, raw }, parsed, paths, store, saveSessio
     console.log('  ' + pad('Tool Items', 16) + ` ${toolCallItems.length}`);
   }
   if (tokenInfo) {
-    console.log('  ' + pad('Tokens', 16) + ` in:${tokenInfo.input_tokens || 0} out:${tokenInfo.output_tokens || 0} total:${tokenInfo.total_tokens || 0}`);
+    const info = tokenInfo as TokenInfo;
+    console.log('  ' + pad('Tokens', 16) + ` in:${info.input_tokens ?? 0} out:${info.output_tokens ?? 0} total:${info.total_tokens ?? 0}`);
   }
-  if (rateLimits && rateLimits.primary) {
+  if (rateLimits?.primary) {
     console.log('  ' + pad('RateLimit', 16) + ` used:${rateLimits.primary.used_percent || 0}% reset:${rateLimits.primary.resets_in_seconds || 0}s`);
   }
   console.log(`\nRaw Tail (${lastN} lines):`);
   raw.split(/\r?\n/).slice(-lastN).forEach((l) => console.log('  ' + l));
 }
 
-module.exports = {
+export default {
   readSessionIdFromLog,
   extractSessionIdFromContent,
   renderJsonlView

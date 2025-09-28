@@ -11,8 +11,7 @@ genie:
   search: true
   skipGitRepoCheck: true
   additionalArgs:
-    # Attach CLI flags not covered above. Examples for structured output & formatting:
-    - --output-schema=.genie/state/schemas/analyze.json
+    # Attach CLI flags not covered above. Example: enforce no-color output.
     - --color=never
   images: []
   background: false

@@ -37,5 +37,5 @@ Docs in this folder (curated)
 
 Next Steps
 - Extract canonical event schemas from Agents docs and align with our WS event shapes in docs/research.md.
-- Time basic agent flows (TTFB, cancel‑tail) from examples and record baselines in experiments/AH‑001/qa/metrics.json.
+- Time basic agent flows (TTFB, cancel‑tail) from examples and record baselines wherever the active wish specifies (for example `artifacts/metrics.md`).
 - Draft a Rust worker/job dispatcher spec mirroring LiveKit’s separation of concerns.

@@ -19,6 +19,8 @@ yarn-error.log*
 pnpm-debug.log*
 .pnpm-store/
 dist/
+!.genie/cli/dist/
+!.genie/cli/dist/**
 build/
 .npm
 .yarn

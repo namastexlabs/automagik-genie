@@ -20,7 +20,7 @@ The Automagik framework provides a unified workflow for product development from
 
 /forge    → Task breakdown & execution
   ├── Reads wish spec_contract
-  ├── Creates forge/tasks.json entries
+  ├── Surfaces forge task IDs in CLI output for wish tracking
   └── Dispatches to agents
 
 /review   → Completion audit
@@ -52,7 +52,7 @@ During the `/plan` conversation:
   ./genie run forge-coder "@docs/research.md analyze latency"
   ```
 
-Output: Updated `.genie/state/index.json` with roadmap status and context ledger
+Output: Updated wish context ledger and CLI-managed session state (no manual `.genie/state/index.json` file)
 
 ### Step 2: Create Wish Blueprint
 
@@ -78,8 +78,7 @@ Break down the wish into executable tasks:
 ```
 
 Outputs:
-- `.genie/state/reports/forge-plan-<slug>-<timestamp>.md`
-- `forge/tasks.json` with external tracker IDs
+- Forge CLI output containing plan details and task IDs—mirror essentials inside the wish Tracking/Execution sections
 - Dispatches to appropriate forge agents
 
 ### Step 4: Implementation
@@ -97,7 +96,7 @@ Execute the forge plan using CLI agents:
 ./genie list
 ```
 
-Store artifacts as specified in the wish (typically `.genie/wishes/<slug>/qa/`)
+Store artifacts exactly where the wish instructs (no default evidence directory)
 
 ### Step 5: Review & Validation
 
@@ -109,7 +108,7 @@ Run completion audit:
 
 Generates:
 - Death Testament in `.genie/reports/`
-- Validation results in `.genie/wishes/<slug>/qa/review-<timestamp>.md`
+- Validation summary appended to the wish (create a dedicated section or linked doc if needed)
 
 ### Step 6: Commit & PR
 
@@ -122,7 +121,7 @@ Create commit and PR:
 The commit agent will:
 - Group related changes
 - Generate commit message referencing wish ID
-- Save advisory to `.genie/state/reports/commit-advisory-<timestamp>.md`
+- Output a commit advisory in the CLI (capture key points in the wish or PR description)
 - Provide PR template with wish reference
 
 ## Branch Strategy
@@ -163,8 +162,8 @@ Performance metrics from production:
 
 All context is logged in the Context Ledger and distributed to:
 - Wish document
-- Roadmap index (`.genie/state/index.json`)
-- Relevant experiments/artifacts
+- Forge plan summaries recorded inside the wish
+- Relevant artefact locations noted by the wish
 
 ## Background Session Management
 
@@ -201,21 +200,12 @@ Background outputs are:
 
 ## Tracker Integration
 
-External tracker IDs (Jira, Linear, GitHub Issues) are stored in `forge/tasks.json`:
+External tracker IDs come from forge execution output. Capture them immediately and append to the wish Tracking section:
 
-```json
-{
-  "wishes": {
-    "baseline-voice": {
-      "tracker_id": "PROJ-123",
-      "groups": {
-        "A": "PROJ-124",
-        "B": "PROJ-125",
-        "C": "PROJ-126"
-      }
-    }
-  }
-}
+```
+### Tracking
+- Forge plan: FORGE-123
+- Execution group A: FORGE-124
 ```
 
 ## CLI Presets
@@ -248,7 +238,6 @@ genie:
   includePlanTool: true
   search: true
   additionalArgs:
-    - --output-schema=.genie/state/schemas/analyze.json
     - --color=never
   background: false
 ---
@@ -260,16 +249,10 @@ genie:
 
 If execution is blocked:
 
-1. Create blocker report:
-   ```
-   .genie/state/reports/blocker-<slug>-<timestamp>.md
-   ```
-
-2. Update wish status log
-
-3. Notify stakeholders
-
-4. Resume only after guidance updated
+1. Log the blocker directly in the wish (timestamp, findings, next action).
+2. Update the wish status log.
+3. Notify stakeholders.
+4. Resume only after guidance is updated.
 
 ## Quick Reference
 

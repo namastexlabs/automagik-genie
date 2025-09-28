@@ -261,9 +261,11 @@ interface ToolResult {
 
 Transcripts are stored as:
 - **Format**: JSON array
-- **File naming**: `experiments/AH-XXX/qa/transcript_raw.json`
+- **File naming**: choose a path that aligns with the active wish (for example `artifacts/transcript_raw.json`)
 - **Encoding**: UTF-8
 - **Compression**: Optional gzip for archival
+
+> Note: The current repository does not generate or persist transcripts automatically; use this section as guidance when you decide to archive them.
 
 ## Compatibility Notes
 

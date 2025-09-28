@@ -81,7 +81,7 @@ Suggest one of the following strategies and log it explicitly:
 2. **Existing branch** – explain why and document in wish status log
 3. **Micro-task** – small fix executed directly; diary the change in wish/commit advisory
 
-For trackers (Jira, Linear, etc.), reference `forge/tasks.json` as the place where IDs should be recorded once they exist.
+For tracker visibility, capture forge-generated IDs (reported in the forge plan output) directly inside the wish status log.
 
 ## Final Response Format
 1. Discovery highlights (bullets)
