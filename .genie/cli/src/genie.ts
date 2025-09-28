@@ -44,7 +44,6 @@ interface CLIOptions {
   style: string;
   status: string | null;
   requestHelp?: boolean;
-  follow: boolean;
   lines: number;
   page: number;
   per: number;
@@ -231,7 +230,6 @@ function parseArguments(argv: string[]): ParsedCommand {
     json: false,
     style: 'compact',
     status: null,
-    follow: false,
     lines: 60,
     page: 1,
     per: 5
@@ -290,10 +288,6 @@ function parseArguments(argv: string[]): ParsedCommand {
     if (token === '--status') {
       if (i + 1 >= raw.length) throw new Error('Missing value for --status');
       options.status = raw[++i];
-      continue;
-    }
-    if (token === '--follow') {
-      options.follow = true;
       continue;
     }
     if (token === '--lines') {
@@ -617,7 +611,7 @@ function runChat(parsed: ParsedCommand, config: GenieConfig, paths: Required<Con
     saveSessions(paths as SessionPathsConfig, store);
     console.log(`🧞 Background conversation started: ${agentName}`);
     console.log(`   Log: ${formatPathRelative(logFile, paths.baseDir || '.')}`);
-    console.log('   Watch: ./genie view <session-id>');
+    console.log('   Watch: ./genie view <sessionId>');
     return;
   }
 
@@ -1020,7 +1014,7 @@ function runContinue(parsed: ParsedCommand, config: GenieConfig, paths: Required
     saveSessions(paths as SessionPathsConfig, store);
     console.log(`🧞 Background resume started: ${agentName}`);
     console.log(`   Log: ${formatPathRelative(logFile, paths.baseDir || '.')}`);
-    console.log('   Watch: ./genie view <session-id>');
+    console.log('   Watch: ./genie view <sessionId>');
     return;
   }
 
@@ -1083,7 +1077,7 @@ function runRuns(parsed: ParsedCommand, config: GenieConfig, paths: Required<Con
     console.log('\nRuns:');
     if (!pageRows.length) console.log('  (none)'); else fmt(pageRows);
     console.log(`\nPage ${page} • per ${per} • Next: genie runs --status ${want} --page ${page+1} --per ${per}`);
-    console.log('Use: genie view <sessionId> [--follow]   •   Resume: genie continue <sessionId> "<prompt>"   •   Stop: genie stop <sessionId>');
+    console.log('Use: genie view <sessionId>   •   Resume: genie continue <sessionId> "<prompt>"   •   Stop: genie stop <sessionId>');
     return;
   }
 
@@ -1095,7 +1089,7 @@ function runRuns(parsed: ParsedCommand, config: GenieConfig, paths: Required<Con
   console.log('\nActive:'); if (!activeRows.length) console.log('  (none)'); else fmt(activeRows);
   console.log('\nRecent:'); if (!recentRows.length) console.log('  (none)'); else fmt(recentRows);
   console.log(`\nPage ${page} • per ${per} • Next: genie runs --page ${page+1} --per ${per} • Focus: genie runs --status completed`);
-  console.log('Use: genie view <sessionId> [--follow]   •   Resume: genie continue <sessionId> "<prompt>"   •   Stop: genie stop <sessionId>');
+  console.log('Use: genie view <sessionId>   •   Resume: genie continue <sessionId> "<prompt>"   •   Stop: genie stop <sessionId>');
 }
 
 function fmt(rows: Array<{ agent: string; status: string | null; sessionId: string | null; lastUsed: string | null; log: string | null }>): void {
@@ -1110,7 +1104,7 @@ function fmt(rows: Array<{ agent: string; status: string | null; sessionId: stri
 function runView(parsed: ParsedCommand, config: GenieConfig, paths: Required<ConfigPaths>): void {
   const [sessionId] = parsed.commandArgs;
   if (!sessionId) {
-    console.log('Usage: genie view <sessionId> [--follow] [--lines N]');
+    console.log('Usage: genie view <sessionId> [--lines N]');
     return;
   }
   const store = loadSessions(paths as SessionPathsConfig, config as SessionLoadConfig, DEFAULT_CONFIG as any);
@@ -1126,11 +1120,6 @@ function runView(parsed: ParsedCommand, config: GenieConfig, paths: Required<Con
   const logFile = entry.logFile;
   if (!logFile || !fs.existsSync(logFile)) {
     console.error('❌ Log not found for this run');
-    return;
-  }
-  if (parsed.options.follow) {
-    const tail = spawn('tail', ['-n', String(parsed.options.lines || 60), '-f', logFile], { stdio: 'inherit' });
-    tail.on('error', (e) => console.error('❌ Failed to tail log:', e instanceof Error ? e.message : String(e)));
     return;
   }
   if (parsed.options.json) {
@@ -1319,7 +1308,7 @@ function runHelp(config: GenieConfig, paths: Required<ConfigPaths>): void {
     { cmd: 'run', args: '<agent> "<prompt>"', desc: runDesc },
     { cmd: 'mode', args: '<genie-mode> "<prompt>"', desc: 'Run a Genie Mode (maps to genie-<mode>)' },
     { cmd: 'continue', args: '<sessionId> "<prompt>"', desc: 'Continue run by session id' },
-    { cmd: 'view', args: '<sessionId> [--follow] [--lines N]', desc: 'View run output (friendly); live follow with --follow' },
+    { cmd: 'view', args: '<sessionId> [--lines N]', desc: 'View run output (friendly)' },
     { cmd: 'stop', args: '<sessionId>', desc: 'Send SIGTERM to a running session' },
     { cmd: 'runs', args: '[--status <s>] [--json]', desc: 'List runs with status; manage background tasks' },
     { cmd: 'list', args: '', desc: 'Show active/completed sessions' },

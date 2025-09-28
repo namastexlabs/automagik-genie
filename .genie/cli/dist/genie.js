@@ -190,7 +190,6 @@ function parseArguments(argv) {
         json: false,
         style: 'compact',
         status: null,
-        follow: false,
         lines: 60,
         page: 1,
         per: 5
@@ -254,10 +253,6 @@ function parseArguments(argv) {
             if (i + 1 >= raw.length)
                 throw new Error('Missing value for --status');
             options.status = raw[++i];
-            continue;
-        }
-        if (token === '--follow') {
-            options.follow = true;
             continue;
         }
         if (token === '--lines') {
@@ -582,7 +577,7 @@ function runChat(parsed, config, paths) {
         (0, session_store_1.saveSessions)(paths, store);
         console.log(`🧞 Background conversation started: ${agentName}`);
         console.log(`   Log: ${formatPathRelative(logFile, paths.baseDir || '.')}`);
-        console.log('   Watch: ./genie view <session-id>');
+        console.log('   Watch: ./genie view <sessionId>');
         return;
     }
     const command = executor.buildRunCommand({
@@ -936,7 +931,7 @@ function runContinue(parsed, config, paths) {
         (0, session_store_1.saveSessions)(paths, store);
         console.log(`🧞 Background resume started: ${agentName}`);
         console.log(`   Log: ${formatPathRelative(logFile, paths.baseDir || '.')}`);
-        console.log('   Watch: ./genie view <session-id>');
+        console.log('   Watch: ./genie view <sessionId>');
         return;
     }
     executeRun({
@@ -1002,7 +997,7 @@ function runRuns(parsed, config, paths) {
         else
             fmt(pageRows);
         console.log(`\nPage ${page} • per ${per} • Next: genie runs --status ${want} --page ${page + 1} --per ${per}`);
-        console.log('Use: genie view <sessionId> [--follow]   •   Resume: genie continue <sessionId> "<prompt>"   •   Stop: genie stop <sessionId>');
+        console.log('Use: genie view <sessionId>   •   Resume: genie continue <sessionId> "<prompt>"   •   Stop: genie stop <sessionId>');
         return;
     }
     const activePool = sortByTimeDesc([...byStatus('running'), ...byStatus('pending-completion')]);
@@ -1024,7 +1019,7 @@ function runRuns(parsed, config, paths) {
     else
         fmt(recentRows);
     console.log(`\nPage ${page} • per ${per} • Next: genie runs --page ${page + 1} --per ${per} • Focus: genie runs --status completed`);
-    console.log('Use: genie view <sessionId> [--follow]   •   Resume: genie continue <sessionId> "<prompt>"   •   Stop: genie stop <sessionId>');
+    console.log('Use: genie view <sessionId>   •   Resume: genie continue <sessionId> "<prompt>"   •   Stop: genie stop <sessionId>');
 }
 function fmt(rows) {
     const pad = (s, len) => (String(s || '') + ' '.repeat(len)).slice(0, len);
@@ -1037,7 +1032,7 @@ function fmt(rows) {
 function runView(parsed, config, paths) {
     const [sessionId] = parsed.commandArgs;
     if (!sessionId) {
-        console.log('Usage: genie view <sessionId> [--follow] [--lines N]');
+        console.log('Usage: genie view <sessionId> [--lines N]');
         return;
     }
     const store = (0, session_store_1.loadSessions)(paths, config, DEFAULT_CONFIG);
@@ -1053,11 +1048,6 @@ function runView(parsed, config, paths) {
     const logFile = entry.logFile;
     if (!logFile || !fs_1.default.existsSync(logFile)) {
         console.error('❌ Log not found for this run');
-        return;
-    }
-    if (parsed.options.follow) {
-        const tail = (0, child_process_1.spawn)('tail', ['-n', String(parsed.options.lines || 60), '-f', logFile], { stdio: 'inherit' });
-        tail.on('error', (e) => console.error('❌ Failed to tail log:', e instanceof Error ? e.message : String(e)));
         return;
     }
     if (parsed.options.json) {
@@ -1250,7 +1240,7 @@ function runHelp(config, paths) {
         { cmd: 'run', args: '<agent> "<prompt>"', desc: runDesc },
         { cmd: 'mode', args: '<genie-mode> "<prompt>"', desc: 'Run a Genie Mode (maps to genie-<mode>)' },
         { cmd: 'continue', args: '<sessionId> "<prompt>"', desc: 'Continue run by session id' },
-        { cmd: 'view', args: '<sessionId> [--follow] [--lines N]', desc: 'View run output (friendly); live follow with --follow' },
+        { cmd: 'view', args: '<sessionId> [--lines N]', desc: 'View run output (friendly)' },
         { cmd: 'stop', args: '<sessionId>', desc: 'Send SIGTERM to a running session' },
         { cmd: 'runs', args: '[--status <s>] [--json]', desc: 'List runs with status; manage background tasks' },
         { cmd: 'list', args: '', desc: 'Show active/completed sessions' },

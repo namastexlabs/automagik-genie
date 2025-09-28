@@ -87,23 +87,22 @@ A common snippet:
 # Start an Agent (hello-*, forge-*, custom)
 ./genie run forge-coder "[Discovery] … [Implementation] … [Verification] …"
 
-# Inspect runs and view logs (friendly or live)
+# Inspect runs and view logs (friendly)
 ./genie runs --status running
-./genie view <id|sessionId> [--follow] [--lines 120]
+./genie view <sessionId> [--lines 120]
 
 # Continue a specific run by session id
 ./genie continue <sessionId> "Follow-up …"
 
-# Stop and clear
-./genie runs --stop <id>
-./genie clear <id>
+# Stop a session
+./genie stop <sessionId>
 ```
 
 ## Subagents & Twin via CLI
 - Start subagent: `./genie run <agent> "<prompt>" [--preset <name>]`
 - Continue session: `./genie continue <sessionId> "<prompt>"`
 - List sessions: `./genie list`
-- Clear session: `./genie clear <agent>`
+- Stop session: `./genie stop <sessionId>`
 
 Twin prompt patterns (run through any agent, typically `plan`):
 - Twin Planning: "Act as an independent architect. Pressure-test this plan. Deliver 3 risks, 3 missing validations, 3 refinements. Finish with Twin Verdict + confidence."
