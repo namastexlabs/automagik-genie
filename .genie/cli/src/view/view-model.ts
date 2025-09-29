@@ -50,6 +50,9 @@ export interface TableNode {
   columns: TableColumn[];
   rows: Array<Record<string, string>>;
   emptyText?: string;
+  rowGap?: number;
+  border?: 'round' | 'none';
+  divider?: boolean;
 }
 
 export interface DividerNode {

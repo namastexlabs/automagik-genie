@@ -1,1 +1,1 @@
-@.genie/agents/core/commit.md
+@.genie/agents/utilities/commit.md

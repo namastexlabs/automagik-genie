@@ -17,7 +17,7 @@ The Genie workflow lives in `.genie/agents/` and is surfaced via CLI wrappers in
 - `forge.md` – breaks approved wish into execution groups + validation hooks (includes planner mode)
 - `review.md` – audits wish completion and produces QA reports
 - `commit.md` – aggregates diffs and proposes commit messaging
-- `prompt.md` – advanced prompting guidance stored in `.genie/agents/core/prompt.md`
+- `prompt.md` – advanced prompting guidance stored in `.genie/agents/utilities/prompt.md`
 - Specialized agents (bug-reporter, git-workflow, implementor, polish, project-manager, qa, self-learn, tests) plus utilities (`refactorer`, `rules-integrator`, optional `evaluator`). See Local Agent Map for current names.
 
 All commands in `.claude/commands/` simply `@include` the corresponding `.genie/agents/...` file to avoid duplication.
@@ -29,15 +29,16 @@ All commands in `.claude/commands/` simply `@include` the corresponding `.genie/
 - `.genie/guides/` – getting-started docs, onboarding
 - `.genie/state/` – CLI-managed data (e.g., `agents/sessions.json` for session tracking, agent logs, forge plans, commit advisories). Inspect via `./genie list sessions` or `./genie view <session>` rather than manual edits.
 - `.genie/wishes/` – active wish contracts (`<slug>-wish.md`)
-- `.genie/agents/core/` – portable Genie prompts and modes (planner, twin, analysis, etc.)
-- `.genie/agents/specialized/` – delivery/QA/learning specialists
+- `.genie/agents/` – entrypoint agents (`plan.md`, `wish.md`, `forge.md`, `review.md`)
+- `.genie/agents/utilities/` – reusable helpers (twin, analyze, debug, commit workflow, prompt, etc.)
+- `.genie/agents/specialists/` – delivery/QA/learning specialists
 - `./genie` – CLI runner for agent conversations
 
 ## Workflow Summary
 1. **/plan** – single-entry agent for product mode. Loads mission/roadmap/standards, gathers context via `@` references, requests background personas via CLI, and decides if item is wish-ready.
 2. **/wish** – creates `.genie/wishes/<slug>-wish.md`, embedding context ledger, execution groups, inline `<spec_contract>`, branch/tracker strategy, and blocker protocol.
 3. **/forge** – surfaces execution groups, evidence expectations, validation hooks, and pointers back to the wish for tracker updates (capture the plan summary inside the wish).
-4. **Implementation** – humans/agents follow forge plan, storing evidence exactly where the wish specifies (no default folders). Specialized agents run via `./genie agent run <specialized-agent> "..."`. Replace `<specialized-agent>` using the Local Agent Map and tailor the files in `.genie/agents/specialized/` during installation.
+4. **Implementation** – humans/agents follow forge plan, storing evidence exactly where the wish specifies (no default folders). Specialist agents run via `./genie agent run <specialist-agent> "..."`. Tailor the files in `.genie/agents/specialists/` during installation.
 5. **/review** (optional) – aggregates QA artefacts, replays validation commands, and writes a review summary back into the wish (create a dedicated section or file path if needed).
 6. **/commit** – groups diffs, recommends commit message/checklist, and outputs a commit advisory (log highlights inside the wish or PR draft).
 7. **Git workflow** – Branch names typically `feat/<wish-slug>`; alternatives logged in the wish. PRs reference the wish and forge plan, and reuse tracker IDs recorded in the wish itself. Update roadmap status after merge.
@@ -48,7 +49,7 @@ All commands in `.claude/commands/` simply `@include` the corresponding `.genie/
 - Background agent outputs are summarised in the wish context ledger; raw logs can be viewed with `./genie view <sessionId>`.
 
 ## Testing & Evaluation
-- Evaluator tooling is optional. If `@.genie/agents/specialized/evaluator.md` is present, `/review` or `/plan` can reference it for scoring; otherwise, evaluation steps default to manual validation.
+- Evaluator tooling is optional. If `@.genie/agents/specialists/evaluator.md` is present, `/review` or `/plan` can reference it for scoring; otherwise, evaluation steps default to manual validation.
 - Typical metrics: `{{METRICS}}` such as latency or quality. Domain-specific metrics should be added per project in the wish/forge plan.
 - Validation hooks should be captured in wishes/forge plans (e.g., `pnpm test`, `cargo test`, metrics scripts).
 
@@ -57,7 +58,7 @@ All commands in `.claude/commands/` simply `@include` the corresponding `.genie/
 - Always reference files with `@` to auto-load content.
 - Define success/failure boundaries explicitly.
 - Encourage concrete examples/snippets over abstractions.
-- Advanced prompting guidance lives in `@.genie/agents/core/prompt.md`.
+- Advanced prompting guidance lives in `@.genie/agents/utilities/prompt.md`.
 
 ## Branch & Tracker Guidance
 - **Dedicated branch** (`feat/<wish-slug>`) for medium/large changes.
@@ -110,234 +111,6 @@ Twin prompt patterns (run through any agent, typically `plan`):
 - Consensus Loop: "Challenge my conclusion. Provide counterpoints, evidence, and a recommendation. Finish with Twin Verdict + confidence."
 - Focused Deep-Dive: "Investigate <topic>. Provide findings, affected files, follow-ups."
 
-## Local Agent Map
-Agent aliases map to agent files. Keep this updated as new agents are added.
-- bug-reporter → `.genie/agents/specialized/bug-reporter.md`
-- git-workflow → `.genie/agents/specialized/git-workflow.md`
-- implementor → `.genie/agents/specialized/implementor.md`
-- polish → `.genie/agents/specialized/polish.md`
-- project-manager → `.genie/agents/specialized/project-manager.md`
-- qa → `.genie/agents/specialized/qa.md`
-- self-learn → `.genie/agents/specialized/self-learn.md`
-- tests → `.genie/agents/specialized/tests.md`
-- forge → `.genie/agents/core/forge.md`
-- planner → `.genie/agents/core/planner.md`
-- twin → `.genie/agents/core/twin.md`
- - planner-agent → `.genie/agents/core/planner.md`
- - consensus-agent → `.genie/agents/core/consensus.md`
- - debug-agent → `.genie/agents/core/debug.md`
- - analyze-agent → `.genie/agents/core/analyze.md`
- - refactor-agent → `.genie/agents/core/refactor.md`
- - docgen-agent → `.genie/agents/core/docgen.md`
- - thinkdeep-agent → `.genie/agents/core/thinkdeep.md`
- - tracer-agent → `.genie/agents/core/tracer.md`
- - challenge-agent → `.genie/agents/core/challenge.md`
- - codereview → `.genie/agents/core/codereview.md`
- - precommit → `.genie/agents/core/precommit.md`
- - testgen → `.genie/agents/core/testgen.md`
- - secaudit → `.genie/agents/core/secaudit.md`
-
-## Agent Selection Matrix
-
-### Core Analysis Agents
-
-#### `analyze` - System Architecture Analysis
-**When to use:**
-- Need holistic technical audit of codebase alignment with long-term goals
-- Assessing architectural soundness, scalability, and maintainability concerns
-- Strategic refactoring planning and dependency mapping
-- Executive-level overview of code fitness and improvement opportunities
-
-**Optimal scenarios:**
-- Pre-migration architecture assessment
-- Technical debt evaluation for roadmap planning
-- System scaling preparation analysis
-- Code review for architectural patterns
-
-**Don't use for:** Line-by-line bug hunting (use `codereview`), specific debugging (use `debug`)
-
-#### `debug` - Root Cause Investigation
-**When to use:**
-- Systematic investigation of bugs, failures, or unexpected behavior
-- Need methodical hypothesis formation with evidence and minimal fixes
-- Complex issues requiring structured investigation workflow
-- Want regression-safe solutions with confidence levels
-
-**Optimal scenarios:**
-- Production issues with unclear causes
-- Intermittent failures requiring systematic analysis
-- Performance bottlenecks needing root cause analysis
-- Bug triage with multiple potential causes
-
-**Don't use for:** Code quality review (use `codereview`), architectural analysis (use `analyze`)
-
-#### `refactor` - Code Improvement Strategy
-**When to use:**
-- Identifying concrete improvement opportunities with exact line references
-- Context-aware decomposition with adaptive thresholds
-- Need precise refactoring recommendations with dependency analysis
-- Want structured JSON output for automated processing
-
-**Optimal scenarios:**
-- Legacy code modernization planning
-- Technical debt reduction initiatives
-- Code smell elimination with priority ranking
-- Large file/class decomposition strategies
-
-**Don't use for:** Bug fixing (use `debug`), architecture design (use `analyze`)
-
-#### `consensus` - Proposal Evaluation
-**When to use:**
-- Need structured assessment of proposals, plans, or ideas
-- Want multi-perspective analysis (for/against/neutral stance-steering)
-- Require confidence-scored recommendations for decision making
-- Complex proposals needing thorough feasibility evaluation
-
-**Optimal scenarios:**
-- Architecture decision records (ADRs)
-- Feature proposal evaluation
-- Technology choice assessment
-- Strategic initiative validation
-
-**Don't use for:** Implementation planning (use `planner`), code review (use `codereview`)
-
-#### `codereview` - Quality Assurance
-**When to use:**
-- Code review for security, performance, maintainability, and architecture
-- Need severity-tagged feedback with actionable recommendations
-- Want line-specific issues with exact positioning
-- Require structured quality assessment with priority fixes
-
-**Optimal scenarios:**
-- Pull request reviews
-- Pre-commit code validation
-- Security vulnerability assessment
-- Code quality audits
-
-**Don't use for:** System architecture (use `analyze`), strategic planning (use `consensus`)
-
-#### `thinkdeep` - Complex Problem Solving
-**When to use:**
-- Complex questions requiring methodical step-by-step exploration
-- Need timeboxed deep reasoning with explicit step outline
-- Want conversation continuity across multiple exchanges
-- Require structured insights with risk assessment
-
-**Optimal scenarios:**
-- Research and discovery phases
-- Complex technical investigation
-- Multi-step problem decomposition
-- Strategic thinking and planning
-
-**Don't use for:** Quick answers, simple debugging, code review
-
-#### `challenge` - Critical Assessment
-**When to use:**
-- Need critical thinking wrapper to prevent automatic agreement
-- Want to pressure-test assumptions with counterarguments
-- Require thorough evaluation of statements or proposals
-- Need to identify flaws, gaps, or misleading points
-
-**Optimal scenarios:**
-- Assumption validation
-- Plan critique and strengthening
-- Risk assessment and devil's advocate analysis
-- Decision validation before implementation
-
-**Don't use for:** Supportive analysis, implementation guidance, code review
-
-### Specialized Workflow Agents
-
-#### `planner` - Strategic Planning
-**When to use:**
-- Interactive sequential planning with workflow architecture
-- Need step-by-step strategic roadmap development
-- Want comprehensive project orchestration
-- Require systematic approach to complex initiatives
-
-**Optimal scenarios:**
-- Project planning and roadmap creation
-- Feature development strategy
-- Migration planning with phases
-- Complex implementation orchestration
-
-#### `testgen` - Test Strategy & Generation
-**When to use:**
-- Step-by-step test generation with expert validation
-- Need comprehensive test strategy across multiple layers
-- Want automated test creation with coverage analysis
-- Require validation hooks and evidence capture
-
-**Optimal scenarios:**
-- TDD implementation
-- Legacy code test coverage
-- Test strategy development
-- Quality assurance automation
-
-#### `precommit` - Validation Workflow
-**When to use:**
-- Step-by-step pre-commit validation workflow
-- Need comprehensive checks before code integration
-- Want automated quality gates with evidence capture
-- Require systematic validation across multiple dimensions
-
-**Optimal scenarios:**
-- CI/CD pipeline validation
-- Code quality enforcement
-- Pre-merge verification
-- Automated compliance checking
-
-#### `secaudit` - Security Assessment
-**When to use:**
-- Comprehensive security audit with OWASP Top 10 coverage
-- Need compliance-focused security analysis
-- Want systematic vulnerability assessment
-- Require security best practices validation
-
-**Optimal scenarios:**
-- Security compliance audits
-- Vulnerability assessment
-- Security architecture review
-- Penetration testing preparation
-
-#### `docgen` - Documentation Strategy
-**When to use:**
-- Step-by-step documentation generation with complexity analysis
-- Need structured documentation workflow
-- Want automated documentation creation
-- Require documentation quality assessment
-
-**Optimal scenarios:**
-- API documentation generation
-- Code documentation automation
-- Technical writing workflow
-- Documentation maintenance strategy
-
-#### `tracer` - Call Flow Analysis
-**When to use:**
-- Static call path prediction and control flow analysis
-- Need method interaction mapping
-- Want execution path tracing for complex systems
-- Require dependency flow visualization
-
-**Optimal scenarios:**
-- Legacy code understanding
-- Debugging complex method interactions
-- Performance bottleneck identification
-- System flow documentation
-
-### Decision Framework
-
-**For bugs/issues:** `debug` → `codereview` (if needed) → `testgen` (for prevention)
-
-**For architecture:** `analyze` → `consensus` (for decisions) → `refactor` (for improvements)
-
-**For planning:** `planner` → `challenge` (for validation) → `consensus` (for approval)
-
-**For quality:** `codereview` → `precommit` → `testgen` → `secaudit`
-
-**For research:** `thinkdeep` → `analyze` → `challenge` → `consensus`
-
 ## Agent Playbook
 
 <prompt>
@@ -371,6 +144,11 @@ Agent aliases map to agent files. Keep this updated as new agents are added.
       <validation>How to verify the correction is working</validation>
     </entry>
     -->
+    <entry date="2025-09-29" violation_type="DOC_INTEGRITY" severity="HIGH">
+      <trigger>Overwriting `AGENTS.md` wholesale without approval during restructuring.</trigger>
+      <correction>Perform targeted, line-level edits for documentation updates; never replace entire files unless explicitly authorized.</correction>
+      <validation>Subsequent doc changes appear as focused diffs reviewed with stakeholders before merge.</validation>
+    </entry>
   </learning_entries>
 </behavioral_learnings>
 
@@ -524,7 +302,7 @@ Agent aliases map to agent files. Keep this updated as new agents are added.
 
 ### Modes (quick reference)
 - planning, consensus, deep-dive, debug, socratic, debate, risk-audit, design-review, test-strategy, compliance, retrospective.
-- Full prompt templates live in `@.genie/agents/core/twin.md`.
+- Full prompt templates live in `@.genie/agents/utilities/twin.md`.
 
 ### Outputs & Evidence
 - Low-stakes: append a short summary to the wish discovery section.

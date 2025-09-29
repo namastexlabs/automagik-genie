@@ -1,1 +1,1 @@
-@.genie/agents/core/plan.md
+@.genie/agents/plan.md

@@ -3,8 +3,8 @@
 ## Overview
 This directory contains agent definitions that power the GENIE CLI's intelligent orchestration capabilities. Agents are organized as:
 
-- **Core** – stable orchestrators (`commit`, `plan`, `forge`, etc.).
-- **Modes** (`modes/`) – Genie framework personas that rarely change between repos (planner, twin, debug, ...).
+- **Entrypoints** – the four workflow phases (`plan.md`, `wish.md`, `forge.md`, `review.md`) stored at the root of this folder.
+- **Utilities** (`utilities/`) – reusable helpers (twin, analyze, debug, commit workflow, prompt, etc.).
 - **Specialists** (`specialists/`) – project-tailored delivery/qa/learning agents that the install flow customizes.
 
 Each agent is a specialized persona with specific expertise and behavioral patterns.
@@ -198,15 +198,14 @@ Agents run in background by default:
 ## Agent Routing Map
 
 Current agent routing (see AGENTS.md for updates):
-- `implementor` → `specialized/implementor.md`
-- `qa` → `specialized/qa.md`
-- `polish` → `specialized/polish.md`
-- `tests` → `specialized/tests.md`
-- `git` | `git-workflow` → `specialized/git-workflow.md`
-- `project-manager` → `specialized/project-manager.md`
-- `planner` → `core/planner.md`
-- `twin` → `core/twin.md`
-- Additional portable prompts live in `.genie/agents/core/`
+- `implementor` → `specialists/implementor.md`
+- `qa` → `specialists/qa.md`
+- `polish` → `specialists/polish.md`
+- `tests` → `specialists/tests.md`
+- `git` | `git-workflow` → `specialists/git-workflow.md`
+- `project-manager` → `specialists/project-manager.md`
+- `twin` → `utilities/twin.md`
+- More utilities live in `.genie/agents/utilities/`
 
 ## Best Practices
 

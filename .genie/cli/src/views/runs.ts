@@ -19,6 +19,15 @@ const GENIE_STYLE: ViewStyle = 'genie';
 
 export function buildRunsOverviewView(params: RunsViewParams): ViewEnvelope {
   const { active, recent, warnings } = params;
+  const badgeRow: ViewNode = {
+    type: 'layout',
+    direction: 'row',
+    gap: 1,
+    children: [
+      { type: 'badge', text: `${active.length} active`, tone: active.length ? 'info' : 'muted' },
+      { type: 'badge', text: `${recent.length} recent`, tone: recent.length ? 'info' : 'muted' }
+    ]
+  };
   return {
     style: GENIE_STYLE,
     title: 'Background Sessions',
@@ -28,12 +37,25 @@ export function buildRunsOverviewView(params: RunsViewParams): ViewEnvelope {
       gap: 1,
       children: [
         { type: 'heading', level: 1, text: 'Background Sessions', accent: 'primary' },
+        badgeRow,
+        {
+          type: 'callout',
+          tone: 'info',
+          icon: '🛰️',
+          title: 'Manage background work',
+          body: [
+            'Use `genie resume <sessionId>` to feed follow-up prompts.',
+            'Run `genie stop <sessionId>` to terminate detached processes.'
+          ]
+        },
+        { type: 'divider', variant: 'solid', accent: 'muted' },
         sectionWithTable('Active Sessions', active, 'No active sessions'),
         sectionWithTable('Recent Sessions (last 10)', recent, 'No recent sessions'),
         warnings && warnings.length
           ? {
               type: 'callout',
               tone: 'warning',
+              icon: '⚠️',
               title: 'Session store warning',
               body: warnings
             }
@@ -41,6 +63,7 @@ export function buildRunsOverviewView(params: RunsViewParams): ViewEnvelope {
         {
           type: 'callout',
           tone: 'info',
+          icon: '💡',
           title: 'Tips',
           body: ['View details: `genie view <sessionId>`', 'Resume work: `genie resume <sessionId> "<prompt>"`']
         }
@@ -50,11 +73,22 @@ export function buildRunsOverviewView(params: RunsViewParams): ViewEnvelope {
 }
 
 function sectionWithTable(title: string, rows: RunRow[], emptyText: string): ViewNode {
+  const badge: ViewNode = {
+    type: 'badge',
+    text: rows.length ? `${rows.length} entries` : 'Empty',
+    tone: rows.length ? 'info' : 'muted'
+  };
   return {
     type: 'layout' as const,
     direction: 'column' as const,
     children: [
       { type: 'heading', level: 2, text: title, accent: 'secondary' },
+      {
+        type: 'layout',
+        direction: 'row',
+        gap: 1,
+        children: [badge]
+      },
       {
         type: 'table' as const,
         columns: [

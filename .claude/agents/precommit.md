@@ -4,4 +4,4 @@ description: Pre-commit validation and checks agent
 model: inherit
 ---
 
-@.genie/agents/core/precommit.md
+@.genie/agents/utilities/commit.md

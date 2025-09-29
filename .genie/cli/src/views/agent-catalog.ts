@@ -19,6 +19,15 @@ const GENIE_STYLE: ViewStyle = 'genie';
 
 export function buildAgentCatalogView(params: AgentCatalogParams): ViewEnvelope {
   const { total, groups } = params;
+  const badgeRow: ViewNode = {
+    type: 'layout',
+    direction: 'row',
+    gap: 1,
+    children: [
+      { type: 'badge', text: `Total ${total}`, tone: 'info' },
+      { type: 'badge', text: `${groups.length} folders`, tone: 'muted' }
+    ]
+  };
   return {
     style: GENIE_STYLE,
     title: 'Agent Catalog',
@@ -28,19 +37,32 @@ export function buildAgentCatalogView(params: AgentCatalogParams): ViewEnvelope 
       gap: 1,
       children: [
         { type: 'heading', level: 1, text: 'Agent Catalog', accent: 'primary' },
-        {
-          type: 'keyValue',
-          columns: 1,
-          items: [{ label: 'Total agents', value: String(total) }]
-        },
-        ...groups.map((group) => buildGroupSection(group)),
+        badgeRow,
         {
           type: 'callout',
           tone: 'info',
+          icon: '🧭',
           title: 'Usage',
           body: [
             'Run an agent: `genie run <agent-id> "<prompt>"`.',
             'List active work: `genie list sessions`.'
+          ]
+        },
+        { type: 'divider', variant: 'solid', accent: 'muted' },
+        ...groups.flatMap((group, index) => {
+          const section = buildGroupSection(group);
+          return index < groups.length - 1
+            ? [section, { type: 'divider', variant: 'solid', accent: 'muted' } as ViewNode]
+            : [section];
+        }) as ViewNode[],
+        {
+          type: 'callout',
+          tone: 'success',
+          icon: '🧪',
+          title: 'Next steps',
+          body: [
+            'Pair `/forge` plans with `/implementor` runs for structured delivery.',
+            'Keep wish context updated as you add or retire agents.'
           ]
         }
       ] as ViewNode[]
@@ -49,12 +71,21 @@ export function buildAgentCatalogView(params: AgentCatalogParams): ViewEnvelope 
 }
 
 function buildGroupSection(group: AgentCatalogGroup): ViewNode {
+  const badges: ViewNode = {
+    type: 'layout',
+    direction: 'row',
+    gap: 1,
+    children: [
+      { type: 'badge', text: `${group.rows.length} agents`, tone: 'info' }
+    ]
+  };
   return {
     type: 'layout',
     direction: 'column',
     gap: 1,
     children: [
       { type: 'heading', level: 2, text: group.label, accent: 'secondary' },
+      badges,
       {
         type: 'table',
         columns: [

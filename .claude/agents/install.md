@@ -4,4 +4,4 @@ description: Installation and setup agent
 model: inherit
 ---
 
-@.genie/agents/core/install.md
+@.genie/agents/utilities/install.md

@@ -24,7 +24,7 @@ Each subsection lists: current behaviour in code, the desired end-state, and con
 ### 1. `run <name> "<prompt>"`
 - **Current behaviour**
   - Entry points: `genie run`, `genie agent run`, `genie mode` (see dispatcher switch at `.genie/cli/src/genie.ts:203-235`).
-  - Agent lookup is segmented into `core`, `modes`, and `specialists` directories (`listAgents()` at `.genie/cli/src/genie.ts:1866-1889`).
+  - Agent lookup is segmented into entrypoints (root files), `utilities/`, and `specialists/` directories (`listAgents()` at `.genie/cli/src/genie.ts:1866-1889`).
   - Numerous runtime flags are accepted (preset, executor, background toggles, etc. in `parseArguments()` at `.genie/cli/src/genie.ts:250-323`).
 - **Target**
   - Single verb `run` that resolves any `.md` under `.genie/agents/**` (folder prefix optional when unique).
@@ -39,7 +39,7 @@ Each subsection lists: current behaviour in code, the desired end-state, and con
 - **Current behaviour**
   - Implemented via `genie agent list` (catalog view grouped by `Modes/Core/Specialized`).
 - **Target**
-  - `genie list agents` should display every `.genie/agents/**.md`, grouped by folder (e.g. `root`, `core`, `specialized`, custom subfolders).
+  - `genie list agents` should display every `.genie/agents/**.md`, grouped by folder (e.g. entrypoints in root, `utilities/`, `specialists/`, custom subfolders).
 - **Change notes**
   - Catalog view is already refactored to use folder grouping (`buildAgentCatalogView` in `.genie/cli/src/views/agent-catalog.ts`).
   - Wire new top-level command when dispatcher is updated; keep `agent list` as compatibility alias until migration completes.
@@ -102,7 +102,7 @@ Each subsection lists: current behaviour in code, the desired end-state, and con
   - `BASE_CONFIG.presets` in `.genie/cli/src/genie.ts:82-144` defines `default`, `careful`, `danger`, `debug`.
 - **Plan**
   - Rename `presets` → `executionModes` with explicit sandbox/network/approval fields.
-  - Update agent front matter (e.g., `.genie/agents/core/prompt.md`) to declare mode metadata; CLI should only read these values.
+  - Update agent front matter (e.g., `.genie/agents/utilities/prompt.md`) to declare mode metadata; CLI should only read these values.
 - **Why**
   - Eliminates confusing preset names and keeps execution posture declarative.
 
@@ -141,11 +141,11 @@ Agents • .genie/agents
 ┌────────────────────────┬────────────────────────────────────────────┐
 │ folder/id              │ summary                                    │
 ├────────────────────────┼────────────────────────────────────────────┤
-│ core/plan              │ Orchestrates discovery → wish readiness    │
-│ core/forge             │ Breaks wish into execution groups + checks │
-│ core/twin              │ Second-opinion loop with verdict + confidence │
-│ specialized/implementor│ Applies forge plan to this repo            │
-│ specialized/qa         │ Validation specialist for repo standards   │
+│ plan                   │ Orchestrates discovery → wish readiness    │
+│ forge                  │ Breaks wish into execution groups + checks │
+│ utilities/twin         │ Second-opinion loop with verdict + confidence │
+│ specialists/implementor│ Applies forge plan to this repo            │
+│ specialists/qa         │ Validation specialist for repo standards   │
 └────────────────────────┴────────────────────────────────────────────┘
 ```
 

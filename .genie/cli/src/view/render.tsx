@@ -214,6 +214,7 @@ function renderTableNode(node: TableNode): React.ReactElement {
   const columns = node.columns;
   const MAX_COL_WIDTH = 40;
   const MIN_COL_WIDTH = 6;
+  const rowGap = node.rowGap ?? 0;
   const sanitized = (value: string) => value.replace(/\s+/g, ' ').trim();
   const truncate = (value: string, width: number) => {
     if (value.length <= width) return value;
@@ -256,22 +257,36 @@ function renderTableNode(node: TableNode): React.ReactElement {
     </InkBox>
   );
 
+  const containerProps = node.border === 'none'
+    ? { flexDirection: 'column' as const }
+    : {
+        flexDirection: 'column' as const,
+        borderStyle: 'round' as const,
+        borderColor: accentToColor('muted'),
+        paddingX: 1,
+        paddingY: 1
+      };
+
+  const showDivider = node.divider !== false && node.rows.length > 0;
+
   return (
-    <InkBox flexDirection="column" borderStyle="round" borderColor={accentToColor('muted')} paddingX={1} paddingY={1}>
+    <InkBox {...containerProps}>
       {renderRow(Object.fromEntries(columns.map((c) => [c.key, c.label])), true)}
+      {showDivider ? (
+        <InkBox>
+          <InkText color={accentToColor('muted')} dimColor>
+            {'─'.repeat(tableWidth)}
+          </InkText>
+        </InkBox>
+      ) : null}
       {node.rows.length === 0 && node.emptyText ? (
-        <InkBox marginTop={1}>
+        <InkBox>
           <InkText color={palette.foreground.placeholder}>{node.emptyText}</InkText>
         </InkBox>
       ) : (
         <Fragment>
-          <InkBox marginY={1}>
-            <InkText color={accentToColor('muted')} dimColor>
-              {'─'.repeat(tableWidth)}
-            </InkText>
-          </InkBox>
           {node.rows.map((row, idx) => (
-            <InkBox key={`row-${idx}`} marginBottom={idx < node.rows.length - 1 ? 1 : 0}>
+            <InkBox key={`row-${idx}`} marginBottom={idx < node.rows.length - 1 ? rowGap : 0}>
               {renderRow(row)}
             </InkBox>
           ))}

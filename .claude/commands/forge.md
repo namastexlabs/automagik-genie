@@ -1,1 +1,1 @@
-@.genie/agents/core/forge.md
+@.genie/agents/forge.md

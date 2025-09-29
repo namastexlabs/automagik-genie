@@ -4,4 +4,4 @@ description: Git workflow and version control specialist
 model: inherit
 ---
 
-@.genie/agents/specialized/git-workflow.md
+@.genie/agents/specialists/git-workflow.md

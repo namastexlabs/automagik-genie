@@ -5,7 +5,7 @@
 ### 2. Agent Catalog
 - `./genie agent list`
 - `./genie list agents`
-- Confirm core vs specialized grouping reflects folder structure (`core/`, `specialized/`).
+- Confirm entrypoint vs utility vs specialist grouping reflects folder structure (root files, `utilities/`, `specialists/`).
 
 ### 3. Session Listings
 - `./genie list sessions`

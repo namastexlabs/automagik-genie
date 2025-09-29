@@ -131,6 +131,7 @@ function renderTableNode(node) {
     const columns = node.columns;
     const MAX_COL_WIDTH = 40;
     const MIN_COL_WIDTH = 6;
+    const rowGap = node.rowGap ?? 0;
     const sanitized = (value) => value.replace(/\s+/g, ' ').trim();
     const truncate = (value, width) => {
         if (value.length <= width)
@@ -163,7 +164,17 @@ function renderTableNode(node) {
             const color = isHeader ? (0, theme_1.accentToColor)('secondary') : theme_1.palette.foreground.default;
             return ((0, jsx_runtime_1.jsx)(InkBox, { width: widths[idx], marginRight: idx < columns.length - 1 ? gapSize : 0, children: (0, jsx_runtime_1.jsx)(InkText, { color: color, bold: isHeader, children: aligned }) }, `${col.key}-${idx}`));
         }) }));
-    return ((0, jsx_runtime_1.jsxs)(InkBox, { flexDirection: "column", borderStyle: "round", borderColor: (0, theme_1.accentToColor)('muted'), paddingX: 1, paddingY: 1, children: [renderRow(Object.fromEntries(columns.map((c) => [c.key, c.label])), true), node.rows.length === 0 && node.emptyText ? ((0, jsx_runtime_1.jsx)(InkBox, { marginTop: 1, children: (0, jsx_runtime_1.jsx)(InkText, { color: theme_1.palette.foreground.placeholder, children: node.emptyText }) })) : ((0, jsx_runtime_1.jsxs)(react_1.Fragment, { children: [(0, jsx_runtime_1.jsx)(InkBox, { marginY: 1, children: (0, jsx_runtime_1.jsx)(InkText, { color: (0, theme_1.accentToColor)('muted'), dimColor: true, children: '─'.repeat(tableWidth) }) }), node.rows.map((row, idx) => ((0, jsx_runtime_1.jsx)(InkBox, { marginBottom: idx < node.rows.length - 1 ? 1 : 0, children: renderRow(row) }, `row-${idx}`)))] }))] }));
+    const containerProps = node.border === 'none'
+        ? { flexDirection: 'column' }
+        : {
+            flexDirection: 'column',
+            borderStyle: 'round',
+            borderColor: (0, theme_1.accentToColor)('muted'),
+            paddingX: 1,
+            paddingY: 1
+        };
+    const showDivider = node.divider !== false && node.rows.length > 0;
+    return ((0, jsx_runtime_1.jsxs)(InkBox, { ...containerProps, children: [renderRow(Object.fromEntries(columns.map((c) => [c.key, c.label])), true), showDivider ? ((0, jsx_runtime_1.jsx)(InkBox, { children: (0, jsx_runtime_1.jsx)(InkText, { color: (0, theme_1.accentToColor)('muted'), dimColor: true, children: '─'.repeat(tableWidth) }) })) : null, node.rows.length === 0 && node.emptyText ? ((0, jsx_runtime_1.jsx)(InkBox, { children: (0, jsx_runtime_1.jsx)(InkText, { color: theme_1.palette.foreground.placeholder, children: node.emptyText }) })) : ((0, jsx_runtime_1.jsx)(react_1.Fragment, { children: node.rows.map((row, idx) => ((0, jsx_runtime_1.jsx)(InkBox, { marginBottom: idx < node.rows.length - 1 ? rowGap : 0, children: renderRow(row) }, `row-${idx}`))) }))] }));
     function alignCell(text, width, align) {
         const padLeft = (count) => (count > 0 ? ' '.repeat(count) : '');
         if (align === 'right')

@@ -1,1 +1,1 @@
-@.genie/agents/core/wish.md
+@.genie/agents/wish.md

@@ -4,6 +4,15 @@ exports.buildRunsOverviewView = buildRunsOverviewView;
 const GENIE_STYLE = 'genie';
 function buildRunsOverviewView(params) {
     const { active, recent, warnings } = params;
+    const badgeRow = {
+        type: 'layout',
+        direction: 'row',
+        gap: 1,
+        children: [
+            { type: 'badge', text: `${active.length} active`, tone: active.length ? 'info' : 'muted' },
+            { type: 'badge', text: `${recent.length} recent`, tone: recent.length ? 'info' : 'muted' }
+        ]
+    };
     return {
         style: GENIE_STYLE,
         title: 'Background Sessions',
@@ -13,12 +22,25 @@ function buildRunsOverviewView(params) {
             gap: 1,
             children: [
                 { type: 'heading', level: 1, text: 'Background Sessions', accent: 'primary' },
+                badgeRow,
+                {
+                    type: 'callout',
+                    tone: 'info',
+                    icon: '🛰️',
+                    title: 'Manage background work',
+                    body: [
+                        'Use `genie resume <sessionId>` to feed follow-up prompts.',
+                        'Run `genie stop <sessionId>` to terminate detached processes.'
+                    ]
+                },
+                { type: 'divider', variant: 'solid', accent: 'muted' },
                 sectionWithTable('Active Sessions', active, 'No active sessions'),
                 sectionWithTable('Recent Sessions (last 10)', recent, 'No recent sessions'),
                 warnings && warnings.length
                     ? {
                         type: 'callout',
                         tone: 'warning',
+                        icon: '⚠️',
                         title: 'Session store warning',
                         body: warnings
                     }
@@ -26,6 +48,7 @@ function buildRunsOverviewView(params) {
                 {
                     type: 'callout',
                     tone: 'info',
+                    icon: '💡',
                     title: 'Tips',
                     body: ['View details: `genie view <sessionId>`', 'Resume work: `genie resume <sessionId> "<prompt>"`']
                 }
@@ -34,11 +57,22 @@ function buildRunsOverviewView(params) {
     };
 }
 function sectionWithTable(title, rows, emptyText) {
+    const badge = {
+        type: 'badge',
+        text: rows.length ? `${rows.length} entries` : 'Empty',
+        tone: rows.length ? 'info' : 'muted'
+    };
     return {
         type: 'layout',
         direction: 'column',
         children: [
             { type: 'heading', level: 2, text: title, accent: 'secondary' },
+            {
+                type: 'layout',
+                direction: 'row',
+                gap: 1,
+                children: [badge]
+            },
             {
                 type: 'table',
                 columns: [

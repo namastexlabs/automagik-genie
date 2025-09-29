@@ -11,6 +11,7 @@ function buildErrorView(title, message) {
         body: {
             type: 'callout',
             tone: 'danger',
+            icon: '❌',
             title,
             body: [message]
         }
@@ -23,6 +24,7 @@ function buildWarningView(title, messages) {
         body: {
             type: 'callout',
             tone: 'warning',
+            icon: '⚠️',
             title,
             body: messages
         }
@@ -35,6 +37,7 @@ function buildInfoView(title, messages) {
         body: {
             type: 'callout',
             tone: 'info',
+            icon: 'ℹ️',
             title,
             body: messages
         }

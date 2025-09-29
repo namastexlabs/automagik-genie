@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * GENIE Agent CLI - Codex exec orchestration with configurable presets
+ * GENIE Agent CLI - Codex exec orchestration with configurable execution modes
  */
 
 import fs from 'fs';
@@ -10,7 +10,15 @@ import { spawn, SpawnOptionsWithoutStdio } from 'child_process';
 import { loadExecutors, DEFAULT_EXECUTOR_KEY } from './executors';
 import type { Executor, ExecutorCommand } from './executors/types';
 import { renderEnvelope, ViewEnvelope, ViewStyle, Tone } from './view';
-import { buildHelpView } from './views/help';
+import {
+  buildHelpView,
+  buildRunHelpView,
+  buildResumeHelpView,
+  buildListHelpView,
+  buildViewHelpView,
+  buildStopHelpView,
+  buildGeneralHelpView
+} from './views/help';
 import { buildAgentCatalogView } from './views/agent-catalog';
 import { buildRunsOverviewView, RunRow } from './views/runs';
 import { buildBackgroundStartingView, buildBackgroundPendingView, buildBackgroundStartView, buildRunCompletionView } from './views/background';
@@ -40,13 +48,10 @@ try {
 }
 
 interface CLIOptions {
-  configOverrides: string[];
   rawArgs: string[];
   background: boolean;
   backgroundExplicit: boolean;
   backgroundRunner: boolean;
-  preset?: string;
-  executor?: string;
   requestHelp?: boolean;
   full: boolean;
 }
@@ -67,12 +72,14 @@ interface ConfigPaths {
 
 interface GenieConfig {
   defaults?: {
+    executionMode?: string;
     preset?: string;
     background?: boolean;
     executor?: string;
   };
   paths?: ConfigPaths;
   executors?: Record<string, any>;
+  executionModes?: Record<string, any>;
   presets?: Record<string, any>;
   background?: {
     enabled?: boolean;
@@ -111,7 +118,6 @@ function recordRuntimeWarning(message: string): void {
 
 const BASE_CONFIG: GenieConfig = {
   defaults: {
-    preset: 'default',
     background: true,
     executor: DEFAULT_EXECUTOR_KEY
   },
@@ -122,7 +128,7 @@ const BASE_CONFIG: GenieConfig = {
     backgroundDir: '.genie/state/agents/background'
   },
   executors: {},
-  presets: {
+  executionModes: {
     default: {
       description: 'Workspace-write automation with GPT-5 Codex.',
       executor: DEFAULT_EXECUTOR_KEY,
@@ -176,7 +182,7 @@ void main();
 
 async function main(): Promise<void> {
   try {
-    const parsed = parseArguments(process.argv.slice(2));
+    let parsed = parseArguments(process.argv.slice(2));
     const envIsBackground = process.env[INTERNAL_BACKGROUND_ENV] === '1';
     if (envIsBackground) {
       parsed.options.background = true;
@@ -184,7 +190,7 @@ async function main(): Promise<void> {
       parsed.options.backgroundExplicit = true;
     }
 
-    const config = loadConfig(parsed.options.configOverrides);
+    const config = loadConfig();
     applyDefaults(parsed.options, config.defaults);
     const paths = resolvePaths(config.paths || {});
     prepareDirectories(paths);
@@ -192,28 +198,44 @@ async function main(): Promise<void> {
     await flushStartupWarnings(parsed.options);
 
     switch (parsed.command) {
-      case 'agent':
-        await runAgentCommand(parsed, config, paths);
-        break;
       case 'run':
+        if (parsed.options.requestHelp || (parsed.commandArgs.length === 0)) {
+          await emitView(buildRunHelpView(), parsed.options);
+          return;
+        }
         await runChat(parsed, config, paths);
         break;
-      case 'mode':
-        await runMode(parsed, config, paths);
-        break;
-      case 'continue':
+      case 'resume':
+        if (parsed.options.requestHelp || (parsed.commandArgs.length === 0)) {
+          await emitView(buildResumeHelpView(), parsed.options);
+          return;
+        }
         await runContinue(parsed, config, paths);
         break;
+      case 'list':
+        if (parsed.options.requestHelp) {
+          await emitView(buildListHelpView(), parsed.options);
+          return;
+        }
+        await runList(parsed, config, paths);
+        break;
       case 'view':
+        if (parsed.options.requestHelp || (parsed.commandArgs.length === 0)) {
+          await emitView(buildViewHelpView(), parsed.options);
+          return;
+        }
         await runView(parsed, config, paths);
         break;
-      case 'runs':
-        await runRuns(parsed, config, paths);
-        break;
       case 'stop':
+        if (parsed.options.requestHelp || (parsed.commandArgs.length === 0)) {
+          await emitView(buildStopHelpView(), parsed.options);
+          return;
+        }
         await runStop(parsed, config, paths);
         break;
       case 'help':
+        await runHelp(parsed, config, paths);
+        break;
       case undefined:
         await runHelp(parsed, config, paths);
         break;
@@ -234,15 +256,12 @@ async function main(): Promise<void> {
 
 function parseArguments(argv: string[]): ParsedCommand {
   const raw = argv.slice();
-  const command = raw.shift();
+  const command = raw.shift()?.toLowerCase();
   const options: CLIOptions = {
-    configOverrides: [],
     rawArgs: argv.slice(),
     background: false,
     backgroundExplicit: false,
     backgroundRunner: false,
-    preset: undefined,
-    executor: undefined,
     requestHelp: undefined,
     full: false
   };
@@ -250,21 +269,6 @@ function parseArguments(argv: string[]): ParsedCommand {
   const filtered: string[] = [];
   for (let i = 0; i < raw.length; i++) {
     const token = raw[i];
-    if (token === '--preset') {
-      if (i + 1 >= raw.length) throw new Error('Missing value for --preset');
-      options.preset = raw[++i];
-      continue;
-    }
-    if (token === '--executor') {
-      if (i + 1 >= raw.length) throw new Error('Missing value for --executor');
-      options.executor = raw[++i];
-      continue;
-    }
-    if (token === '-c' || token === '--config') {
-      if (i + 1 >= raw.length) throw new Error('Missing value for -c/--config');
-      options.configOverrides.push(raw[++i]);
-      continue;
-    }
     if (token === '--help' || token === '-h') {
       options.requestHelp = true;
       continue;
@@ -320,37 +324,28 @@ function applyDefaults(options: CLIOptions, defaults?: GenieConfig['defaults']):
   if (!options.backgroundExplicit) {
     options.background = Boolean(defaults?.background);
   }
-  if (!options.preset && defaults?.preset) {
-    options.preset = defaults.preset;
-  }
-  if (!options.executor && defaults?.executor) {
-    options.executor = defaults.executor;
-  }
 }
 
-function loadConfig(overrides: string[]): GenieConfig {
+function loadConfig(): GenieConfig {
   let config = deepClone(DEFAULT_CONFIG);
-  let configFilePath: string | null = null;
-  if (fs.existsSync(CONFIG_PATH)) {
-    configFilePath = CONFIG_PATH;
-  }
+  const configFilePath = fs.existsSync(CONFIG_PATH) ? CONFIG_PATH : null;
+
   if (configFilePath) {
     try {
-      const file = fs.readFileSync(configFilePath, 'utf8');
-      if (file.trim().length) {
+      const raw = fs.readFileSync(configFilePath, 'utf8');
+      if (raw.trim().length) {
         let parsed: any = {};
         if (YAML) {
-          parsed = YAML.parse(file) || {};
-        } else if (file.trim().startsWith('{')) {
-          try { parsed = JSON.parse(file); } catch { parsed = {}; }
-        } else {
+          parsed = YAML.parse(raw) || {};
+        } else if (raw.trim().startsWith('{')) {
           try {
-            parsed = parseSimpleYaml(file);
-          } catch (fallbackError) {
-            const message = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
-            recordStartupWarning(`[genie] Failed to parse ${path.basename(configFilePath)} without yaml module: ${message}`);
+            parsed = JSON.parse(raw);
+          } catch {
             parsed = {};
           }
+        } else {
+          recordStartupWarning('[genie] YAML module unavailable; ignoring config overrides. Install "yaml" to enable parsing.');
+          parsed = {};
         }
         config = mergeDeep(config, parsed);
       }
@@ -363,7 +358,6 @@ function loadConfig(overrides: string[]): GenieConfig {
     config.__configPath = CONFIG_PATH;
   }
 
-  overrides.forEach((override) => applyConfigOverride(config, override));
   return config;
 }
 
@@ -395,145 +389,6 @@ function mergeDeep(target: any, source: any): any {
   return base;
 }
 
-function applyConfigOverride(config: any, override: string): void {
-  const index = override.indexOf('=');
-  if (index === -1) {
-    throw new Error(`Invalid override '${override}'. Expected key=value.`);
-  }
-  const keyPath = override.slice(0, index).trim();
-  const valueRaw = override.slice(index + 1).trim();
-  if (!keyPath.length) throw new Error(`Invalid override '${override}'. Key is required.`);
-
-  let value: any;
-  try {
-    value = JSON.parse(valueRaw);
-  } catch {
-    value = valueRaw;
-  }
-
-  const segments = keyPath.split('.');
-  let cursor = config;
-  for (let i = 0; i < segments.length - 1; i++) {
-    const segment = segments[i];
-    if (!Object.prototype.hasOwnProperty.call(cursor, segment) || typeof cursor[segment] !== 'object' || cursor[segment] === null) {
-      cursor[segment] = {};
-    }
-    cursor = cursor[segment];
-  }
-  cursor[segments[segments.length - 1]] = value;
-}
-
-function parseSimpleYaml(text: string): any {
-  const lines = String(text || '').split(/\r?\n/);
-  const root: any = {};
-  const stack: Array<{ indent: number; value: any }> = [{ indent: -1, value: root }];
-
-  for (let i = 0; i < lines.length; i += 1) {
-    let line = lines[i];
-    if (!line || !line.trim()) continue;
-    const hash = line.indexOf('#');
-    if (hash !== -1) {
-      line = line.slice(0, hash);
-    }
-    if (!line.trim()) continue;
-
-    const indentMatch = line.match(/^ */);
-    const indent = indentMatch ? indentMatch[0].length : 0;
-    const level = Math.floor(indent / 2);
-    const trimmed = line.trim();
-
-    while (stack.length && stack[stack.length - 1].indent >= level) {
-      stack.pop();
-    }
-
-    const parentContainer = stack[stack.length - 1].value;
-
-    if (trimmed.startsWith('- ')) {
-      if (!Array.isArray(parentContainer)) {
-        throw new Error('Invalid YAML structure: list item outside of an array.');
-      }
-      const itemValue = parseYamlScalar(trimmed.slice(2).trim());
-      parentContainer.push(itemValue);
-      if (itemValue && typeof itemValue === 'object' && !Array.isArray(itemValue)) {
-        stack.push({ indent: level, value: itemValue });
-      }
-      continue;
-    }
-
-    const colonIdx = trimmed.indexOf(':');
-    if (colonIdx === -1) {
-      continue;
-    }
-
-    const key = trimmed.slice(0, colonIdx).trim();
-    let valueRaw = trimmed.slice(colonIdx + 1).trim();
-    let value;
-    if (!valueRaw.length) {
-      const lookAhead = findNextMeaningfulYamlLine(lines, i + 1);
-      if (lookAhead && lookAhead.indent > level) {
-        value = lookAhead.isArray ? [] : {};
-        if (Array.isArray(parentContainer)) {
-          parentContainer.push(value);
-        } else {
-          parentContainer[key] = value;
-        }
-        stack.push({ indent: level, value });
-        continue;
-      }
-      value = null;
-    } else {
-      value = parseYamlScalar(valueRaw);
-    }
-
-    if (Array.isArray(parentContainer)) {
-      parentContainer.push(value);
-    } else {
-      parentContainer[key] = value;
-    }
-
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
-      stack.push({ indent: level, value });
-    }
-  }
-
-  return root;
-}
-
-function findNextMeaningfulYamlLine(lines: string[], start: number) {
-  for (let i = start; i < lines.length; i += 1) {
-    let line = lines[i];
-    if (!line || !line.trim()) continue;
-    const hash = line.indexOf('#');
-    if (hash !== -1) {
-      line = line.slice(0, hash);
-    }
-    if (!line.trim()) continue;
-    const indentMatch = line.match(/^ */);
-    const indent = indentMatch ? indentMatch[0].length : 0;
-    const trimmed = line.trim();
-    return {
-      indent: Math.floor(indent / 2),
-      isArray: trimmed.startsWith('- ')
-    };
-  }
-  return null;
-}
-
-function parseYamlScalar(valueRaw: string): any {
-  if (!valueRaw.length) return null;
-  if (valueRaw === 'true') return true;
-  if (valueRaw === 'false') return false;
-  if (valueRaw === 'null') return null;
-  if (/^[-+]?[0-9]+(\.[0-9]+)?$/.test(valueRaw)) {
-    return Number(valueRaw);
-  }
-  if ((valueRaw.startsWith('"') && valueRaw.endsWith('"')) || (valueRaw.startsWith('\'') && valueRaw.endsWith('\''))) {
-    const unquoted = valueRaw.slice(1, -1);
-    return unquoted.replace(/\"/g, '"').replace(/\\'/g, "'");
-  }
-  return valueRaw;
-}
-
 function resolvePaths(paths: ConfigPaths): Required<ConfigPaths> {
   const baseDir = paths.baseDir || '.';
   return {
@@ -553,36 +408,125 @@ function prepareDirectories(paths: Required<ConfigPaths>): void {
   });
 }
 
+async function maybeHandleBackgroundLaunch(params: {
+  parsed: ParsedCommand;
+  config: GenieConfig;
+  paths: Required<ConfigPaths>;
+  store: SessionStore;
+  entry: SessionEntry;
+  agentName: string;
+  executorKey: string;
+  executionMode: string;
+  startTime: number;
+  logFile: string;
+  allowResume: boolean;
+}): Promise<boolean> {
+  const { parsed, config, paths, store, entry, agentName, executorKey, executionMode, startTime, logFile, allowResume } = params;
+
+  if (!parsed.options.background || parsed.options.backgroundRunner) {
+    return false;
+  }
+
+  const runnerPid = backgroundManager.launch({
+    rawArgs: parsed.options.rawArgs,
+    startTime,
+    logFile,
+    backgroundConfig: config.background,
+    scriptPath: __filename
+  });
+
+  entry.runnerPid = runnerPid;
+  entry.status = 'running';
+  entry.background = parsed.options.background;
+  saveSessions(paths as SessionPathsConfig, store);
+
+  const emitStarting = async (frame?: string) => {
+    const startingView = buildBackgroundStartingView({ agentName, frame });
+    await emitView(startingView, parsed.options);
+  };
+
+  const emitStatus = async (sessionId: string | null | undefined, frame?: string) => {
+    if (!sessionId) {
+      const pendingView = buildBackgroundPendingView({ agentName, frame });
+      await emitView(pendingView, parsed.options);
+      return;
+    }
+
+    const actions = buildBackgroundActions(sessionId, { resume: allowResume, includeStop: true });
+    const statusView = buildBackgroundStartView({
+      agentName,
+      sessionId,
+      executor: entry.executor || executorKey,
+      mode: entry.mode || entry.preset || executionMode,
+      background: entry.background,
+      actions
+    });
+    await emitView(statusView, parsed.options);
+  };
+
+  await emitStarting('⠋');
+
+  if (entry.sessionId) {
+    await emitStatus(entry.sessionId);
+    return true;
+  }
+
+  await emitStatus(null, '⠙');
+
+  const resolvedSessionId = await resolveSessionIdForBanner(
+    agentName,
+    config,
+    paths,
+    entry.sessionId,
+    logFile,
+    async (frame) => emitStatus(null, frame)
+  );
+
+  const finalSessionId = resolvedSessionId || entry.sessionId;
+  if (finalSessionId && !entry.sessionId) {
+    entry.sessionId = finalSessionId;
+    entry.lastUsed = new Date().toISOString();
+    saveSessions(paths as SessionPathsConfig, store);
+  }
+
+  await emitStatus(entry.sessionId ?? resolvedSessionId ?? null);
+  return true;
+}
+
 async function runChat(parsed: ParsedCommand, config: GenieConfig, paths: Required<ConfigPaths>): Promise<void> {
   const [agentName, ...promptParts] = parsed.commandArgs;
   if (!agentName) {
     throw new Error('Usage: genie run <agent> "<prompt>"');
   }
   const prompt = promptParts.join(' ').trim();
-  const agentSpec = loadAgentSpec(agentName);
+  const resolvedAgentName = resolveAgentIdentifier(agentName);
+  const agentSpec = loadAgentSpec(resolvedAgentName);
   const agentMeta = agentSpec.meta || {};
   const agentGenie = agentMeta.genie || {};
   if (!parsed.options.backgroundExplicit && typeof agentGenie.background === 'boolean') {
     parsed.options.background = agentGenie.background;
   }
-  const presetName = parsed.options.preset || config.defaults?.preset || 'default';
-  const executorKey = agentGenie.executor || resolveExecutorKey(parsed.options, config, presetName);
+  const defaultMode = config.defaults?.executionMode || config.defaults?.preset || 'default';
+  const agentMode = agentGenie.mode || agentGenie.executionMode || agentGenie.preset;
+  const modeName = typeof agentMode === 'string' && agentMode.trim().length ? agentMode.trim() : defaultMode;
+  const executorKey = agentGenie.executor || resolveExecutorKey(config, modeName);
   const executor = requireExecutor(executorKey);
   const executorOverrides = extractExecutorOverrides(agentGenie, executorKey);
-  const executorConfig = buildExecutorConfig(config, presetName, executorKey, executorOverrides);
+  const executorConfig = buildExecutorConfig(config, modeName, executorKey, executorOverrides);
   const executorPaths = resolveExecutorPaths(paths, executorKey);
   const store = loadSessions(paths as SessionPathsConfig, config as SessionLoadConfig, DEFAULT_CONFIG as any);
 
   const startTime = deriveStartTime();
-  const logFile = deriveLogFile(agentName, startTime, paths);
+  const logFile = deriveLogFile(resolvedAgentName, startTime, paths);
 
   const entry: SessionEntry = {
-    ...(store.agents[agentName] || {}),
-    agent: agentName,
-    preset: presetName,
+    ...(store.agents[resolvedAgentName] || {}),
+    agent: resolvedAgentName,
+    preset: modeName,
+    mode: modeName,
     logFile,
     lastPrompt: prompt.slice(0, 200),
-    created: (store.agents[agentName] && store.agents[agentName].created) || new Date().toISOString(),
+    created: (store.agents[resolvedAgentName] && store.agents[resolvedAgentName].created) || new Date().toISOString(),
     lastUsed: new Date().toISOString(),
     status: 'starting',
     background: parsed.options.background,
@@ -594,71 +538,24 @@ async function runChat(parsed: ParsedCommand, config: GenieConfig, paths: Requir
     startTime: new Date(startTime).toISOString(),
     sessionId: null
   };
-  store.agents[agentName] = entry;
+  store.agents[resolvedAgentName] = entry;
   saveSessions(paths as SessionPathsConfig, store);
 
-  if (parsed.options.background && !parsed.options.backgroundRunner) {
-    const runnerPid = backgroundManager.launch({
-      rawArgs: parsed.options.rawArgs,
-      startTime,
-      logFile,
-      backgroundConfig: config.background,
-      scriptPath: __filename
-    });
-    entry.runnerPid = runnerPid;
-    entry.status = 'running';
-    saveSessions(paths as SessionPathsConfig, store);
+  const handledBackground = await maybeHandleBackgroundLaunch({
+    parsed,
+    config,
+    paths,
+    store,
+    entry,
+    agentName: resolvedAgentName,
+    executorKey,
+    executionMode: modeName,
+    startTime,
+    logFile,
+    allowResume: true
+  });
 
-    const emitStarting = async (frame?: string) => {
-      const startingView = buildBackgroundStartingView({ agentName, frame });
-      await emitView(startingView, parsed.options);
-    };
-
-    const emitStatus = async (sessionId: string | null | undefined, frame?: string) => {
-      if (!sessionId) {
-        const pendingView = buildBackgroundPendingView({ agentName, frame });
-        await emitView(pendingView, parsed.options);
-        return;
-      }
-
-      const actions = buildBackgroundActions(sessionId, { resume: true, includeStop: true });
-      const statusView = buildBackgroundStartView({
-        agentName,
-        sessionId,
-        executor: entry.executor || executorKey,
-        preset: entry.preset || presetName,
-        background: entry.background,
-        actions
-      });
-      await emitView(statusView, parsed.options);
-    };
-
-    await emitStarting('⠋');
-
-    if (entry.sessionId) {
-      await emitStatus(entry.sessionId);
-      return;
-    }
-
-    await emitStatus(null, '⠙');
-
-    const resolvedSessionId = await resolveSessionIdForBanner(
-      agentName,
-      config,
-      paths,
-      entry.sessionId,
-      logFile,
-      async (frame) => emitStatus(null, frame)
-    );
-
-    const finalSessionId = resolvedSessionId || entry.sessionId;
-
-    if (finalSessionId && !entry.sessionId) {
-      entry.sessionId = finalSessionId;
-      entry.lastUsed = new Date().toISOString();
-      saveSessions(paths as SessionPathsConfig, store);
-    }
-    await emitStatus(entry.sessionId ?? resolvedSessionId ?? null);
+  if (handledBackground) {
     return;
   }
 
@@ -684,77 +581,9 @@ async function runChat(parsed: ParsedCommand, config: GenieConfig, paths: Requir
     logFile,
     background: parsed.options.background,
     runnerPid: parsed.options.backgroundRunner ? process.pid : null,
-    cliOptions: parsed.options
+    cliOptions: parsed.options,
+    executionMode: modeName
   });
-}
-
-async function runAgentCommand(parsed: ParsedCommand, config: GenieConfig, paths: Required<ConfigPaths>): Promise<void> {
-  const [maybeSubcommand, ...rest] = parsed.commandArgs;
-  if (parsed.options.requestHelp) {
-    await emitView(
-      buildInfoView('Agent command', [
-        'Usage:',
-        '  genie agent list',
-        '  genie agent run <agent-id> "<prompt>"',
-        '  genie agent <agent-id> "<prompt>"'
-      ]),
-      parsed.options
-    );
-    return;
-  }
-
-  const sub = (maybeSubcommand || '').toLowerCase();
-  if (!maybeSubcommand || sub === 'list' || sub === 'ls') {
-    await emitAgentCatalog(parsed, config, paths);
-    return;
-  }
-
-  if (sub === 'run' || sub === 'start' || sub === 'launch') {
-    if (!rest.length) {
-      throw new Error('Usage: genie agent run <agent-id> "<prompt>"');
-    }
-    const [agentId, ...promptParts] = rest;
-    await runAgentRun(agentId, promptParts, parsed, config, paths);
-    return;
-  }
-
-  if (sub === 'help') {
-    await emitView(
-      buildInfoView('Agent command', [
-        'Usage:',
-        '  genie agent list',
-        '  genie agent run <agent-id> "<prompt>"',
-        '  genie agent <agent-id> "<prompt>"'
-      ]),
-      parsed.options
-    );
-    return;
-  }
-
-  await runAgentRun(maybeSubcommand, rest, parsed, config, paths);
-}
-
-async function runAgentRun(
-  agentInput: string,
-  promptParts: string[],
-  parsed: ParsedCommand,
-  config: GenieConfig,
-  paths: Required<ConfigPaths>
-): Promise<void> {
-  const agentId = resolveAgentIdentifier(agentInput);
-  const prompt = promptParts.join(' ').trim();
-  if (!prompt) {
-    throw new Error(`Usage: genie agent run ${agentInput} "<prompt>"`);
-  }
-  const cloned: ParsedCommand = {
-    command: 'run',
-    commandArgs: [agentId, prompt],
-    options: {
-      ...parsed.options,
-      rawArgs: [...parsed.options.rawArgs]
-    }
-  };
-  await runChat(cloned, config, paths);
 }
 
 // Due to size, remaining functions continue...
@@ -775,12 +604,13 @@ interface ExecuteRunArgs {
   background: boolean;
   runnerPid: number | null;
   cliOptions: CLIOptions;
+  executionMode: string;
 }
 
-function resolveExecutorKey(options: CLIOptions, config: GenieConfig, presetName: string): string {
-  if (options.executor) return options.executor;
-  const preset = config.presets && config.presets[presetName];
-  if (preset && preset.executor) return preset.executor;
+function resolveExecutorKey(config: GenieConfig, modeName: string): string {
+  const modes = config.executionModes || config.presets || {};
+  const mode = modes[modeName];
+  if (mode && mode.executor) return mode.executor;
   if (config.defaults && config.defaults.executor) return config.defaults.executor;
   return DEFAULT_EXECUTOR_KEY;
 }
@@ -794,14 +624,15 @@ function requireExecutor(key: string): Executor {
   return executor;
 }
 
-function buildExecutorConfig(config: GenieConfig, presetName: string, executorKey: string, agentOverrides: any): any {
+function buildExecutorConfig(config: GenieConfig, modeName: string, executorKey: string, agentOverrides: any): any {
   const base = deepClone((config.executors && config.executors[executorKey]) || {});
-  const preset = config.presets && config.presets[presetName];
-  if (!preset && presetName && presetName !== 'default') {
-    const available = Object.keys(config.presets || {}).join(', ') || 'default';
-    throw new Error(`Preset '${presetName}' not found. Available presets: ${available}`);
+  const modes = config.executionModes || config.presets || {};
+  const mode = modes[modeName];
+  if (!mode && modeName && modeName !== 'default') {
+    const available = Object.keys(modes).join(', ') || 'default';
+    throw new Error(`Execution mode '${modeName}' not found. Available modes: ${available}`);
   }
-  const overrides = getExecutorOverrides(preset, executorKey);
+  const overrides = getExecutorOverrides(mode, executorKey);
   let merged = mergeDeep(base, overrides);
   if (agentOverrides && Object.keys(agentOverrides).length) {
     merged = mergeDeep(merged, agentOverrides);
@@ -814,9 +645,9 @@ function resolveExecutorPaths(paths: Required<ConfigPaths>, executorKey: string)
   return paths.executors[executorKey] || {};
 }
 
-function getExecutorOverrides(preset: any, executorKey: string): any {
-  if (!preset || !preset.overrides) return {};
-  const { overrides } = preset;
+function getExecutorOverrides(mode: any, executorKey: string): any {
+  if (!mode || !mode.overrides) return {};
+  const { overrides } = mode;
   if (overrides.executors && overrides.executors[executorKey]) {
     return overrides.executors[executorKey];
   }
@@ -828,7 +659,15 @@ function getExecutorOverrides(preset: any, executorKey: string): any {
 
 function extractExecutorOverrides(agentGenie: any, executorKey: string): any {
   if (!agentGenie || typeof agentGenie !== 'object') return {};
-  const { executor, background: _background, preset: _preset, json: _json, ...rest } = agentGenie;
+  const {
+    executor,
+    background: _background,
+    preset: _preset,
+    mode: _mode,
+    executionMode: _executionMode,
+    json: _json,
+    ...rest
+  } = agentGenie;
   const overrides: Record<string, any> = {};
   const executorDef = EXECUTORS[executorKey]?.defaults;
   const topLevelKeys = executorDef ? new Set(Object.keys(executorDef)) : null;
@@ -866,7 +705,8 @@ function executeRun(args: ExecuteRunArgs): Promise<void> {
     logFile,
     background,
     runnerPid,
-    cliOptions
+    cliOptions,
+    executionMode
   } = args;
 
   if (!command || typeof command.command !== 'string' || !Array.isArray(command.args)) {
@@ -958,7 +798,7 @@ function executeRun(args: ExecuteRunArgs): Promise<void> {
         outcome: 'failure',
         sessionId: entry.sessionId,
         executorKey,
-        preset: entry.preset || presetName,
+        mode: entry.mode || entry.preset || executionMode,
         background: entry.background,
         exitCode: null,
         durationMs: Date.now() - startTime,
@@ -997,7 +837,7 @@ function executeRun(args: ExecuteRunArgs): Promise<void> {
         outcome,
         sessionId: entry.sessionId,
         executorKey,
-        preset: entry.preset || presetName,
+        mode: entry.mode || entry.preset || executionMode,
         background: entry.background,
         exitCode: code,
         durationMs: Date.now() - startTime,
@@ -1033,24 +873,6 @@ function executeRun(args: ExecuteRunArgs): Promise<void> {
   return promise;
 }
 
-async function runMode(parsed: ParsedCommand, config: GenieConfig, paths: Required<ConfigPaths>): Promise<void> {
-  const [modeName, ...promptParts] = parsed.commandArgs;
-  if (!modeName) {
-    throw new Error('Usage: genie mode <genie-mode> "<prompt>"');
-  }
-  const id = modeName.startsWith('genie-') ? modeName : `genie-${modeName}`;
-  const prompt = promptParts.join(' ').trim();
-  const cloned: ParsedCommand = {
-    command: 'run',
-    commandArgs: [id, prompt],
-    options: {
-      ...parsed.options,
-      rawArgs: [...parsed.options.rawArgs]
-    }
-  };
-  await runChat(cloned, config, paths);
-}
-
 function loadAgentSpec(name: string): AgentSpec {
   const base = name.endsWith('.md') ? name.slice(0, -3) : name;
   const agentPath = path.join('.genie', 'agents', `${base}.md`);
@@ -1075,16 +897,15 @@ function extractFrontMatter(source: string): { meta?: Record<string, any>; body:
   }
   const raw = source.slice(3, end).trim();
   const body = source.slice(end + 4);
+  if (!YAML) {
+    recordStartupWarning('[genie] YAML module unavailable; front matter metadata ignored.');
+    return { meta: {}, body };
+  }
   try {
-    const parsed = YAML ? YAML.parse(raw) : parseSimpleYaml(raw);
-    return { meta: parsed || {}, body };
+    const parsed = YAML.parse(raw) || {};
+    return { meta: parsed, body };
   } catch {
-    try {
-      const fallback = parseSimpleYaml(raw);
-      return { meta: fallback || {}, body };
-    } catch {
-      return { meta: {}, body };
-    }
+    return { meta: {}, body };
   }
 }
 
@@ -1152,14 +973,15 @@ function formatRelativeTime(value: string): string {
 }
 
 async function runContinue(parsed: ParsedCommand, config: GenieConfig, paths: Required<ConfigPaths>): Promise<void> {
+  // Help is handled in the main switch statement
   if (parsed.options.requestHelp) {
-    await runHelp(parsed, config, paths);
+    await emitView(buildResumeHelpView(), parsed.options);
     return;
   }
 
   const cmdArgs = parsed.commandArgs;
   if (cmdArgs.length < 2) {
-    throw new Error('Usage: genie continue <sessionId> "<prompt>"');
+    throw new Error('Usage: genie resume <sessionId> "<prompt>"');
   }
 
   const store = loadSessions(paths as SessionPathsConfig, config as SessionLoadConfig, DEFAULT_CONFIG as any);
@@ -1173,17 +995,27 @@ async function runContinue(parsed: ParsedCommand, config: GenieConfig, paths: Re
     throw new Error(`❌ No active session for agent '${agentName}'`);
   }
 
-  const presetName = session.preset || config.defaults?.preset || 'default';
   const agentSpec = loadAgentSpec(agentName);
   const agentMeta = agentSpec.meta || {};
   const agentGenie = agentMeta.genie || {};
   if (!parsed.options.backgroundExplicit && typeof agentGenie.background === 'boolean') {
     parsed.options.background = agentGenie.background;
   }
-  const executorKey = session.executor || agentGenie.executor || resolveExecutorKey(parsed.options, config, presetName);
+  const defaultMode = config.defaults?.executionMode || config.defaults?.preset || 'default';
+  const storedMode = session.mode || session.preset;
+  const agentMode = agentGenie.mode || agentGenie.executionMode || agentGenie.preset;
+  const modeName = typeof storedMode === 'string' && storedMode.trim().length
+    ? storedMode.trim()
+    : typeof agentMode === 'string' && agentMode.trim().length
+      ? agentMode.trim()
+      : defaultMode;
+  session.mode = modeName;
+  session.preset = modeName;
+
+  const executorKey = session.executor || agentGenie.executor || resolveExecutorKey(config, modeName);
   const executor = requireExecutor(executorKey);
   const executorOverrides = extractExecutorOverrides(agentGenie, executorKey);
-  const executorConfig = buildExecutorConfig(config, presetName, executorKey, executorOverrides);
+  const executorConfig = buildExecutorConfig(config, modeName, executorKey, executorOverrides);
   const executorPaths = resolveExecutorPaths(paths, executorKey);
   const command = executor.buildResumeCommand({
     config: executorConfig,
@@ -1206,66 +1038,21 @@ async function runContinue(parsed: ParsedCommand, config: GenieConfig, paths: Re
   session.signal = null;
   saveSessions(paths as SessionPathsConfig, store);
 
-  if (parsed.options.background && !parsed.options.backgroundRunner) {
-    const runnerPid = backgroundManager.launch({
-      rawArgs: parsed.options.rawArgs,
-      startTime,
-      logFile,
-      backgroundConfig: config.background,
-      scriptPath: __filename
-    });
-    session.runnerPid = runnerPid;
-    session.status = 'running';
-    saveSessions(paths as SessionPathsConfig, store);
-    const emitStarting = async (frame?: string) => {
-      const startingView = buildBackgroundStartingView({ agentName, frame });
-      await emitView(startingView, parsed.options);
-    };
-    const emitStatus = async (sessionId: string | null | undefined, frame?: string) => {
-      if (!sessionId) {
-        const pendingView = buildBackgroundPendingView({ agentName, frame });
-        await emitView(pendingView, parsed.options);
-        return;
-      }
+  const handledBackground = await maybeHandleBackgroundLaunch({
+    parsed,
+    config,
+    paths,
+    store,
+    entry: session,
+    agentName,
+    executorKey,
+    executionMode: modeName,
+    startTime,
+    logFile,
+    allowResume: false
+  });
 
-      const actions = buildBackgroundActions(sessionId, { resume: false, includeStop: true });
-      const statusView = buildBackgroundStartView({
-        agentName,
-        sessionId,
-        executor: session.executor || executorKey,
-        preset: session.preset || presetName,
-        background: session.background,
-        actions
-      });
-      await emitView(statusView, parsed.options);
-    };
-
-    await emitStarting('⠋');
-
-    if (session.sessionId) {
-      await emitStatus(session.sessionId);
-      return;
-    }
-
-    await emitStatus(null, '⠙');
-
-    const resolvedSessionId = await resolveSessionIdForBanner(
-      agentName,
-      config,
-      paths,
-      session.sessionId,
-      logFile,
-      async (frame) => emitStatus(null, frame)
-    );
-
-    const finalSessionId = resolvedSessionId || session.sessionId;
-
-    if (finalSessionId && !session.sessionId) {
-      session.sessionId = finalSessionId;
-      session.lastUsed = new Date().toISOString();
-      saveSessions(paths as SessionPathsConfig, store);
-    }
-    await emitStatus(session.sessionId ?? resolvedSessionId ?? null);
+  if (handledBackground) {
     return;
   }
 
@@ -1285,7 +1072,8 @@ async function runContinue(parsed: ParsedCommand, config: GenieConfig, paths: Re
     logFile,
     background: parsed.options.background,
     runnerPid: parsed.options.backgroundRunner ? process.pid : null,
-    cliOptions: parsed.options
+    cliOptions: parsed.options,
+    executionMode: modeName
   });
 }
 
@@ -1332,6 +1120,28 @@ async function runRuns(parsed: ParsedCommand, config: GenieConfig, paths: Requir
     warnings: warnings.length ? warnings : undefined
   });
   await emitView(envelope, parsed.options);
+}
+
+async function runList(parsed: ParsedCommand, config: GenieConfig, paths: Required<ConfigPaths>): Promise<void> {
+  const [targetRaw] = parsed.commandArgs;
+  const target = (targetRaw || 'agents').toLowerCase();
+
+  if (target === 'agents') {
+    await emitAgentCatalog(parsed, config, paths);
+    return;
+  }
+
+  if (target === 'sessions') {
+    await runRuns(parsed, config, paths);
+    return;
+  }
+
+  await emitView(
+    buildErrorView('Unknown list target', `Unknown list target '${targetRaw}'. Try 'agents' or 'sessions'.`),
+    parsed.options,
+    { stream: process.stderr }
+  );
+  process.exitCode = 1;
 }
 
 async function runView(parsed: ParsedCommand, config: GenieConfig, paths: Required<ConfigPaths>): Promise<void> {
@@ -1386,7 +1196,8 @@ async function runView(parsed: ParsedCommand, config: GenieConfig, paths: Requir
   const displayTranscript = parsed.options.full ? transcript : sliceTranscriptForLatest(transcript);
   const metaItems: Array<{ label: string; value: string; tone?: Tone }> = [];
   if (entry.executor) metaItems.push({ label: 'Executor', value: String(entry.executor) });
-  if (entry.preset) metaItems.push({ label: 'Preset', value: String(entry.preset) });
+  const executionMode = entry.mode || entry.preset;
+  if (executionMode) metaItems.push({ label: 'Execution mode', value: String(executionMode) });
   if (entry.background !== undefined) {
     metaItems.push({ label: 'Background', value: entry.background ? 'detached' : 'attached' });
   }
@@ -1479,25 +1290,25 @@ function buildBackgroundActions(
 ): string[] {
   if (!sessionId) {
     const lines: string[] = [
-      '• View: session pending – run `./genie list sessions` then `./genie view <sessionId>`'
+      '• View: session pending – run `genie list sessions` then `genie view <sessionId>`'
     ];
     if (options.resume) {
-      lines.push('• Resume: session pending – run `./genie resume <sessionId> "<prompt>"` once available');
+      lines.push('• Resume: session pending – run `genie resume <sessionId> "<prompt>"` once available');
     }
     if (options.includeStop) {
-      lines.push('• Stop: session pending – run `./genie stop <sessionId>` once available');
+      lines.push('• Stop: session pending – run `genie stop <sessionId>` once available');
     }
     return lines;
   }
 
-  const lines: string[] = [`• View: ./genie view ${sessionId}`];
+  const lines: string[] = [`• View: genie view ${sessionId}`];
 
   if (options.resume) {
-    lines.push(`• Resume: ./genie resume ${sessionId} "<prompt>"`);
+    lines.push(`• Resume: genie resume ${sessionId} "<prompt>"`);
   }
 
   if (options.includeStop) {
-    lines.push(`• Stop: ./genie stop ${sessionId}`);
+    lines.push(`• Stop: genie stop ${sessionId}`);
   }
 
   return lines;
@@ -1643,6 +1454,37 @@ function resolveDisplayStatus(entry: SessionEntry): string {
 }
 
 async function runHelp(parsed: ParsedCommand, config: GenieConfig, paths: Required<ConfigPaths>): Promise<void> {
+  const [helpTarget] = parsed.commandArgs;
+
+  // If a specific command is requested, show detailed help for that command
+  if (helpTarget) {
+    switch (helpTarget.toLowerCase()) {
+      case 'run':
+        await emitView(buildRunHelpView(), parsed.options);
+        return;
+      case 'resume':
+        await emitView(buildResumeHelpView(), parsed.options);
+        return;
+      case 'list':
+        await emitView(buildListHelpView(), parsed.options);
+        return;
+      case 'view':
+        await emitView(buildViewHelpView(), parsed.options);
+        return;
+      case 'stop':
+        await emitView(buildStopHelpView(), parsed.options);
+        return;
+      case 'help':
+        await emitView(buildGeneralHelpView(), parsed.options);
+        return;
+      default:
+        await emitView(buildErrorView('Unknown command', `Unknown command '${helpTarget}'. Use 'genie help' to see available commands.`), parsed.options, { stream: process.stderr });
+        process.exitCode = 1;
+        return;
+    }
+  }
+
+  // Show main help if no specific command requested
   const backgroundDefault = Boolean(config.defaults && config.defaults.background);
   const commandRows = [
     { command: 'run', args: '<agent> "<prompt>"', description: 'Start or attach to an agent' },
@@ -1651,19 +1493,24 @@ async function runHelp(parsed: ParsedCommand, config: GenieConfig, paths: Requir
     { command: 'resume', args: '<sessionId> "<prompt>"', description: 'Continue a background session' },
     { command: 'view', args: '<sessionId> [--full]', description: 'Show transcript for a session' },
     { command: 'stop', args: '<sessionId>', description: 'End a background session' },
-    { command: 'help', args: '', description: 'Show this panel' }
+    { command: 'help', args: '[command]', description: 'Show help for a specific command or this panel' }
   ];
 
   const envelope = buildHelpView({
     backgroundDefault,
     commandRows,
-    promptFramework: [
-      'Discovery → load @ context, restate goals, surface blockers early.',
-      'Implementation → follow wish/forge guidance with evidence-first outputs.',
-      'Verification → capture validation commands, metrics, and open questions.'
-    ],
+    promptFramework: {
+      title: '🧞 Genie Framework',
+      bulletPoints: [
+        'Plan → Load mission/roadmap/standards context, clarify scope, log assumptions/decisions, and produce the planning brief with branch/tracker guidance.',
+        'Wish → Convert the planning brief into an approved wish with context ledger, inline <spec_contract>, execution groups, and blocker protocol.',
+        'Forge → Break the wish into execution groups and task files, document validation hooks, evidence paths, personas, and branch strategy before implementation.',
+        'Review → Audit delivery by consolidating evidence, replaying agreed checks, and issuing a verdict or follow-up report before marking the wish complete.'
+      ]
+    },
     examples: [
       'genie run plan "[Discovery] mission @.genie/product/mission.md"',
+      'genie help run',
       'genie view RUN-1234',
       'genie list agents'
     ]

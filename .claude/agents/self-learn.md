@@ -4,4 +4,4 @@ description: Self-learning and knowledge improvement specialist
 model: inherit
 ---
 
-@.genie/agents/specialized/self-learn.md
+@.genie/agents/specialists/self-learn.md

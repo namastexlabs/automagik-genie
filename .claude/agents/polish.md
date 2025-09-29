@@ -4,4 +4,4 @@ description: Code polishing and refinement specialist
 model: inherit
 ---
 
-@.genie/agents/specialized/polish.md
+@.genie/agents/specialists/polish.md

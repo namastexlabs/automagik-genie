@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 "use strict";
 /**
- * GENIE Agent CLI - Codex exec orchestration with configurable presets
+ * GENIE Agent CLI - Codex exec orchestration with configurable execution modes
  */
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -80,7 +80,6 @@ function recordRuntimeWarning(message) {
 }
 const BASE_CONFIG = {
     defaults: {
-        preset: 'default',
         background: true,
         executor: executors_1.DEFAULT_EXECUTOR_KEY
     },
@@ -91,7 +90,7 @@ const BASE_CONFIG = {
         backgroundDir: '.genie/state/agents/background'
     },
     executors: {},
-    presets: {
+    executionModes: {
         default: {
             description: 'Workspace-write automation with GPT-5 Codex.',
             executor: executors_1.DEFAULT_EXECUTOR_KEY,
@@ -142,36 +141,30 @@ const DEFAULT_CONFIG = buildDefaultConfig();
 void main();
 async function main() {
     try {
-        const parsed = parseArguments(process.argv.slice(2));
+        let parsed = parseArguments(process.argv.slice(2));
         const envIsBackground = process.env[background_manager_1.INTERNAL_BACKGROUND_ENV] === '1';
         if (envIsBackground) {
             parsed.options.background = true;
             parsed.options.backgroundRunner = true;
             parsed.options.backgroundExplicit = true;
         }
-        const config = loadConfig(parsed.options.configOverrides);
+        const config = loadConfig();
         applyDefaults(parsed.options, config.defaults);
         const paths = resolvePaths(config.paths || {});
         prepareDirectories(paths);
         await flushStartupWarnings(parsed.options);
         switch (parsed.command) {
-            case 'agent':
-                await runAgentCommand(parsed, config, paths);
-                break;
             case 'run':
                 await runChat(parsed, config, paths);
                 break;
-            case 'mode':
-                await runMode(parsed, config, paths);
-                break;
-            case 'continue':
+            case 'resume':
                 await runContinue(parsed, config, paths);
+                break;
+            case 'list':
+                await runList(parsed, config, paths);
                 break;
             case 'view':
                 await runView(parsed, config, paths);
-                break;
-            case 'runs':
-                await runRuns(parsed, config, paths);
                 break;
             case 'stop':
                 await runStop(parsed, config, paths);
@@ -197,39 +190,18 @@ async function main() {
 }
 function parseArguments(argv) {
     const raw = argv.slice();
-    const command = raw.shift();
+    const command = raw.shift()?.toLowerCase();
     const options = {
-        configOverrides: [],
         rawArgs: argv.slice(),
         background: false,
         backgroundExplicit: false,
         backgroundRunner: false,
-        preset: undefined,
-        executor: undefined,
         requestHelp: undefined,
         full: false
     };
     const filtered = [];
     for (let i = 0; i < raw.length; i++) {
         const token = raw[i];
-        if (token === '--preset') {
-            if (i + 1 >= raw.length)
-                throw new Error('Missing value for --preset');
-            options.preset = raw[++i];
-            continue;
-        }
-        if (token === '--executor') {
-            if (i + 1 >= raw.length)
-                throw new Error('Missing value for --executor');
-            options.executor = raw[++i];
-            continue;
-        }
-        if (token === '-c' || token === '--config') {
-            if (i + 1 >= raw.length)
-                throw new Error('Missing value for -c/--config');
-            options.configOverrides.push(raw[++i]);
-            continue;
-        }
         if (token === '--help' || token === '-h') {
             options.requestHelp = true;
             continue;
@@ -277,44 +249,29 @@ function applyDefaults(options, defaults) {
     if (!options.backgroundExplicit) {
         options.background = Boolean(defaults?.background);
     }
-    if (!options.preset && defaults?.preset) {
-        options.preset = defaults.preset;
-    }
-    if (!options.executor && defaults?.executor) {
-        options.executor = defaults.executor;
-    }
 }
-function loadConfig(overrides) {
+function loadConfig() {
     let config = deepClone(DEFAULT_CONFIG);
-    let configFilePath = null;
-    if (fs_1.default.existsSync(CONFIG_PATH)) {
-        configFilePath = CONFIG_PATH;
-    }
+    const configFilePath = fs_1.default.existsSync(CONFIG_PATH) ? CONFIG_PATH : null;
     if (configFilePath) {
         try {
-            const file = fs_1.default.readFileSync(configFilePath, 'utf8');
-            if (file.trim().length) {
+            const raw = fs_1.default.readFileSync(configFilePath, 'utf8');
+            if (raw.trim().length) {
                 let parsed = {};
                 if (YAML) {
-                    parsed = YAML.parse(file) || {};
+                    parsed = YAML.parse(raw) || {};
                 }
-                else if (file.trim().startsWith('{')) {
+                else if (raw.trim().startsWith('{')) {
                     try {
-                        parsed = JSON.parse(file);
+                        parsed = JSON.parse(raw);
                     }
                     catch {
                         parsed = {};
                     }
                 }
                 else {
-                    try {
-                        parsed = parseSimpleYaml(file);
-                    }
-                    catch (fallbackError) {
-                        const message = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
-                        recordStartupWarning(`[genie] Failed to parse ${path_1.default.basename(configFilePath)} without yaml module: ${message}`);
-                        parsed = {};
-                    }
+                    recordStartupWarning('[genie] YAML module unavailable; ignoring config overrides. Install "yaml" to enable parsing.');
+                    parsed = {};
                 }
                 config = mergeDeep(config, parsed);
             }
@@ -328,7 +285,6 @@ function loadConfig(overrides) {
     else {
         config.__configPath = CONFIG_PATH;
     }
-    overrides.forEach((override) => applyConfigOverride(config, override));
     return config;
 }
 function deepClone(input) {
@@ -357,142 +313,6 @@ function mergeDeep(target, source) {
     });
     return base;
 }
-function applyConfigOverride(config, override) {
-    const index = override.indexOf('=');
-    if (index === -1) {
-        throw new Error(`Invalid override '${override}'. Expected key=value.`);
-    }
-    const keyPath = override.slice(0, index).trim();
-    const valueRaw = override.slice(index + 1).trim();
-    if (!keyPath.length)
-        throw new Error(`Invalid override '${override}'. Key is required.`);
-    let value;
-    try {
-        value = JSON.parse(valueRaw);
-    }
-    catch {
-        value = valueRaw;
-    }
-    const segments = keyPath.split('.');
-    let cursor = config;
-    for (let i = 0; i < segments.length - 1; i++) {
-        const segment = segments[i];
-        if (!Object.prototype.hasOwnProperty.call(cursor, segment) || typeof cursor[segment] !== 'object' || cursor[segment] === null) {
-            cursor[segment] = {};
-        }
-        cursor = cursor[segment];
-    }
-    cursor[segments[segments.length - 1]] = value;
-}
-function parseSimpleYaml(text) {
-    const lines = String(text || '').split(/\r?\n/);
-    const root = {};
-    const stack = [{ indent: -1, value: root }];
-    for (let i = 0; i < lines.length; i += 1) {
-        let line = lines[i];
-        if (!line || !line.trim())
-            continue;
-        const hash = line.indexOf('#');
-        if (hash !== -1) {
-            line = line.slice(0, hash);
-        }
-        if (!line.trim())
-            continue;
-        const indentMatch = line.match(/^ */);
-        const indent = indentMatch ? indentMatch[0].length : 0;
-        const level = Math.floor(indent / 2);
-        const trimmed = line.trim();
-        while (stack.length && stack[stack.length - 1].indent >= level) {
-            stack.pop();
-        }
-        const parentContainer = stack[stack.length - 1].value;
-        if (trimmed.startsWith('- ')) {
-            if (!Array.isArray(parentContainer)) {
-                throw new Error('Invalid YAML structure: list item outside of an array.');
-            }
-            const itemValue = parseYamlScalar(trimmed.slice(2).trim());
-            parentContainer.push(itemValue);
-            if (itemValue && typeof itemValue === 'object' && !Array.isArray(itemValue)) {
-                stack.push({ indent: level, value: itemValue });
-            }
-            continue;
-        }
-        const colonIdx = trimmed.indexOf(':');
-        if (colonIdx === -1) {
-            continue;
-        }
-        const key = trimmed.slice(0, colonIdx).trim();
-        let valueRaw = trimmed.slice(colonIdx + 1).trim();
-        let value;
-        if (!valueRaw.length) {
-            const lookAhead = findNextMeaningfulYamlLine(lines, i + 1);
-            if (lookAhead && lookAhead.indent > level) {
-                value = lookAhead.isArray ? [] : {};
-                if (Array.isArray(parentContainer)) {
-                    parentContainer.push(value);
-                }
-                else {
-                    parentContainer[key] = value;
-                }
-                stack.push({ indent: level, value });
-                continue;
-            }
-            value = null;
-        }
-        else {
-            value = parseYamlScalar(valueRaw);
-        }
-        if (Array.isArray(parentContainer)) {
-            parentContainer.push(value);
-        }
-        else {
-            parentContainer[key] = value;
-        }
-        if (value && typeof value === 'object' && !Array.isArray(value)) {
-            stack.push({ indent: level, value });
-        }
-    }
-    return root;
-}
-function findNextMeaningfulYamlLine(lines, start) {
-    for (let i = start; i < lines.length; i += 1) {
-        let line = lines[i];
-        if (!line || !line.trim())
-            continue;
-        const hash = line.indexOf('#');
-        if (hash !== -1) {
-            line = line.slice(0, hash);
-        }
-        if (!line.trim())
-            continue;
-        const indentMatch = line.match(/^ */);
-        const indent = indentMatch ? indentMatch[0].length : 0;
-        const trimmed = line.trim();
-        return {
-            indent: Math.floor(indent / 2),
-            isArray: trimmed.startsWith('- ')
-        };
-    }
-    return null;
-}
-function parseYamlScalar(valueRaw) {
-    if (!valueRaw.length)
-        return null;
-    if (valueRaw === 'true')
-        return true;
-    if (valueRaw === 'false')
-        return false;
-    if (valueRaw === 'null')
-        return null;
-    if (/^[-+]?[0-9]+(\.[0-9]+)?$/.test(valueRaw)) {
-        return Number(valueRaw);
-    }
-    if ((valueRaw.startsWith('"') && valueRaw.endsWith('"')) || (valueRaw.startsWith('\'') && valueRaw.endsWith('\''))) {
-        const unquoted = valueRaw.slice(1, -1);
-        return unquoted.replace(/\"/g, '"').replace(/\\'/g, "'");
-    }
-    return valueRaw;
-}
 function resolvePaths(paths) {
     const baseDir = paths.baseDir || '.';
     return {
@@ -510,34 +330,91 @@ function prepareDirectories(paths) {
         }
     });
 }
+async function maybeHandleBackgroundLaunch(params) {
+    const { parsed, config, paths, store, entry, agentName, executorKey, executionMode, startTime, logFile, allowResume } = params;
+    if (!parsed.options.background || parsed.options.backgroundRunner) {
+        return false;
+    }
+    const runnerPid = backgroundManager.launch({
+        rawArgs: parsed.options.rawArgs,
+        startTime,
+        logFile,
+        backgroundConfig: config.background,
+        scriptPath: __filename
+    });
+    entry.runnerPid = runnerPid;
+    entry.status = 'running';
+    entry.background = parsed.options.background;
+    (0, session_store_1.saveSessions)(paths, store);
+    const emitStarting = async (frame) => {
+        const startingView = (0, background_1.buildBackgroundStartingView)({ agentName, frame });
+        await emitView(startingView, parsed.options);
+    };
+    const emitStatus = async (sessionId, frame) => {
+        if (!sessionId) {
+            const pendingView = (0, background_1.buildBackgroundPendingView)({ agentName, frame });
+            await emitView(pendingView, parsed.options);
+            return;
+        }
+        const actions = buildBackgroundActions(sessionId, { resume: allowResume, includeStop: true });
+        const statusView = (0, background_1.buildBackgroundStartView)({
+            agentName,
+            sessionId,
+            executor: entry.executor || executorKey,
+            mode: entry.mode || entry.preset || executionMode,
+            background: entry.background,
+            actions
+        });
+        await emitView(statusView, parsed.options);
+    };
+    await emitStarting('⠋');
+    if (entry.sessionId) {
+        await emitStatus(entry.sessionId);
+        return true;
+    }
+    await emitStatus(null, '⠙');
+    const resolvedSessionId = await resolveSessionIdForBanner(agentName, config, paths, entry.sessionId, logFile, async (frame) => emitStatus(null, frame));
+    const finalSessionId = resolvedSessionId || entry.sessionId;
+    if (finalSessionId && !entry.sessionId) {
+        entry.sessionId = finalSessionId;
+        entry.lastUsed = new Date().toISOString();
+        (0, session_store_1.saveSessions)(paths, store);
+    }
+    await emitStatus(entry.sessionId ?? resolvedSessionId ?? null);
+    return true;
+}
 async function runChat(parsed, config, paths) {
     const [agentName, ...promptParts] = parsed.commandArgs;
     if (!agentName) {
         throw new Error('Usage: genie run <agent> "<prompt>"');
     }
     const prompt = promptParts.join(' ').trim();
-    const agentSpec = loadAgentSpec(agentName);
+    const resolvedAgentName = resolveAgentIdentifier(agentName);
+    const agentSpec = loadAgentSpec(resolvedAgentName);
     const agentMeta = agentSpec.meta || {};
     const agentGenie = agentMeta.genie || {};
     if (!parsed.options.backgroundExplicit && typeof agentGenie.background === 'boolean') {
         parsed.options.background = agentGenie.background;
     }
-    const presetName = parsed.options.preset || config.defaults?.preset || 'default';
-    const executorKey = agentGenie.executor || resolveExecutorKey(parsed.options, config, presetName);
+    const defaultMode = config.defaults?.executionMode || config.defaults?.preset || 'default';
+    const agentMode = agentGenie.mode || agentGenie.executionMode || agentGenie.preset;
+    const modeName = typeof agentMode === 'string' && agentMode.trim().length ? agentMode.trim() : defaultMode;
+    const executorKey = agentGenie.executor || resolveExecutorKey(config, modeName);
     const executor = requireExecutor(executorKey);
     const executorOverrides = extractExecutorOverrides(agentGenie, executorKey);
-    const executorConfig = buildExecutorConfig(config, presetName, executorKey, executorOverrides);
+    const executorConfig = buildExecutorConfig(config, modeName, executorKey, executorOverrides);
     const executorPaths = resolveExecutorPaths(paths, executorKey);
     const store = (0, session_store_1.loadSessions)(paths, config, DEFAULT_CONFIG);
     const startTime = deriveStartTime();
-    const logFile = deriveLogFile(agentName, startTime, paths);
+    const logFile = deriveLogFile(resolvedAgentName, startTime, paths);
     const entry = {
-        ...(store.agents[agentName] || {}),
-        agent: agentName,
-        preset: presetName,
+        ...(store.agents[resolvedAgentName] || {}),
+        agent: resolvedAgentName,
+        preset: modeName,
+        mode: modeName,
         logFile,
         lastPrompt: prompt.slice(0, 200),
-        created: (store.agents[agentName] && store.agents[agentName].created) || new Date().toISOString(),
+        created: (store.agents[resolvedAgentName] && store.agents[resolvedAgentName].created) || new Date().toISOString(),
         lastUsed: new Date().toISOString(),
         status: 'starting',
         background: parsed.options.background,
@@ -549,51 +426,22 @@ async function runChat(parsed, config, paths) {
         startTime: new Date(startTime).toISOString(),
         sessionId: null
     };
-    store.agents[agentName] = entry;
+    store.agents[resolvedAgentName] = entry;
     (0, session_store_1.saveSessions)(paths, store);
-    if (parsed.options.background && !parsed.options.backgroundRunner) {
-        const runnerPid = backgroundManager.launch({
-            rawArgs: parsed.options.rawArgs,
-            startTime,
-            logFile,
-            backgroundConfig: config.background,
-            scriptPath: __filename
-        });
-        entry.runnerPid = runnerPid;
-        entry.status = 'running';
-        (0, session_store_1.saveSessions)(paths, store);
-        const emitStarting = async (frame) => {
-            const startingView = (0, background_1.buildBackgroundStartingView)({ agentName, frame });
-            await emitView(startingView, parsed.options);
-        };
-        const emitStatus = async (sessionId, frame) => {
-            if (!sessionId) {
-                const pendingView = (0, background_1.buildBackgroundPendingView)({ agentName, frame });
-                await emitView(pendingView, parsed.options);
-                return;
-            }
-            const actions = buildBackgroundActions(sessionId, { resume: true, includeStop: true });
-            const statusView = (0, background_1.buildBackgroundStartView)({
-                agentName,
-                sessionId,
-                actions
-            });
-            await emitView(statusView, parsed.options);
-        };
-        await emitStarting('⠋');
-        if (entry.sessionId) {
-            await emitStatus(entry.sessionId);
-            return;
-        }
-        await emitStatus(null, '⠙');
-        const resolvedSessionId = await resolveSessionIdForBanner(agentName, config, paths, entry.sessionId, logFile, async (frame) => emitStatus(null, frame));
-        const finalSessionId = resolvedSessionId || entry.sessionId;
-        if (finalSessionId && !entry.sessionId) {
-            entry.sessionId = finalSessionId;
-            entry.lastUsed = new Date().toISOString();
-            (0, session_store_1.saveSessions)(paths, store);
-        }
-        await emitStatus(entry.sessionId ?? resolvedSessionId ?? null);
+    const handledBackground = await maybeHandleBackgroundLaunch({
+        parsed,
+        config,
+        paths,
+        store,
+        entry,
+        agentName: resolvedAgentName,
+        executorKey,
+        executionMode: modeName,
+        startTime,
+        logFile,
+        allowResume: true
+    });
+    if (handledBackground) {
         return;
     }
     const command = executor.buildRunCommand({
@@ -617,66 +465,15 @@ async function runChat(parsed, config, paths) {
         logFile,
         background: parsed.options.background,
         runnerPid: parsed.options.backgroundRunner ? process.pid : null,
-        cliOptions: parsed.options
+        cliOptions: parsed.options,
+        executionMode: modeName
     });
 }
-async function runAgentCommand(parsed, config, paths) {
-    const [maybeSubcommand, ...rest] = parsed.commandArgs;
-    if (parsed.options.requestHelp) {
-        await emitView((0, common_1.buildInfoView)('Agent command', [
-            'Usage:',
-            '  genie agent list',
-            '  genie agent run <agent-id> "<prompt>"',
-            '  genie agent <agent-id> "<prompt>"'
-        ]), parsed.options);
-        return;
-    }
-    const sub = (maybeSubcommand || '').toLowerCase();
-    if (!maybeSubcommand || sub === 'list' || sub === 'ls') {
-        await emitAgentCatalog(parsed, config, paths);
-        return;
-    }
-    if (sub === 'run' || sub === 'start' || sub === 'launch') {
-        if (!rest.length) {
-            throw new Error('Usage: genie agent run <agent-id> "<prompt>"');
-        }
-        const [agentId, ...promptParts] = rest;
-        await runAgentRun(agentId, promptParts, parsed, config, paths);
-        return;
-    }
-    if (sub === 'help') {
-        await emitView((0, common_1.buildInfoView)('Agent command', [
-            'Usage:',
-            '  genie agent list',
-            '  genie agent run <agent-id> "<prompt>"',
-            '  genie agent <agent-id> "<prompt>"'
-        ]), parsed.options);
-        return;
-    }
-    await runAgentRun(maybeSubcommand, rest, parsed, config, paths);
-}
-async function runAgentRun(agentInput, promptParts, parsed, config, paths) {
-    const agentId = resolveAgentIdentifier(agentInput);
-    const prompt = promptParts.join(' ').trim();
-    if (!prompt) {
-        throw new Error(`Usage: genie agent run ${agentInput} "<prompt>"`);
-    }
-    const cloned = {
-        command: 'run',
-        commandArgs: [agentId, prompt],
-        options: {
-            ...parsed.options,
-            rawArgs: [...parsed.options.rawArgs]
-        }
-    };
-    await runChat(cloned, config, paths);
-}
-function resolveExecutorKey(options, config, presetName) {
-    if (options.executor)
-        return options.executor;
-    const preset = config.presets && config.presets[presetName];
-    if (preset && preset.executor)
-        return preset.executor;
+function resolveExecutorKey(config, modeName) {
+    const modes = config.executionModes || config.presets || {};
+    const mode = modes[modeName];
+    if (mode && mode.executor)
+        return mode.executor;
     if (config.defaults && config.defaults.executor)
         return config.defaults.executor;
     return executors_1.DEFAULT_EXECUTOR_KEY;
@@ -689,14 +486,15 @@ function requireExecutor(key) {
     }
     return executor;
 }
-function buildExecutorConfig(config, presetName, executorKey, agentOverrides) {
+function buildExecutorConfig(config, modeName, executorKey, agentOverrides) {
     const base = deepClone((config.executors && config.executors[executorKey]) || {});
-    const preset = config.presets && config.presets[presetName];
-    if (!preset && presetName && presetName !== 'default') {
-        const available = Object.keys(config.presets || {}).join(', ') || 'default';
-        throw new Error(`Preset '${presetName}' not found. Available presets: ${available}`);
+    const modes = config.executionModes || config.presets || {};
+    const mode = modes[modeName];
+    if (!mode && modeName && modeName !== 'default') {
+        const available = Object.keys(modes).join(', ') || 'default';
+        throw new Error(`Execution mode '${modeName}' not found. Available modes: ${available}`);
     }
-    const overrides = getExecutorOverrides(preset, executorKey);
+    const overrides = getExecutorOverrides(mode, executorKey);
     let merged = mergeDeep(base, overrides);
     if (agentOverrides && Object.keys(agentOverrides).length) {
         merged = mergeDeep(merged, agentOverrides);
@@ -708,10 +506,10 @@ function resolveExecutorPaths(paths, executorKey) {
         return {};
     return paths.executors[executorKey] || {};
 }
-function getExecutorOverrides(preset, executorKey) {
-    if (!preset || !preset.overrides)
+function getExecutorOverrides(mode, executorKey) {
+    if (!mode || !mode.overrides)
         return {};
-    const { overrides } = preset;
+    const { overrides } = mode;
     if (overrides.executors && overrides.executors[executorKey]) {
         return overrides.executors[executorKey];
     }
@@ -723,7 +521,7 @@ function getExecutorOverrides(preset, executorKey) {
 function extractExecutorOverrides(agentGenie, executorKey) {
     if (!agentGenie || typeof agentGenie !== 'object')
         return {};
-    const { executor, background: _background, preset: _preset, json: _json, ...rest } = agentGenie;
+    const { executor, background: _background, preset: _preset, mode: _mode, executionMode: _executionMode, json: _json, ...rest } = agentGenie;
     const overrides = {};
     const executorDef = EXECUTORS[executorKey]?.defaults;
     const topLevelKeys = executorDef ? new Set(Object.keys(executorDef)) : null;
@@ -745,7 +543,7 @@ function extractExecutorOverrides(agentGenie, executorKey) {
     return overrides;
 }
 function executeRun(args) {
-    const { agentName, command, executorKey, executor, executorConfig, executorPaths, store, entry, paths, config, startTime, logFile, background, runnerPid, cliOptions } = args;
+    const { agentName, command, executorKey, executor, executorConfig, executorPaths, store, entry, paths, config, startTime, logFile, background, runnerPid, cliOptions, executionMode } = args;
     if (!command || typeof command.command !== 'string' || !Array.isArray(command.args)) {
         throw new Error(`Executor '${executorKey}' returned an invalid command configuration.`);
     }
@@ -833,6 +631,8 @@ function executeRun(args) {
                 outcome: 'failure',
                 sessionId: entry.sessionId,
                 executorKey,
+                mode: entry.mode || entry.preset || executionMode,
+                background: entry.background,
                 exitCode: null,
                 durationMs: Date.now() - startTime,
                 extraNotes: [`Launch error: ${message}`]
@@ -869,6 +669,8 @@ function executeRun(args) {
                 outcome,
                 sessionId: entry.sessionId,
                 executorKey,
+                mode: entry.mode || entry.preset || executionMode,
+                background: entry.background,
                 exitCode: code,
                 durationMs: Date.now() - startTime,
                 extraNotes: notes
@@ -901,23 +703,6 @@ function executeRun(args) {
     }
     return promise;
 }
-async function runMode(parsed, config, paths) {
-    const [modeName, ...promptParts] = parsed.commandArgs;
-    if (!modeName) {
-        throw new Error('Usage: genie mode <genie-mode> "<prompt>"');
-    }
-    const id = modeName.startsWith('genie-') ? modeName : `genie-${modeName}`;
-    const prompt = promptParts.join(' ').trim();
-    const cloned = {
-        command: 'run',
-        commandArgs: [id, prompt],
-        options: {
-            ...parsed.options,
-            rawArgs: [...parsed.options.rawArgs]
-        }
-    };
-    await runChat(cloned, config, paths);
-}
 function loadAgentSpec(name) {
     const base = name.endsWith('.md') ? name.slice(0, -3) : name;
     const agentPath = path_1.default.join('.genie', 'agents', `${base}.md`);
@@ -941,18 +726,16 @@ function extractFrontMatter(source) {
     }
     const raw = source.slice(3, end).trim();
     const body = source.slice(end + 4);
+    if (!YAML) {
+        recordStartupWarning('[genie] YAML module unavailable; front matter metadata ignored.');
+        return { meta: {}, body };
+    }
     try {
-        const parsed = YAML ? YAML.parse(raw) : parseSimpleYaml(raw);
-        return { meta: parsed || {}, body };
+        const parsed = YAML.parse(raw) || {};
+        return { meta: parsed, body };
     }
     catch {
-        try {
-            const fallback = parseSimpleYaml(raw);
-            return { meta: fallback || {}, body };
-        }
-        catch {
-            return { meta: {}, body };
-        }
+        return { meta: {}, body };
     }
 }
 function deriveStartTime() {
@@ -1034,7 +817,7 @@ async function runContinue(parsed, config, paths) {
     }
     const cmdArgs = parsed.commandArgs;
     if (cmdArgs.length < 2) {
-        throw new Error('Usage: genie continue <sessionId> "<prompt>"');
+        throw new Error('Usage: genie resume <sessionId> "<prompt>"');
     }
     const store = (0, session_store_1.loadSessions)(paths, config, DEFAULT_CONFIG);
     const sessionIdArg = cmdArgs[0];
@@ -1046,17 +829,26 @@ async function runContinue(parsed, config, paths) {
     if (!session || !session.sessionId) {
         throw new Error(`❌ No active session for agent '${agentName}'`);
     }
-    const presetName = session.preset || config.defaults?.preset || 'default';
     const agentSpec = loadAgentSpec(agentName);
     const agentMeta = agentSpec.meta || {};
     const agentGenie = agentMeta.genie || {};
     if (!parsed.options.backgroundExplicit && typeof agentGenie.background === 'boolean') {
         parsed.options.background = agentGenie.background;
     }
-    const executorKey = session.executor || agentGenie.executor || resolveExecutorKey(parsed.options, config, presetName);
+    const defaultMode = config.defaults?.executionMode || config.defaults?.preset || 'default';
+    const storedMode = session.mode || session.preset;
+    const agentMode = agentGenie.mode || agentGenie.executionMode || agentGenie.preset;
+    const modeName = typeof storedMode === 'string' && storedMode.trim().length
+        ? storedMode.trim()
+        : typeof agentMode === 'string' && agentMode.trim().length
+            ? agentMode.trim()
+            : defaultMode;
+    session.mode = modeName;
+    session.preset = modeName;
+    const executorKey = session.executor || agentGenie.executor || resolveExecutorKey(config, modeName);
     const executor = requireExecutor(executorKey);
     const executorOverrides = extractExecutorOverrides(agentGenie, executorKey);
-    const executorConfig = buildExecutorConfig(config, presetName, executorKey, executorOverrides);
+    const executorConfig = buildExecutorConfig(config, modeName, executorKey, executorOverrides);
     const executorPaths = resolveExecutorPaths(paths, executorKey);
     const command = executor.buildResumeCommand({
         config: executorConfig,
@@ -1076,49 +868,20 @@ async function runContinue(parsed, config, paths) {
     session.exitCode = null;
     session.signal = null;
     (0, session_store_1.saveSessions)(paths, store);
-    if (parsed.options.background && !parsed.options.backgroundRunner) {
-        const runnerPid = backgroundManager.launch({
-            rawArgs: parsed.options.rawArgs,
-            startTime,
-            logFile,
-            backgroundConfig: config.background,
-            scriptPath: __filename
-        });
-        session.runnerPid = runnerPid;
-        session.status = 'running';
-        (0, session_store_1.saveSessions)(paths, store);
-        const emitStarting = async (frame) => {
-            const startingView = (0, background_1.buildBackgroundStartingView)({ agentName, frame });
-            await emitView(startingView, parsed.options);
-        };
-        const emitStatus = async (sessionId, frame) => {
-            if (!sessionId) {
-                const pendingView = (0, background_1.buildBackgroundPendingView)({ agentName, frame });
-                await emitView(pendingView, parsed.options);
-                return;
-            }
-            const actions = buildBackgroundActions(sessionId, { resume: false, includeStop: true });
-            const statusView = (0, background_1.buildBackgroundStartView)({
-                agentName,
-                sessionId,
-                actions
-            });
-            await emitView(statusView, parsed.options);
-        };
-        await emitStarting('⠋');
-        if (session.sessionId) {
-            await emitStatus(session.sessionId);
-            return;
-        }
-        await emitStatus(null, '⠙');
-        const resolvedSessionId = await resolveSessionIdForBanner(agentName, config, paths, session.sessionId, logFile, async (frame) => emitStatus(null, frame));
-        const finalSessionId = resolvedSessionId || session.sessionId;
-        if (finalSessionId && !session.sessionId) {
-            session.sessionId = finalSessionId;
-            session.lastUsed = new Date().toISOString();
-            (0, session_store_1.saveSessions)(paths, store);
-        }
-        await emitStatus(session.sessionId ?? resolvedSessionId ?? null);
+    const handledBackground = await maybeHandleBackgroundLaunch({
+        parsed,
+        config,
+        paths,
+        store,
+        entry: session,
+        agentName,
+        executorKey,
+        executionMode: modeName,
+        startTime,
+        logFile,
+        allowResume: false
+    });
+    if (handledBackground) {
         return;
     }
     await executeRun({
@@ -1137,7 +900,8 @@ async function runContinue(parsed, config, paths) {
         logFile,
         background: parsed.options.background,
         runnerPid: parsed.options.backgroundRunner ? process.pid : null,
-        cliOptions: parsed.options
+        cliOptions: parsed.options,
+        executionMode: modeName
     });
 }
 async function runRuns(parsed, config, paths) {
@@ -1172,6 +936,20 @@ async function runRuns(parsed, config, paths) {
         warnings: warnings.length ? warnings : undefined
     });
     await emitView(envelope, parsed.options);
+}
+async function runList(parsed, config, paths) {
+    const [targetRaw] = parsed.commandArgs;
+    const target = (targetRaw || 'agents').toLowerCase();
+    if (target === 'agents') {
+        await emitAgentCatalog(parsed, config, paths);
+        return;
+    }
+    if (target === 'sessions') {
+        await runRuns(parsed, config, paths);
+        return;
+    }
+    await emitView((0, common_1.buildErrorView)('Unknown list target', `Unknown list target '${targetRaw}'. Try 'agents' or 'sessions'.`), parsed.options, { stream: process.stderr });
+    process.exitCode = 1;
 }
 async function runView(parsed, config, paths) {
     const [sessionId] = parsed.commandArgs;
@@ -1221,8 +999,9 @@ async function runView(parsed, config, paths) {
     const metaItems = [];
     if (entry.executor)
         metaItems.push({ label: 'Executor', value: String(entry.executor) });
-    if (entry.preset)
-        metaItems.push({ label: 'Preset', value: String(entry.preset) });
+    const executionMode = entry.mode || entry.preset;
+    if (executionMode)
+        metaItems.push({ label: 'Execution mode', value: String(executionMode) });
     if (entry.background !== undefined) {
         metaItems.push({ label: 'Background', value: entry.background ? 'detached' : 'attached' });
     }
@@ -1303,22 +1082,22 @@ async function runStop(parsed, config, paths) {
 function buildBackgroundActions(sessionId, options) {
     if (!sessionId) {
         const lines = [
-            '• View: session pending – run `./genie list sessions` then `./genie view <sessionId>`'
+            '• View: session pending – run `genie list sessions` then `genie view <sessionId>`'
         ];
         if (options.resume) {
-            lines.push('• Resume: session pending – run `./genie resume <sessionId> "<prompt>"` once available');
+            lines.push('• Resume: session pending – run `genie resume <sessionId> "<prompt>"` once available');
         }
         if (options.includeStop) {
-            lines.push('• Stop: session pending – run `./genie stop <sessionId>` once available');
+            lines.push('• Stop: session pending – run `genie stop <sessionId>` once available');
         }
         return lines;
     }
-    const lines = [`• View: ./genie view ${sessionId}`];
+    const lines = [`• View: genie view ${sessionId}`];
     if (options.resume) {
-        lines.push(`• Resume: ./genie resume ${sessionId} "<prompt>"`);
+        lines.push(`• Resume: genie resume ${sessionId} "<prompt>"`);
     }
     if (options.includeStop) {
-        lines.push(`• Stop: ./genie stop ${sessionId}`);
+        lines.push(`• Stop: genie stop ${sessionId}`);
     }
     return lines;
 }
@@ -1450,11 +1229,15 @@ async function runHelp(parsed, config, paths) {
     const envelope = (0, help_1.buildHelpView)({
         backgroundDefault,
         commandRows,
-        promptFramework: [
-            'Discovery → load @ context, restate goals, surface blockers early.',
-            'Implementation → follow wish/forge guidance with evidence-first outputs.',
-            'Verification → capture validation commands, metrics, and open questions.'
-        ],
+        promptFramework: {
+            title: '🧞 Genie Framework',
+            bulletPoints: [
+                'Plan → Load mission/roadmap/standards context, clarify scope, log assumptions/decisions, and produce the planning brief with branch/tracker guidance.',
+                'Wish → Convert the planning brief into an approved wish with context ledger, inline <spec_contract>, execution groups, and blocker protocol.',
+                'Forge → Break the wish into execution groups and task files, document validation hooks, evidence paths, personas, and branch strategy before implementation.',
+                'Review → Audit delivery by consolidating evidence, replaying agreed checks, and issuing a verdict or follow-up report before marking the wish complete.'
+            ]
+        },
         examples: [
             'genie run plan "[Discovery] mission @.genie/product/mission.md"',
             'genie view RUN-1234',

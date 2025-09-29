@@ -3,6 +3,7 @@ import fs from 'fs';
 export interface SessionEntry {
   agent: string;
   preset?: string;
+  mode?: string;
   logFile?: string;
   lastPrompt?: string;
   created?: string;
@@ -102,6 +103,8 @@ function migrateSessionEntries(store: SessionStore, defaultExecutor: string): Se
 
   Object.entries(result.agents || {}).forEach(([agent, entry]) => {
     if (!entry || typeof entry !== 'object') return;
+    if (!entry.mode && entry.preset) result.agents[agent].mode = entry.preset;
+    if (!entry.preset && entry.mode) result.agents[agent].preset = entry.mode;
     if (!entry.executor) result.agents[agent].executor = defaultExecutor;
   });
 

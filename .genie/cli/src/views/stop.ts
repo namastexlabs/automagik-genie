@@ -17,6 +17,17 @@ interface StopViewParams {
 const GENIE_STYLE: ViewStyle = 'genie';
 
 export function buildStopView(params: StopViewParams): ViewEnvelope {
+  const counts = countStatuses(params.events);
+  const badgeRow: ViewNode = {
+    type: 'layout',
+    direction: 'row',
+    gap: 1,
+    children: [
+      { type: 'badge', text: `${counts.done} stopped`, tone: 'success' },
+      { type: 'badge', text: `${counts.pending} pending`, tone: counts.pending ? 'warning' : 'muted' },
+      { type: 'badge', text: `${counts.failed} failed`, tone: counts.failed ? 'danger' : 'muted' }
+    ]
+  };
   return {
     style: GENIE_STYLE,
     title: `Stop: ${params.target}`,
@@ -26,6 +37,8 @@ export function buildStopView(params: StopViewParams): ViewEnvelope {
       gap: 1,
       children: [
         { type: 'heading', level: 1, text: `Stop signal • ${params.target}`, accent: 'primary' },
+        badgeRow,
+        { type: 'divider', variant: 'solid', accent: 'muted' },
         {
           type: 'timeline',
           items: params.events.map((event) => ({
@@ -38,6 +51,7 @@ export function buildStopView(params: StopViewParams): ViewEnvelope {
         {
           type: 'callout',
           tone: params.events.every((e) => e.status === 'done') ? 'success' : 'warning',
+          icon: params.events.every((e) => e.status === 'done') ? '✅' : '⚠️',
           title: 'Summary',
           body: [params.summary]
         },
@@ -47,4 +61,16 @@ export function buildStopView(params: StopViewParams): ViewEnvelope {
       ].filter(Boolean) as ViewNode[]
     }
   };
+}
+
+function countStatuses(events: StopEvent[]): { done: number; pending: number; failed: number } {
+  return events.reduce(
+    (acc, event) => {
+      if (event.status === 'done') acc.done += 1;
+      else if (event.status === 'pending') acc.pending += 1;
+      else if (event.status === 'failed') acc.failed += 1;
+      return acc;
+    },
+    { done: 0, pending: 0, failed: 0 }
+  );
 }
