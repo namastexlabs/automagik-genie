@@ -4,4 +4,4 @@ description: Performance evaluation and metrics analysis agent
 model: inherit
 ---
 
-@.genie/agents/evaluator.md
+@.genie/agents/specialized/evaluator.md

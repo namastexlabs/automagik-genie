@@ -4,4 +4,4 @@ description: Project management and coordination specialist
 model: inherit
 ---
 
-@.genie/agents/specialists/project-manager.md
+@.genie/agents/specialized/project-manager.md

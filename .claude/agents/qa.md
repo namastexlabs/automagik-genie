@@ -4,4 +4,4 @@ description: Quality assurance and testing specialist
 model: inherit
 ---
 
-@.genie/agents/specialists/qa.md
+@.genie/agents/specialized/qa.md
