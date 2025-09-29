@@ -147,21 +147,23 @@ Agents • .genie/agents
 ### `genie list sessions`
 ```
 Sessions • Active
-┌──────────────┬────────────────────────────────────────────┬───────────────┬────────────────────────────────────────────┐
-│ agent        │ session      │ updated       │ view         │
-├──────────────┼────────────────────────────────────────────┼───────────────┼────────────────────────────────────────────┤
-│ implementor  │ 01998ef3-5bc0-76c1-8aae-77bc8790d2d9        │ 2m ago        │ genie view 01998ef3-5bc0-76c1-8aae-77bc8790d2d9 │
-│ qa           │ 01998ef3-7c44-7b09-8a9b-3d9c7501c223        │ 7m ago        │ genie view 01998ef3-7c44-7b09-8a9b-3d9c7501c223  │
-└──────────────┴────────────────────────────────────────────┴───────────────┴────────────────────────────────────────────┘
+┌──────────────┬────────────────────────────────────────────┬───────────────┐
+│ agent        │ session                                    │ updated       │
+├──────────────┼────────────────────────────────────────────┼───────────────┤
+│ implementor  │ 01998ef3-5bc0-76c1-8aae-77bc8790d2d9        │ 2m ago        │
+│ qa           │ 01998ef3-7c44-7b09-8a9b-3d9c7501c223        │ 7m ago        │
+└──────────────┴────────────────────────────────────────────┴───────────────┘
+Hint: `genie view <sessionId>`
 
 Sessions • Recent (10)
-┌──────────────┬────────────────────────────────────────────┬───────────────┬────────────────────────────────────────────┐
-│ agent        │ session      │ completed     │ view         │
-├──────────────┼────────────────────────────────────────────┼───────────────┼────────────────────────────────────────────┤
-│ forge        │ 01998ef3-6d24-78f0-95bb-0de4d9517d11        │ 12m ago       │ genie view 01998ef3-6d24-78f0-95bb-0de4d9517d11  │
-│ prompt       │ 01998ef3-4306-7d61-9c3d-9d0f4c0c6a01        │ 18m ago       │ genie view 01998ef3-4306-7d61-9c3d-9d0f4c0c6a01  │
-│ …            │ …            │ …             │ …                    │
-└──────────────┴────────────────────────────────────────────┴───────────────┴────────────────────────────────────────────┘
+┌──────────────┬────────────────────────────────────────────┬───────────────┐
+│ agent        │ session                                    │ completed     │
+├──────────────┼────────────────────────────────────────────┼───────────────┤
+│ forge        │ 01998ef3-6d24-78f0-95bb-0de4d9517d11        │ 12m ago       │
+│ prompt       │ 01998ef3-4306-7d61-9c3d-9d0f4c0c6a01        │ 18m ago       │
+│ …            │ …                                          │ …             │
+└──────────────┴────────────────────────────────────────────┴───────────────┘
+Hint: `genie view <sessionId>` → `genie resume <sessionId> "<prompt>"` → `genie stop <sessionId>`
 ```
 
 ### `genie resume 01998ef3-5bc0-76c1-8aae-77bc8790d2d9 "[Verification] Capture evidence"`
@@ -176,7 +178,7 @@ Sessions • Recent (10)
 ### `genie view 01998ef3-5bc0-76c1-8aae-77bc8790d2d9`
 ```
 Transcript • 01998ef3-5bc0-76c1-8aae-77bc8790d2d9 (implementor)
-Session: 01998ef3-5bc0-76c1-8aae-77bc8790d2d9  │  Status: running  │  Log: .genie/state/agents/logs/implementor-01998ef3.log
+Session: 01998ef3-5bc0-76c1-8aae-77bc8790d2d9  │  Status: running
 
 [Assistant] ✅ Verification complete. Tests: pnpm run check → passed.
 [Reasoning] Evidence saved @.genie/wishes/voice-auth-wish.md#metrics
@@ -187,7 +189,7 @@ Tip: run `genie view 01998ef3-5bc0-76c1-8aae-77bc8790d2d9 --full` to replay the 
 ### `genie view 01998ef3-5bc0-76c1-8aae-77bc8790d2d9 --full`
 ```
 Transcript • 01998ef3-5bc0-76c1-8aae-77bc8790d2d9 (implementor)
-Session: 01998ef3-5bc0-76c1-8aae-77bc8790d2d9  │  Status: completed  │  Log: .genie/state/agents/logs/implementor-01998ef3.log
+Session: 01998ef3-5bc0-76c1-8aae-77bc8790d2d9  │  Status: completed
 
 [Reasoning] Preparing verification plan…
 [Action] Shell command
@@ -196,20 +198,36 @@ $ pnpm run check
 [Assistant] ✅ Verification complete. Tests: pnpm run check → passed.
 ```
 
-### `genie help run`
+### `genie help`
 ```
-GENIE CLI • Command Palette
-Usage: genie <command> [options]
-Background default: Enabled (detached)
+                                   GENIE CLI
 
-Command               Arguments                 Description
-run                   <agent> "<prompt>"        Start or attach to an agent
-list agents                                      Show available agents
-list sessions                                    Display active + recent runs
-resume                <session> "<prompt>"      Continue a background session
-view                  <session> [--full]         Render transcript for a session
-stop                  <session>                  Terminate a background session
-help                  [command]                  Show this panel
+
+Genie Template :: Command Palette Quickstart
+
+
+Usage       genie <command> [options]
+Background  Enabled (detached by default)
+
+
+Command        Arguments               Description
+run            <agent> "<prompt>"      Start or attach to an agent
+list agents                            Show available agents
+list sessions                          Display active and recent runs
+resume         <sessionId> "<prompt>"  Continue a background session
+view           <sessionId> [--full]    Show transcript for a session
+stop           <sessionId>             End a background session
+help                                   Show this panel
+
+Prompt Framework
+• Discovery → load @ context, restate goals, surface blockers early.
+• Implementation → follow wish/forge guidance with evidence-first outputs.
+• Verification → capture validation commands, metrics, and open questions.
+
+Examples
+• genie run plan "[Discovery] mission @.genie/product/mission.md"
+• genie view 01998ef3-5bc0-76c1-8aae-77bc8790d2d9
+• genie list agents
 ```
 
 ---
@@ -220,7 +238,7 @@ help                  [command]                  Show this panel
 3. **Execution modes** – replace `presets` with descriptive execution modes; update front matter and default config accordingly.
 4. **Agent discovery** – ensure recursive discovery is wired to the new command set (done in plan; verify again post-dispatcher update).
 5. **Session listing** – simplify `runRuns()` to produce the active/recent tables and rename command to `list sessions`.
-6. **Transcript view** – finalize chat transcript rendering in `runView()` and ensure status metadata is displayed.
+6. **Transcript view** – finalize chat transcript rendering in `runView()`, surface session status, and remove log-path leakage.
 7. **Stop semantics** – verify PID-based stop paths are removed and QA documentation reflects session-id only.
 8. **Documentation refresh** – update README, AGENTS.md, QA.md, CLI tests, and onboarding scripts once code migration lands.
 
