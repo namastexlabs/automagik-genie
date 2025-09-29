@@ -47,8 +47,8 @@ Each subsection lists: current behaviour in code, the desired end-state, and con
 - **Current behaviour**
   - Exposed as `genie runs` with pagination, status filters, and JSON output (see `runRuns()` in `.genie/cli/src/genie.ts:1231-1397`).
 - **Target**
-  - Present two tables: **Active** (running / pending) and **Recent** (last 10 completions), sorted by `lastUsed` descending.
-  - No manual filters or pagination knobs; hints guide the user to `view`, `resume`, `stop`.
+- Present two tables: **Active** (running / pending) and **Recent** (last 10 completions), sorted by `lastUsed` descending.
+- No manual filters or pagination knobs by default; hints guide the user to `view`, `resume`, `stop`. (If we ever exceed terminal width we can reintroduce simple pagination later.)
 - **Change notes**
   - `buildRunsOverviewView()` already renders the desired layout (`.genie/cli/src/views/runs.ts`).
   - Remove paging/status logic and switch `runs` verb to `list sessions`.
@@ -71,7 +71,7 @@ Each subsection lists: current behaviour in code, the desired end-state, and con
 - **Target**
   - Parse JSONL events and render a chat-style transcript (assistant / reasoning / tool / action messages) via new `buildChatView`.
   - Default output shows the latest assistant reply; `--full` replays the entire run.
-  - Header should include status, session id, log path.
+- Header should include session id and current status; log paths must not be exposed (current CLI still prints them, so hide them as part of the refactor).
 - **Change notes**
   - Transcript builder + Ink view are implemented (`buildTranscriptFromEvents`, `buildChatView`).
   - Next steps: wire the parser to drop `--lines`, `--json`, and ensure status appears in the header (TODO).
