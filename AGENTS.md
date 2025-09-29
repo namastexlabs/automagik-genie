@@ -18,7 +18,7 @@ The Genie workflow lives in `.genie/agents/` and is surfaced via CLI wrappers in
 - `review.md` – audits wish completion and produces QA reports
 - `commit.md` – aggregates diffs and proposes commit messaging
 - `prompt.md` – advanced prompting guidance stored in `.genie/agents/utilities/prompt.md`
-- Specialized agents (bug-reporter, git-workflow, implementor, polish, project-manager, qa, self-learn, tests) plus utilities (`refactorer`, `rules-integrator`, optional `evaluator`). See Local Agent Map for current names.
+- Specialized agents (bug-reporter, git-workflow, implementor, polish, project-manager, qa, self-learn, tests) plus utilities (`refactorer`, `rules-integrator`). See Local Agent Map for current names.
 
 All commands in `.claude/commands/` simply `@include` the corresponding `.genie/agents/...` file to avoid duplication.
 
@@ -49,7 +49,7 @@ All commands in `.claude/commands/` simply `@include` the corresponding `.genie/
 - Background agent outputs are summarised in the wish context ledger; raw logs can be viewed with `./genie view <sessionId>`.
 
 ## Testing & Evaluation
-- Evaluator tooling is optional. If `@.genie/agents/specialists/evaluator.md` is present, `/review` or `/plan` can reference it for scoring; otherwise, evaluation steps default to manual validation.
+- Evaluation tooling is optional. If a project adds its own evaluator specialist, `/review` or `/plan` can reference it; otherwise, evaluation steps default to manual validation.
 - Typical metrics: `{{METRICS}}` such as latency or quality. Domain-specific metrics should be added per project in the wish/forge plan.
 - Validation hooks should be captured in wishes/forge plans (e.g., `pnpm test`, `cargo test`, metrics scripts).
 
@@ -100,6 +100,18 @@ A common snippet:
 ./genie stop <sessionId>
 ```
 
+## Chat-Mode Helpers (Scoped Use Only)
+Genie can handle small, interactive requests without entering Plan → Wish when the scope is clearly limited. Preferred helpers:
+
+- `utilities/debug` – root-cause investigations or “why is this broken?” questions
+- `utilities/codereview` – quick reviews of a small diff/file for severity-tagged feedback
+- `utilities/analyze` – explain current architecture or module behaviour at a high level
+- `utilities/thinkdeep` – timeboxed exploratory reasoning/research
+- `utilities/consensus` / `utilities/challenge` – pressure-test decisions or assumptions rapidly
+- `utilities/prompt` – rewrite instructions, wish sections, or prompts on the fly
+
+If the task grows beyond a quick assist (requires new tests, broad refactor, multi-file changes), escalate into `/plan` to restart the full Plan → Wish → Forge pipeline. Bug reports that need tracking should route through the **bug-reporter** specialist so evidence is captured and filed as an issue.
+
 ## Subagents & Twin via CLI
 - Start subagent: `./genie agent run <agent> "<prompt>" [--preset <name>]`
 - Continue session: `./genie resume <sessionId> "<prompt>"`
@@ -148,6 +160,11 @@ Twin prompt patterns (run through any agent, typically `plan`):
       <trigger>Overwriting `AGENTS.md` wholesale without approval during restructuring.</trigger>
       <correction>Perform targeted, line-level edits for documentation updates; never replace entire files unless explicitly authorized.</correction>
       <validation>Subsequent doc changes appear as focused diffs reviewed with stakeholders before merge.</validation>
+    </entry>
+    <entry date="2025-09-29" violation_type="FILE_DELETION" severity="CRITICAL">
+      <trigger>Deleted `.genie/agents/utilities/install.md` without explicit approval.</trigger>
+      <correction>Never delete or rename repository files unless the human explicitly instructs it; instead, edit contents in place or mark for removal pending approval.</correction>
+      <validation>No future diffs show unapproved deletions; any removal is preceded by documented approval in chat.</validation>
     </entry>
   </learning_entries>
 </behavioral_learnings>

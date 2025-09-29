@@ -18,7 +18,7 @@ The Genie workflow lives in `.genie/agents/` and is surfaced via CLI wrappers in
 - `review.md` – audits wish completion and produces QA reports
 - `commit.md` – aggregates diffs and proposes commit messaging
 - `prompt.md` – advanced prompting guidance stored in `.genie/agents/utilities/prompt.md`
-- Specialized agents (bug-reporter, git-workflow, implementor, polish, project-manager, qa, self-learn, tests) plus utilities (`refactorer`, `rules-integrator`, optional `evaluator`). See Local Agent Map for current names.
+- Specialized agents (bug-reporter, git-workflow, implementor, polish, project-manager, qa, self-learn, tests) plus utilities (`refactorer`, `rules-integrator`). See Local Agent Map for current names.
 
 All commands in `.claude/commands/` simply `@include` the corresponding `.genie/agents/...` file to avoid duplication.
 
@@ -48,7 +48,7 @@ All commands in `.claude/commands/` simply `@include` the corresponding `.genie/
 - Background agent outputs are summarised in the wish context ledger; raw logs can be viewed with `./genie view <sessionId>`.
 
 ## Testing & Evaluation
-- Evaluator tooling is optional. If `@.genie/agents/specialists/evaluator.md` is present, `/review` or `/plan` can reference it for scoring; otherwise, evaluation steps default to manual validation.
+- Evaluation tooling is optional. If a project adds its own evaluator specialist, `/review` or `/plan` can reference it; otherwise, evaluation steps default to manual validation.
 - Typical metrics: `{{METRICS}}` such as latency or quality. Domain-specific metrics should be added per project in the wish/forge plan.
 - Validation hooks should be captured in wishes/forge plans (e.g., `pnpm test`, `cargo test`, metrics scripts).
 

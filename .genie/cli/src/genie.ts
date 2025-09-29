@@ -199,14 +199,14 @@ async function main(): Promise<void> {
 
     switch (parsed.command) {
       case 'run':
-        if (parsed.options.requestHelp || (parsed.commandArgs.length === 0)) {
+        if (parsed.options.requestHelp) {
           await emitView(buildRunHelpView(), parsed.options);
           return;
         }
         await runChat(parsed, config, paths);
         break;
       case 'resume':
-        if (parsed.options.requestHelp || (parsed.commandArgs.length === 0)) {
+        if (parsed.options.requestHelp) {
           await emitView(buildResumeHelpView(), parsed.options);
           return;
         }
@@ -220,22 +220,20 @@ async function main(): Promise<void> {
         await runList(parsed, config, paths);
         break;
       case 'view':
-        if (parsed.options.requestHelp || (parsed.commandArgs.length === 0)) {
+        if (parsed.options.requestHelp) {
           await emitView(buildViewHelpView(), parsed.options);
           return;
         }
         await runView(parsed, config, paths);
         break;
       case 'stop':
-        if (parsed.options.requestHelp || (parsed.commandArgs.length === 0)) {
+        if (parsed.options.requestHelp) {
           await emitView(buildStopHelpView(), parsed.options);
           return;
         }
         await runStop(parsed, config, paths);
         break;
       case 'help':
-        await runHelp(parsed, config, paths);
-        break;
       case undefined:
         await runHelp(parsed, config, paths);
         break;
@@ -974,10 +972,6 @@ function formatRelativeTime(value: string): string {
 
 async function runContinue(parsed: ParsedCommand, config: GenieConfig, paths: Required<ConfigPaths>): Promise<void> {
   // Help is handled in the main switch statement
-  if (parsed.options.requestHelp) {
-    await emitView(buildResumeHelpView(), parsed.options);
-    return;
-  }
 
   const cmdArgs = parsed.commandArgs;
   if (cmdArgs.length < 2) {
@@ -1454,37 +1448,7 @@ function resolveDisplayStatus(entry: SessionEntry): string {
 }
 
 async function runHelp(parsed: ParsedCommand, config: GenieConfig, paths: Required<ConfigPaths>): Promise<void> {
-  const [helpTarget] = parsed.commandArgs;
-
-  // If a specific command is requested, show detailed help for that command
-  if (helpTarget) {
-    switch (helpTarget.toLowerCase()) {
-      case 'run':
-        await emitView(buildRunHelpView(), parsed.options);
-        return;
-      case 'resume':
-        await emitView(buildResumeHelpView(), parsed.options);
-        return;
-      case 'list':
-        await emitView(buildListHelpView(), parsed.options);
-        return;
-      case 'view':
-        await emitView(buildViewHelpView(), parsed.options);
-        return;
-      case 'stop':
-        await emitView(buildStopHelpView(), parsed.options);
-        return;
-      case 'help':
-        await emitView(buildGeneralHelpView(), parsed.options);
-        return;
-      default:
-        await emitView(buildErrorView('Unknown command', `Unknown command '${helpTarget}'. Use 'genie help' to see available commands.`), parsed.options, { stream: process.stderr });
-        process.exitCode = 1;
-        return;
-    }
-  }
-
-  // Show main help if no specific command requested
+  // Always show main help - no subcommand help through 'genie help <command>'
   const backgroundDefault = Boolean(config.defaults && config.defaults.background);
   const commandRows = [
     { command: 'run', args: '<agent> "<prompt>"', description: 'Start or attach to an agent' },
@@ -1493,7 +1457,7 @@ async function runHelp(parsed: ParsedCommand, config: GenieConfig, paths: Requir
     { command: 'resume', args: '<sessionId> "<prompt>"', description: 'Continue a background session' },
     { command: 'view', args: '<sessionId> [--full]', description: 'Show transcript for a session' },
     { command: 'stop', args: '<sessionId>', description: 'End a background session' },
-    { command: 'help', args: '[command]', description: 'Show help for a specific command or this panel' }
+    { command: 'help', args: '', description: 'Show this panel' }
   ];
 
   const envelope = buildHelpView({
@@ -1510,9 +1474,9 @@ async function runHelp(parsed: ParsedCommand, config: GenieConfig, paths: Requir
     },
     examples: [
       'genie run plan "[Discovery] mission @.genie/product/mission.md"',
-      'genie help run',
+      'genie run --help  # Show help for run command',
       'genie view RUN-1234',
-      'genie list agents'
+      'genie list agents --help  # Show help for list command'
     ]
   });
 

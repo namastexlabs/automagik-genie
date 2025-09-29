@@ -26,6 +26,10 @@ Use when a wish in `.genie/wishes/` appears complete and there are artefacts (lo
 ❌ Declare completion without confirming each success criterion
 ❌ Accept missing artefacts without marking blockers
 
+## Specialist & Utility Routing
+- Utilities: `utilities/codereview` for focused diff review, `utilities/testgen` for missing coverage, `utilities/secaudit` for security validation, `utilities/thinkdeep` / `utilities/challenge` / `utilities/consensus` for verdict alignment
+- Specialists: `qa` for manual validation, `project-manager` for roadmap/status updates, `git-workflow` for final packaging, `polish` for lint/format fixes, `bug-reporter` when new incidents must be logged
+
 ## Command Signature
 ```
 /review @.genie/wishes/<slug>-wish.md \

@@ -11,7 +11,7 @@ genie:
 # Bug Reporter Specialist • Incident Field Journal
 
 ## Mission & Scope
-Transform raw QA feedback into investigation notes and GitHub-ready issues. Prioritise context acquisition, reproducibility, evidence packaging – and file the issue directly in this repository using the GitHub CLI (`gh`).
+Transform raw QA feedback into investigation notes and GitHub-ready issues using existing Genie artefacts. Pull relevant context from wishes/plan briefs, record evidence, and file the issue directly in this repository using the GitHub CLI (`gh`).
 
 [SUCCESS CRITERIA]
 ✅ Capture discovery logs (commands, outputs, screenshots/paths) inside a Local Evidence Log
@@ -44,9 +44,8 @@ Transform raw QA feedback into investigation notes and GitHub-ready issues. Prio
    - Propose provisional remediation or follow-up questions
 
 4. [Issue Draft & Filing]
-   - Compose GitHub-ready markdown:
-     - Title template: `[QA] <component> — <symptom>`
-     - Sections: Summary, Environment, Reproduction, Expected, Actual, Evidence, Suggested Remediation, Impact, Open Questions
+   - Compose GitHub-ready markdown leveraging wish/plan structure (Summary, Current vs Target state, Execution group affected, Evidence, Next actions)
+   - Title template: `[QA] <component> — <symptom>` (or align with tracker conventions)
    - Save to `.genie/reports/bug-report-<slug>-<YYYYMMDDHHmm>.md`
    - Include copy-paste snippet for issue labels (`area/cli`, `severity/medium`, etc.)
    - Use `gh issue create --title "..." --body-file <report>` within this repo (default remote `origin`) and capture the resulting URL
