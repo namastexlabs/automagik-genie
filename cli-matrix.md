@@ -124,10 +124,10 @@ These mock outputs reflect the desired experience after refactor.
 ### `genie run implementor "[Discovery] Review backlog"`
 ```
 ▸ GENIE • run implementor (mode: workspace-write)
-  session: RUN-8A2Q4
-  watch : genie view RUN-8A2Q4
-  resume: genie resume RUN-8A2Q4 "<prompt>"
-  stop  : genie stop RUN-8A2Q4
+  session: 01998ef3-5bc0-76c1-8aae-77bc8790d2d9
+  watch : genie view 01998ef3-5bc0-76c1-8aae-77bc8790d2d9
+  resume: genie resume 01998ef3-5bc0-76c1-8aae-77bc8790d2d9 "<prompt>"
+  stop  : genie stop 01998ef3-5bc0-76c1-8aae-77bc8790d2d9
 ```
 
 ### `genie list agents`
@@ -147,24 +147,24 @@ Agents • .genie/agents
 ### `genie list sessions`
 ```
 Sessions • Active
-┌──────────────┬──────────────┬───────────────┬──────────────┐
+┌──────────────┬────────────────────────────────────────────┬───────────────┬────────────────────────────────────────────┐
 │ agent        │ session      │ updated       │ view         │
 ├──────────────┼────────────────────────────────────────────┼───────────────┼────────────────────────────────────────────┤
 │ implementor  │ 01998ef3-5bc0-76c1-8aae-77bc8790d2d9        │ 2m ago        │ genie view 01998ef3-5bc0-76c1-8aae-77bc8790d2d9 │
 │ qa           │ 01998ef3-7c44-7b09-8a9b-3d9c7501c223        │ 7m ago        │ genie view 01998ef3-7c44-7b09-8a9b-3d9c7501c223  │
-└──────────────┴──────────────┴───────────────┴──────────────┘
+└──────────────┴────────────────────────────────────────────┴───────────────┴────────────────────────────────────────────┘
 
 Sessions • Recent (10)
-┌──────────────┬──────────────┬───────────────┬──────────────┐
+┌──────────────┬────────────────────────────────────────────┬───────────────┬────────────────────────────────────────────┐
 │ agent        │ session      │ completed     │ view         │
 ├──────────────┼────────────────────────────────────────────┼───────────────┼────────────────────────────────────────────┤
 │ forge        │ 01998ef3-6d24-78f0-95bb-0de4d9517d11        │ 12m ago       │ genie view 01998ef3-6d24-78f0-95bb-0de4d9517d11  │
 │ prompt       │ 01998ef3-4306-7d61-9c3d-9d0f4c0c6a01        │ 18m ago       │ genie view 01998ef3-4306-7d61-9c3d-9d0f4c0c6a01  │
 │ …            │ …            │ …             │ …                    │
-└──────────────┴──────────────┴───────────────┴──────────────┘
+└──────────────┴────────────────────────────────────────────┴───────────────┴────────────────────────────────────────────┘
 ```
 
-### `genie resume RUN-8A2Q4 "[Verification] Capture evidence"`
+### `genie resume 01998ef3-5bc0-76c1-8aae-77bc8790d2d9 "[Verification] Capture evidence"`
 ```
 ▸ GENIE • resume 01998ef3-5bc0-76c1-8aae-77bc8790d2d9 (mode: workspace-write)
   status: background
@@ -202,14 +202,14 @@ GENIE CLI • Command Palette
 Usage: genie <command> [options]
 Background default: Enabled (detached)
 
-Command        Arguments                 Description
-run            <agent> "<prompt>"        Start or attach to an agent
-list agents                               Show available agents
-list sessions                             Display active + recent runs
-resume         <session> "<prompt>"      Continue a background session
-view           <session> [--full]         Render transcript for a session
-stop           <session>                  Terminate a background session
-help           [command]                  Show this panel
+Command               Arguments                 Description
+run                   <agent> "<prompt>"        Start or attach to an agent
+list agents                                      Show available agents
+list sessions                                    Display active + recent runs
+resume                <session> "<prompt>"      Continue a background session
+view                  <session> [--full]         Render transcript for a session
+stop                  <session>                  Terminate a background session
+help                  [command]                  Show this panel
 ```
 
 ---
