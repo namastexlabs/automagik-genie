@@ -7,7 +7,7 @@ genie:
   executor: codex
   model: gpt-5-codex
   reasoningEffort: high
-  background: false
+  background: true
 ---
 
 # Forge Task Orchestrator • Single-Group Specialist
