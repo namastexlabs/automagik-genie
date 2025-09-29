@@ -188,7 +188,7 @@ Transcript • 01998ef3-5bc0-76c1-8aae-77bc8790d2d9 (implementor)
 Session     01998ef3-5bc0-76c1-8aae-77bc8790d2d9
 Status      running
 Executor    codex
-Preset      default
+Execution mode workspace-write
 Background  detached
 
 [Assistant] ✅ Verification complete. Tests: pnpm run check → passed.
@@ -203,7 +203,7 @@ Transcript • 01998ef3-5bc0-76c1-8aae-77bc8790d2d9 (implementor)
 Session     01998ef3-5bc0-76c1-8aae-77bc8790d2d9
 Status      completed
 Executor    codex
-Preset      default
+Execution mode workspace-write
 Background  detached
 
 [Reasoning] Preparing verification plan…
@@ -235,9 +235,11 @@ stop           <sessionId>             End a background session
 help                                   Show this panel
 
 Prompt Framework
-• Discovery → load @ context, restate goals, surface blockers early.
-• Implementation → follow wish/forge guidance with evidence-first outputs.
-• Verification → capture validation commands, metrics, and open questions.
+• Plan → load @ context (mission, roadmap, standards), restate goals, surface blockers early.
+• Wish → capture spec contract, execution plan, branch/tracker guidance, and evidence expectations.
+• Forge → break wish into execution groups, validations, and specialist hand-offs.
+• Implementation → follow forge guidance, delegate to specialists, capture evidence as you go.
+• Verification → replay validation hooks, summarize metrics, queue review/commit follow-ups.
 
 Examples
 • genie run plan "[Discovery] mission @.genie/product/mission.md"
