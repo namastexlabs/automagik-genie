@@ -1,7 +1,7 @@
 # GENIE CLI Architecture
 
 This directory hosts the runtime wrapper that powers `./genie` commands. The CLI is responsible for
-routing user requests, launching Codex (via `npx -y @namastexlabs/codex@0.43.0-alpha.4` or other executors), tracking background runs, and exposing
+routing user requests, launching Codex (via `npx -y @namastexlabs/codex@0.43.0-alpha.5` or other executors), tracking background runs, and exposing
 tooling for inspection.
 
 ## Module Map
@@ -27,7 +27,7 @@ Key source modules (`src/`):
 * Parses CLI arguments (`run`, `mode`, `continue`, `view`, `stop`, `runs`, `list`, `help`).
 * Loads configuration (from `config.yaml` + overrides) and prepares required directories.
 * Resolves the target agent markdown (`.genie/agents/*.md`) to extract instructions and metadata.
-* Delegates actual execution to an executor (defaults to `codex` running through `npx -y @namastexlabs/codex@0.43.0-alpha.4`).
+* Delegates actual execution to an executor (defaults to `codex` running through `npx -y @namastexlabs/codex@0.43.0-alpha.5`).
 * Manages background runs via `BackgroundManager`, wiring environment variables for the detached process.
 * Tracks sessions using `session-store` (stores state in `.genie/state/agents/sessions.json`).
 * Provides inspection tooling (`genie list sessions`, `genie view`) leveraging executor-supplied log viewers.
@@ -47,7 +47,7 @@ Key source modules (`src/`):
 ### `executors/codex.ts`
 * Defines the contract for invoking Codex. Key responsibilities:
   * Provide defaults (`binary`, package spec, session directory, CLI flags) consumed by `genie.js`.
-  * `buildRunCommand` and `buildResumeCommand` – convert tool config into shell arguments (e.g. `npx -y @namastexlabs/codex@0.43.0-alpha.4 exec`).
+  * `buildRunCommand` and `buildResumeCommand` – convert tool config into shell arguments (e.g. `npx -y @namastexlabs/codex@0.43.0-alpha.5 exec`).
   * `resolvePaths` – executor-specific paths (session transcripts).
   * `extractSessionId` / `getSessionExtractionDelay` – hook used by the CLI to capture session IDs from Codex artifacts.
   * `logViewer` – attach Codex-specific interpretation logic (imported from `codex-log-viewer.js`).
@@ -63,7 +63,7 @@ Key source modules (`src/`):
 1. `./genie run hello-coder "Prompt..."`
 2. `genie.js` parses options, merges config, prepares directories.
 3. Agent spec (`.genie/agents/hello-coder.md`) is loaded for instructions.
-4. `executors/codex.js` builds the Codex command (`npx -y @namastexlabs/codex@0.43.0-alpha.4 exec ...`) and optional resume metadata.
+4. `executors/codex.js` builds the Codex command (`npx -y @namastexlabs/codex@0.43.0-alpha.5 exec ...`) and optional resume metadata.
 5. `genie.js` launches the process (foreground or background) and streams logs to `.genie/state/agents/logs/...`.
 6. Session metadata is persisted via `session-store` – enabling `genie list sessions` and `genie resume` later.
 7. On completion, Codex JSONL logs are parsed through the executor’s `logViewer` when a human runs `genie view`.

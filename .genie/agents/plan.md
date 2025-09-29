@@ -1,11 +1,13 @@
 ---
 name: plan
-description: 🧭 Unified planning agent that turns raw ideas into roadmap-ready wishes by reviewing product docs, gathering
-  context, and coordinating follow-up actions.
+description: "\U0001F9ED Unified planning agent that turns raw ideas into roadmap-ready\
+  \ wishes by reviewing product docs, gathering context, and coordinating follow-up\
+  \ actions."
 genie:
   executor: codex
   model: gpt-5
   reasoningEffort: medium
+  background: true
 ---
 
 # /plan – Genie Product Orchestrator

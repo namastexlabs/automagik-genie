@@ -92,7 +92,7 @@ The agent CLI uses presets for different scenarios:
 
 Each file in `.genie/agents/` can override executor behaviour by adding a YAML
 front matter block. The CLI loads that block, merges it with `config.yaml`, and
-translates it to `npx -y @namastexlabs/codex@0.43.0-alpha.4 exec` flags. The structure is:
+translates it to `npx -y @namastexlabs/codex@0.43.0-alpha.5 exec` flags. The structure is:
 
 ```yaml
 ---
@@ -102,7 +102,7 @@ genie:
   executor: codex            # Which executor profile to use (defaults to `codex`)
   background: false          # Force foreground (otherwise inherits CLI default)
   binary: npx                # Override executable name if needed
-  packageSpec: "@namastexlabs/codex@0.43.0-alpha.4"
+  packageSpec: "@namastexlabs/codex@0.43.0-alpha.5"
   sessionsDir: .genie/state/agents/codex-sessions
   sessionExtractionDelayMs: 2000
   exec:

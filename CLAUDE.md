@@ -45,6 +45,7 @@ All commands in `.claude/commands/` simply `@include` the corresponding `.genie/
 
 ## Evidence & Storage Conventions
 - Wishes must declare where artefacts live; there is no default `qa/` directory. Capture metrics inline in the wish (e.g., tables under a **Metrics** section) or in clearly named companion files.
+- Every wish must complete the **Evidence Checklist** block in @.genie/agents/wish.md before implementation begins, spelling out validation commands, artefact locations, and approval checkpoints.
 - External tracker IDs live in the wish markdown (for example a **Tracking** section with `Forge task: FORGE-123`).
 - Background agent outputs are summarised in the wish context ledger; raw logs can be viewed with `./genie view <sessionId>`.
 
