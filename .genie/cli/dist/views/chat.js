@@ -3,11 +3,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.buildChatView = buildChatView;
 const GENIE_STYLE = 'genie';
 function buildChatView(params) {
-    const { agent, sessionId, logPath, messages, meta = [], showFull, hint } = params;
+    const { agent, sessionId, status, messages, meta = [], showFull, hint } = params;
     const headerRows = [
-        { label: 'Session', value: sessionId ?? 'n/a', tone: sessionId ? 'success' : 'muted' },
-        { label: 'Log', value: logPath }
+        { label: 'Session', value: sessionId ?? 'n/a', tone: sessionId ? 'success' : 'muted' }
     ];
+    if (status) {
+        headerRows.push({ label: 'Status', value: status });
+    }
     const metaRows = headerRows.concat(meta ?? []);
     const children = [
         { type: 'heading', level: 1, text: agent, accent: 'primary' },

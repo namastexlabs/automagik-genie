@@ -572,6 +572,10 @@ async function runChat(parsed, config, paths) {
         entry.runnerPid = runnerPid;
         entry.status = 'running';
         (0, session_store_1.saveSessions)(paths, store);
+        const emitStarting = async (frame) => {
+            const startingView = (0, background_1.buildBackgroundStartingView)({ agentName, frame });
+            await emitView(startingView, parsed.options);
+        };
         const emitStatus = async (sessionId, frame) => {
             if (!sessionId) {
                 const pendingView = (0, background_1.buildBackgroundPendingView)({ agentName, frame });
@@ -581,12 +585,12 @@ async function runChat(parsed, config, paths) {
             const actions = buildBackgroundActions(sessionId, { resume: true, includeStop: true });
             const statusView = (0, background_1.buildBackgroundStartView)({
                 agentName,
-                logPath: formatPathRelative(logFile, paths.baseDir || '.'),
                 sessionId,
                 actions
             });
             await emitView(statusView, parsed.options);
         };
+        await emitStarting('⠋');
         if (entry.sessionId) {
             await emitStatus(entry.sessionId);
             return;
@@ -837,7 +841,6 @@ function executeRun(args) {
             const envelope = (0, background_1.buildRunCompletionView)({
                 agentName,
                 outcome: 'failure',
-                logPath: formatPathRelative(logFile, paths.baseDir || '.'),
                 sessionId: entry.sessionId,
                 executorKey,
                 exitCode: null,
@@ -874,7 +877,6 @@ function executeRun(args) {
             const envelope = (0, background_1.buildRunCompletionView)({
                 agentName,
                 outcome,
-                logPath: formatPathRelative(logFile, paths.baseDir || '.'),
                 sessionId: entry.sessionId,
                 executorKey,
                 exitCode: code,
@@ -1095,6 +1097,10 @@ async function runContinue(parsed, config, paths) {
         session.runnerPid = runnerPid;
         session.status = 'running';
         (0, session_store_1.saveSessions)(paths, store);
+        const emitStarting = async (frame) => {
+            const startingView = (0, background_1.buildBackgroundStartingView)({ agentName, frame });
+            await emitView(startingView, parsed.options);
+        };
         const emitStatus = async (sessionId, frame) => {
             if (!sessionId) {
                 const pendingView = (0, background_1.buildBackgroundPendingView)({ agentName, frame });
@@ -1104,12 +1110,12 @@ async function runContinue(parsed, config, paths) {
             const actions = buildBackgroundActions(sessionId, { resume: false, includeStop: true });
             const statusView = (0, background_1.buildBackgroundStartView)({
                 agentName,
-                logPath: formatPathRelative(logFile, paths.baseDir || '.'),
                 sessionId,
                 actions
             });
             await emitView(statusView, parsed.options);
         };
+        await emitStarting('⠋');
         if (session.sessionId) {
             await emitStatus(session.sessionId);
             return;
@@ -1225,7 +1231,7 @@ async function runView(parsed, config, paths) {
     const envelope = (0, chat_1.buildChatView)({
         agent: entry.agent ?? 'unknown',
         sessionId: entry.sessionId ?? null,
-        logPath: formatPathRelative(logFile, paths.baseDir || '.'),
+        status: entry.status ?? null,
         messages: displayTranscript,
         meta: entry.executor ? [{ label: 'Executor', value: entry.executor }] : undefined,
         showFull: Boolean(parsed.options.full),

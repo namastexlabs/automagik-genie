@@ -13,7 +13,7 @@ export interface ChatMessage {
 export interface ChatViewParams {
   agent: string;
   sessionId: string | null;
-  logPath: string;
+  status?: string | null;
   messages: ChatMessage[];
   meta?: Array<{ label: string; value: string; tone?: Tone }>;
   showFull: boolean;
@@ -21,11 +21,13 @@ export interface ChatViewParams {
 }
 
 export function buildChatView(params: ChatViewParams): ViewEnvelope {
-  const { agent, sessionId, logPath, messages, meta = [], showFull, hint } = params;
+  const { agent, sessionId, status, messages, meta = [], showFull, hint } = params;
   const headerRows: Array<{ label: string; value: string; tone?: Tone }> = [
-    { label: 'Session', value: sessionId ?? 'n/a', tone: sessionId ? 'success' : 'muted' },
-    { label: 'Log', value: logPath }
+    { label: 'Session', value: sessionId ?? 'n/a', tone: sessionId ? 'success' : 'muted' }
   ];
+  if (status) {
+    headerRows.push({ label: 'Status', value: status });
+  }
   const metaRows = headerRows.concat(meta ?? []);
 
   const children: ViewNode[] = [

@@ -963,7 +963,6 @@ function executeRun(args: ExecuteRunArgs): Promise<void> {
       const envelope = buildRunCompletionView({
         agentName,
         outcome: 'failure',
-        logPath: formatPathRelative(logFile, paths.baseDir || '.'),
         sessionId: entry.sessionId,
         executorKey,
         exitCode: null,
@@ -1001,7 +1000,6 @@ function executeRun(args: ExecuteRunArgs): Promise<void> {
       const envelope = buildRunCompletionView({
         agentName,
         outcome,
-        logPath: formatPathRelative(logFile, paths.baseDir || '.'),
         sessionId: entry.sessionId,
         executorKey,
         exitCode: code,
@@ -1389,7 +1387,7 @@ async function runView(parsed: ParsedCommand, config: GenieConfig, paths: Requir
   const envelope = buildChatView({
     agent: entry.agent ?? 'unknown',
     sessionId: entry.sessionId ?? null,
-    logPath: formatPathRelative(logFile, paths.baseDir || '.'),
+    status: entry.status ?? null,
     messages: displayTranscript,
     meta: entry.executor ? [{ label: 'Executor', value: entry.executor }] : undefined,
     showFull: Boolean(parsed.options.full),
@@ -1474,7 +1472,7 @@ function buildBackgroundActions(
 ): string[] {
   if (!sessionId) {
     const lines: string[] = [
-      '• Watch: session pending – run `./genie list sessions` then `./genie view <sessionId>`'
+      '• View: session pending – run `./genie list sessions` then `./genie view <sessionId>`'
     ];
     if (options.resume) {
       lines.push('• Resume: session pending – run `./genie resume <sessionId> "<prompt>"` once available');
@@ -1485,7 +1483,7 @@ function buildBackgroundActions(
     return lines;
   }
 
-  const lines: string[] = [`• Watch: ./genie view ${sessionId}`];
+  const lines: string[] = [`• View: ./genie view ${sessionId}`];
 
   if (options.resume) {
     lines.push(`• Resume: ./genie resume ${sessionId} "<prompt>"`);

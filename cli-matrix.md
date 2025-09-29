@@ -30,9 +30,10 @@ Each subsection lists: current behaviour in code, the desired end-state, and con
   - Single verb `run` that resolves any `.md` under `.genie/agents/**` (folder prefix optional when unique).
   - Runtime posture comes exclusively from agent metadata / YAML defaults; CLI no longer accepts ad-hoc overrides.
 - **Change notes**
-  - Replace segmented `segments` logic in `listAgents()` with recursive directory walk (done in plan above).
-  - Remove legacy aliases `agent`/`mode` once routing logic is migrated.
-  - Audit flag stripping in `parseArguments()` (see Runtime Flag Audit below).
+- Replace segmented `segments` logic in `listAgents()` with recursive directory walk (done in plan above).
+- Remove legacy aliases `agent`/`mode` once routing logic is migrated.
+- Audit flag stripping in `parseArguments()` (see Runtime Flag Audit below).
+- In background mode, emit spinner frames in the following order: `Starting background agent…`, `Obtaining session id…`, then the success callout with available actions.
 
 ### 2. `list agents`
 - **Current behaviour**
@@ -61,8 +62,9 @@ Each subsection lists: current behaviour in code, the desired end-state, and con
 - **Target**
   - Alias becomes `resume`; inherits stored executor/sandbox from the session metadata without CLI overrides.
 - **Change notes**
-  - Rename command when dispatcher is refactored; strip deprecated flags from argument parsing.
-  - Background status view already updated to use the new copy.
+- Rename command when dispatcher is refactored; strip deprecated flags from argument parsing.
+- Background status view already updated to use the new copy.
+- Mirror the background spinner sequence used by `run` (start → session id → ready with actions).
 
 ### 5. `view <session> [--full]`
 - **Current behaviour**
@@ -125,9 +127,9 @@ These mock outputs reflect the desired experience after refactor.
 ```
 ▸ GENIE • run implementor (mode: workspace-write)
   session: 01998ef3-5bc0-76c1-8aae-77bc8790d2d9
-  watch : genie view 01998ef3-5bc0-76c1-8aae-77bc8790d2d9
-  resume: genie resume 01998ef3-5bc0-76c1-8aae-77bc8790d2d9 "<prompt>"
-  stop  : genie stop 01998ef3-5bc0-76c1-8aae-77bc8790d2d9
+  • View: genie view 01998ef3-5bc0-76c1-8aae-77bc8790d2d9
+  • Resume: genie resume 01998ef3-5bc0-76c1-8aae-77bc8790d2d9 "<prompt>"
+  • Stop: genie stop 01998ef3-5bc0-76c1-8aae-77bc8790d2d9
 ```
 
 ### `genie list agents`
@@ -178,7 +180,9 @@ Hint: `genie view <sessionId>` → `genie resume <sessionId> "<prompt>"` → `ge
 ### `genie view 01998ef3-5bc0-76c1-8aae-77bc8790d2d9`
 ```
 Transcript • 01998ef3-5bc0-76c1-8aae-77bc8790d2d9 (implementor)
-Session: 01998ef3-5bc0-76c1-8aae-77bc8790d2d9  │  Status: running
+Session   01998ef3-5bc0-76c1-8aae-77bc8790d2d9
+Status    running
+Executor  codex
 
 [Assistant] ✅ Verification complete. Tests: pnpm run check → passed.
 [Reasoning] Evidence saved @.genie/wishes/voice-auth-wish.md#metrics
@@ -189,7 +193,9 @@ Tip: run `genie view 01998ef3-5bc0-76c1-8aae-77bc8790d2d9 --full` to replay the 
 ### `genie view 01998ef3-5bc0-76c1-8aae-77bc8790d2d9 --full`
 ```
 Transcript • 01998ef3-5bc0-76c1-8aae-77bc8790d2d9 (implementor)
-Session: 01998ef3-5bc0-76c1-8aae-77bc8790d2d9  │  Status: completed
+Session   01998ef3-5bc0-76c1-8aae-77bc8790d2d9
+Status    completed
+Executor  codex
 
 [Reasoning] Preparing verification plan…
 [Action] Shell command
