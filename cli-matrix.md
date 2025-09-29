@@ -32,7 +32,7 @@ Each subsection lists: current behaviour in code, the desired end-state, and con
 - **Change notes**
 - Replace segmented `segments` logic in `listAgents()` with recursive directory walk (done in plan above).
 - Remove legacy aliases `agent`/`mode` once routing logic is migrated.
-- Audit flag stripping in `parseArguments()` (see Runtime Flag Audit below).
+- Audit flag stripping in `parseArguments()` (see Runtime Flag Audit below) — `--background/--no-background` must disappear.
 - In background mode, emit spinner frames in the following order: `Starting background agent…`, `Obtaining session id…`, then the success callout with available actions.
 
 ### 2. `list agents`
@@ -62,7 +62,7 @@ Each subsection lists: current behaviour in code, the desired end-state, and con
 - **Target**
   - Alias becomes `resume`; inherits stored executor/sandbox from the session metadata without CLI overrides.
 - **Change notes**
-- Rename command when dispatcher is refactored; strip deprecated flags from argument parsing.
+- Rename command when dispatcher is refactored; strip deprecated flags from argument parsing (`--background/--no-background` must go).
 - Background status view already updated to use the new copy.
 - Mirror the background spinner sequence used by `run` (start → session id → ready with actions).
 
@@ -113,8 +113,8 @@ Each subsection lists: current behaviour in code, the desired end-state, and con
 | --- | --- | --- |
 | `--preset` | `parseArguments()` `.genie/cli/src/genie.ts:268-274` | Remove once execution modes move to `.genie/cli/config.yaml` / agent metadata. |
 | `--background` / `--no-background` | `.genie/cli/src/genie.ts:275-283` | Drop; defaults live in config/metadata. |
-| `--executor` | `.genie/cli/src/genie.ts:284-290` | Remove per-run overrides. |
-| `-c/--config` | `.genie/cli/src/genie.ts:291-296` | Remove; rely on config files. |
+| `--executor` | `.genie/cli/src/genie.ts:284-290` | Drop; defaults live in config/metadata. |
+| `-c/--config` | `.genie/cli/src/genie.ts:291-296` | Drop; defaults live in config/metadata. |
 | `--full` | `.genie/cli/src/genie.ts:302-305` | Keep (transcript toggle). |
 | `--style`, `--json`, `--lines`, `--per`, `--prefix` | `.genie/cli/src/genie.ts:306-337` | Delete; replaced by fixed Genie theme & simplified views. |
 | `--status`, `--page` | `.genie/cli/src/genie.ts:308-331` | Legacy filters; consider reintroducing simple `--page` only if session list grows beyond 10 entries. |

@@ -218,16 +218,6 @@ function parseArguments(argv) {
             options.preset = raw[++i];
             continue;
         }
-        if (token === '--background') {
-            options.background = true;
-            options.backgroundExplicit = true;
-            continue;
-        }
-        if (token === '--no-background') {
-            options.background = false;
-            options.backgroundExplicit = true;
-            continue;
-        }
         if (token === '--executor') {
             if (i + 1 >= raw.length)
                 throw new Error('Missing value for --executor');

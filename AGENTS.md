@@ -17,7 +17,7 @@ The Genie workflow lives in `.genie/agents/` and is surfaced via CLI wrappers in
 - `forge.md` – breaks approved wish into execution groups + validation hooks (includes planner mode)
 - `review.md` – audits wish completion and produces QA reports
 - `commit.md` – aggregates diffs and proposes commit messaging
-- `prompt.md` – advanced prompting guidance (formerly `.claude.template/commands/prompt.md`)
+- `prompt.md` – advanced prompting guidance stored in `.genie/agents/core/prompt.md`
 - Specialized agents (bug-reporter, git-workflow, implementor, polish, project-manager, qa, self-learn, tests) plus utilities (`refactorer`, `rules-integrator`, optional `evaluator`). See Local Agent Map for current names.
 
 All commands in `.claude/commands/` simply `@include` the corresponding `.genie/agents/...` file to avoid duplication.
@@ -137,14 +137,206 @@ Agent aliases map to agent files. Keep this updated as new agents are added.
  - testgen → `.genie/agents/core/testgen.md`
  - secaudit → `.genie/agents/core/secaudit.md`
 
-## Migration Notes
-- Agent OS directories have been merged into `.genie/` (the old `.agent-os/` folder is removed).
-- `.claude.template/` and `.genie.template/` have been consolidated; their debloated prompts now live in `.genie/agents/`.
-- `.claude/commands/` are thin wrappers around `.genie/agents/`; update both when introducing new agents.
+## Agent Selection Matrix
 
-Keep this document synced when introducing new agents, changing folder layouts, or adjusting workflow expectations.
+### Core Analysis Agents
 
----
+#### `analyze` - System Architecture Analysis
+**When to use:**
+- Need holistic technical audit of codebase alignment with long-term goals
+- Assessing architectural soundness, scalability, and maintainability concerns
+- Strategic refactoring planning and dependency mapping
+- Executive-level overview of code fitness and improvement opportunities
+
+**Optimal scenarios:**
+- Pre-migration architecture assessment
+- Technical debt evaluation for roadmap planning
+- System scaling preparation analysis
+- Code review for architectural patterns
+
+**Don't use for:** Line-by-line bug hunting (use `codereview`), specific debugging (use `debug`)
+
+#### `debug` - Root Cause Investigation
+**When to use:**
+- Systematic investigation of bugs, failures, or unexpected behavior
+- Need methodical hypothesis formation with evidence and minimal fixes
+- Complex issues requiring structured investigation workflow
+- Want regression-safe solutions with confidence levels
+
+**Optimal scenarios:**
+- Production issues with unclear causes
+- Intermittent failures requiring systematic analysis
+- Performance bottlenecks needing root cause analysis
+- Bug triage with multiple potential causes
+
+**Don't use for:** Code quality review (use `codereview`), architectural analysis (use `analyze`)
+
+#### `refactor` - Code Improvement Strategy
+**When to use:**
+- Identifying concrete improvement opportunities with exact line references
+- Context-aware decomposition with adaptive thresholds
+- Need precise refactoring recommendations with dependency analysis
+- Want structured JSON output for automated processing
+
+**Optimal scenarios:**
+- Legacy code modernization planning
+- Technical debt reduction initiatives
+- Code smell elimination with priority ranking
+- Large file/class decomposition strategies
+
+**Don't use for:** Bug fixing (use `debug`), architecture design (use `analyze`)
+
+#### `consensus` - Proposal Evaluation
+**When to use:**
+- Need structured assessment of proposals, plans, or ideas
+- Want multi-perspective analysis (for/against/neutral stance-steering)
+- Require confidence-scored recommendations for decision making
+- Complex proposals needing thorough feasibility evaluation
+
+**Optimal scenarios:**
+- Architecture decision records (ADRs)
+- Feature proposal evaluation
+- Technology choice assessment
+- Strategic initiative validation
+
+**Don't use for:** Implementation planning (use `planner`), code review (use `codereview`)
+
+#### `codereview` - Quality Assurance
+**When to use:**
+- Code review for security, performance, maintainability, and architecture
+- Need severity-tagged feedback with actionable recommendations
+- Want line-specific issues with exact positioning
+- Require structured quality assessment with priority fixes
+
+**Optimal scenarios:**
+- Pull request reviews
+- Pre-commit code validation
+- Security vulnerability assessment
+- Code quality audits
+
+**Don't use for:** System architecture (use `analyze`), strategic planning (use `consensus`)
+
+#### `thinkdeep` - Complex Problem Solving
+**When to use:**
+- Complex questions requiring methodical step-by-step exploration
+- Need timeboxed deep reasoning with explicit step outline
+- Want conversation continuity across multiple exchanges
+- Require structured insights with risk assessment
+
+**Optimal scenarios:**
+- Research and discovery phases
+- Complex technical investigation
+- Multi-step problem decomposition
+- Strategic thinking and planning
+
+**Don't use for:** Quick answers, simple debugging, code review
+
+#### `challenge` - Critical Assessment
+**When to use:**
+- Need critical thinking wrapper to prevent automatic agreement
+- Want to pressure-test assumptions with counterarguments
+- Require thorough evaluation of statements or proposals
+- Need to identify flaws, gaps, or misleading points
+
+**Optimal scenarios:**
+- Assumption validation
+- Plan critique and strengthening
+- Risk assessment and devil's advocate analysis
+- Decision validation before implementation
+
+**Don't use for:** Supportive analysis, implementation guidance, code review
+
+### Specialized Workflow Agents
+
+#### `planner` - Strategic Planning
+**When to use:**
+- Interactive sequential planning with workflow architecture
+- Need step-by-step strategic roadmap development
+- Want comprehensive project orchestration
+- Require systematic approach to complex initiatives
+
+**Optimal scenarios:**
+- Project planning and roadmap creation
+- Feature development strategy
+- Migration planning with phases
+- Complex implementation orchestration
+
+#### `testgen` - Test Strategy & Generation
+**When to use:**
+- Step-by-step test generation with expert validation
+- Need comprehensive test strategy across multiple layers
+- Want automated test creation with coverage analysis
+- Require validation hooks and evidence capture
+
+**Optimal scenarios:**
+- TDD implementation
+- Legacy code test coverage
+- Test strategy development
+- Quality assurance automation
+
+#### `precommit` - Validation Workflow
+**When to use:**
+- Step-by-step pre-commit validation workflow
+- Need comprehensive checks before code integration
+- Want automated quality gates with evidence capture
+- Require systematic validation across multiple dimensions
+
+**Optimal scenarios:**
+- CI/CD pipeline validation
+- Code quality enforcement
+- Pre-merge verification
+- Automated compliance checking
+
+#### `secaudit` - Security Assessment
+**When to use:**
+- Comprehensive security audit with OWASP Top 10 coverage
+- Need compliance-focused security analysis
+- Want systematic vulnerability assessment
+- Require security best practices validation
+
+**Optimal scenarios:**
+- Security compliance audits
+- Vulnerability assessment
+- Security architecture review
+- Penetration testing preparation
+
+#### `docgen` - Documentation Strategy
+**When to use:**
+- Step-by-step documentation generation with complexity analysis
+- Need structured documentation workflow
+- Want automated documentation creation
+- Require documentation quality assessment
+
+**Optimal scenarios:**
+- API documentation generation
+- Code documentation automation
+- Technical writing workflow
+- Documentation maintenance strategy
+
+#### `tracer` - Call Flow Analysis
+**When to use:**
+- Static call path prediction and control flow analysis
+- Need method interaction mapping
+- Want execution path tracing for complex systems
+- Require dependency flow visualization
+
+**Optimal scenarios:**
+- Legacy code understanding
+- Debugging complex method interactions
+- Performance bottleneck identification
+- System flow documentation
+
+### Decision Framework
+
+**For bugs/issues:** `debug` → `codereview` (if needed) → `testgen` (for prevention)
+
+**For architecture:** `analyze` → `consensus` (for decisions) → `refactor` (for improvements)
+
+**For planning:** `planner` → `challenge` (for validation) → `consensus` (for approval)
+
+**For quality:** `codereview` → `precommit` → `testgen` → `secaudit`
+
+**For research:** `thinkdeep` → `analyze` → `challenge` → `consensus`
 
 ## Agent Playbook
 

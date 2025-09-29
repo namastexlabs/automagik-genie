@@ -17,7 +17,7 @@ The Genie workflow lives in `.genie/agents/` and is surfaced via CLI wrappers in
 - `forge.md` – breaks approved wish into execution groups + validation hooks (includes planner mode)
 - `review.md` – audits wish completion and produces QA reports
 - `commit.md` – aggregates diffs and proposes commit messaging
-- `prompt.md` – advanced prompting guidance (formerly `.claude.template/commands/prompt.md`)
+- `prompt.md` – advanced prompting guidance stored in `.genie/agents/core/prompt.md`
 - Specialized agents (bug-reporter, git-workflow, implementor, polish, project-manager, qa, self-learn, tests) plus utilities (`refactorer`, `rules-integrator`, optional `evaluator`). See Local Agent Map for current names.
 
 All commands in `.claude/commands/` simply `@include` the corresponding `.genie/agents/...` file to avoid duplication.
@@ -136,15 +136,6 @@ Agent aliases map to agent files. Keep this updated as new agents are added.
  - precommit → `.genie/agents/core/precommit.md`
  - testgen → `.genie/agents/core/testgen.md`
  - secaudit → `.genie/agents/core/secaudit.md`
-
-## Migration Notes
-- Agent OS directories have been merged into `.genie/` (the old `.agent-os/` folder is removed).
-- `.claude.template/` and `.genie.template/` have been consolidated; their debloated prompts now live in `.genie/agents/`.
-- `.claude/commands/` are thin wrappers around `.genie/agents/`; update both when introducing new agents.
-
-Keep this document synced when introducing new agents, changing folder layouts, or adjusting workflow expectations.
-
----
 
 ## Agent Playbook
 

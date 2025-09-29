@@ -625,6 +625,9 @@ async function runChat(parsed: ParsedCommand, config: GenieConfig, paths: Requir
       const statusView = buildBackgroundStartView({
         agentName,
         sessionId,
+        executor: entry.executor || executorKey,
+        preset: entry.preset || presetName,
+        background: entry.background,
         actions
       });
       await emitView(statusView, parsed.options);
@@ -955,6 +958,8 @@ function executeRun(args: ExecuteRunArgs): Promise<void> {
         outcome: 'failure',
         sessionId: entry.sessionId,
         executorKey,
+        preset: entry.preset || presetName,
+        background: entry.background,
         exitCode: null,
         durationMs: Date.now() - startTime,
         extraNotes: [`Launch error: ${message}`]
@@ -992,6 +997,8 @@ function executeRun(args: ExecuteRunArgs): Promise<void> {
         outcome,
         sessionId: entry.sessionId,
         executorKey,
+        preset: entry.preset || presetName,
+        background: entry.background,
         exitCode: code,
         durationMs: Date.now() - startTime,
         extraNotes: notes
@@ -1225,6 +1232,9 @@ async function runContinue(parsed: ParsedCommand, config: GenieConfig, paths: Re
       const statusView = buildBackgroundStartView({
         agentName,
         sessionId,
+        executor: session.executor || executorKey,
+        preset: session.preset || presetName,
+        background: session.background,
         actions
       });
       await emitView(statusView, parsed.options);

@@ -1,4 +1,4 @@
-import { ViewEnvelope, ViewStyle, ViewNode } from '../view';
+import { ViewEnvelope, ViewStyle, ViewNode, Tone } from '../view';
 
 const GENIE_STYLE: ViewStyle = 'genie';
 
@@ -10,6 +10,9 @@ export interface BackgroundLoadingParams {
 export interface BackgroundStartParams {
   agentName: string;
   sessionId?: string | null;
+  executor?: string | null;
+  preset?: string | null;
+  background?: boolean | null;
   actions?: string[];
 }
 
@@ -17,9 +20,11 @@ export interface RunCompletionParams {
   agentName: string;
   outcome: 'success' | 'warning' | 'failure';
   sessionId?: string | null;
+  executorKey?: string;
+  preset?: string | null;
+  background?: boolean | null;
   exitCode?: number | null;
   durationMs?: number | null;
-  executorKey?: string;
   extraNotes?: string[];
 }
 
@@ -37,7 +42,7 @@ export function buildBackgroundStartingView(params: BackgroundLoadingParams): Vi
 }
 
 export function buildBackgroundPendingView(params: BackgroundLoadingParams): ViewEnvelope {
-  const message = `${params.frame ?? '⠋'} Obtaining session id…`;
+  const message = `${params.frame ?? '⠙'} Obtaining session id…`;
   return {
     style: GENIE_STYLE,
     body: {
@@ -50,10 +55,25 @@ export function buildBackgroundPendingView(params: BackgroundLoadingParams): Vie
 }
 
 export function buildBackgroundStartView(params: BackgroundStartParams): ViewEnvelope {
-  const bodyLines = compact([
-    params.sessionId ? `Session → ${params.sessionId}` : null,
-    ...(params.actions || [])
+  const items: Array<{ label: string; value: string; tone?: Tone }> = compact([
+    { label: 'Session', value: params.sessionId ?? 'n/a', tone: params.sessionId ? 'success' : 'muted' },
+    params.executor ? { label: 'Executor', value: params.executor } : null,
+    params.preset ? { label: 'Preset', value: params.preset } : null,
+    params.background === true
+      ? { label: 'Background', value: 'detached' }
+      : params.background === false
+        ? { label: 'Background', value: 'attached' }
+        : null
   ]);
+
+  const actionsList = params.actions && params.actions.length
+    ? {
+        type: 'callout' as const,
+        tone: 'info' as const,
+        title: 'Next steps',
+        body: params.actions
+      }
+    : null;
 
   return {
     style: GENIE_STYLE,
@@ -62,24 +82,39 @@ export function buildBackgroundStartView(params: BackgroundStartParams): ViewEnv
       direction: 'column',
       gap: 1,
       children: [
+        { type: 'heading', level: 1, text: `${params.agentName} ready in background`, accent: 'secondary' },
         {
-          type: 'callout',
-          tone: 'success',
-          title: `${params.agentName} ready in background`,
-          body: bodyLines.length ? bodyLines : ['Session initialised.']
-        }
-      ] as ViewNode[]
+          type: 'keyValue',
+          columns: 1,
+          items
+        },
+        actionsList
+      ].filter(Boolean) as ViewNode[]
     }
   };
 }
 
 export function buildRunCompletionView(params: RunCompletionParams): ViewEnvelope {
   const tone = params.outcome === 'success' ? 'success' : params.outcome === 'warning' ? 'warning' : 'danger';
-  const title = params.outcome === 'success'
-    ? `${params.agentName} completed`
-    : params.outcome === 'warning'
-      ? `${params.agentName} completed with warnings`
-      : `${params.agentName} failed`;
+  const title =
+    params.outcome === 'success'
+      ? `${params.agentName} completed`
+      : params.outcome === 'warning'
+        ? `${params.agentName} completed with warnings`
+        : `${params.agentName} failed`;
+
+  const metaItems: Array<{ label: string; value: string; tone?: Tone }> = compact([
+    params.sessionId ? { label: 'Session', value: params.sessionId } : null,
+    params.executorKey ? { label: 'Executor', value: params.executorKey } : null,
+    params.preset ? { label: 'Preset', value: params.preset } : null,
+    params.background === true
+      ? { label: 'Background', value: 'detached' }
+      : params.background === false
+        ? { label: 'Background', value: 'attached' }
+        : null,
+    params.exitCode !== undefined && params.exitCode !== null ? { label: 'Exit code', value: String(params.exitCode) } : null,
+    params.durationMs ? { label: 'Runtime', value: `${(params.durationMs / 1000).toFixed(1)}s` } : null
+  ]);
 
   return {
     style: GENIE_STYLE,
@@ -91,14 +126,9 @@ export function buildRunCompletionView(params: RunCompletionParams): ViewEnvelop
       children: [
         { type: 'heading', level: 1, text: title, accent: params.outcome === 'failure' ? 'muted' : 'secondary' },
         {
-          type: 'callout',
-          tone,
-          body: compact([
-            params.sessionId ? `Session → ${params.sessionId}` : null,
-            params.exitCode !== undefined && params.exitCode !== null ? `Exit code → ${params.exitCode}` : null,
-            params.executorKey ? `Executor → ${params.executorKey}` : null,
-            params.durationMs ? `Runtime → ${(params.durationMs / 1000).toFixed(1)}s` : null
-          ])
+          type: 'keyValue',
+          columns: 1,
+          items: metaItems
         },
         params.extraNotes && params.extraNotes.length
           ? { type: 'list', items: params.extraNotes, tone: 'muted' }
