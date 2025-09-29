@@ -4,7 +4,7 @@ This roadmap is a canvas. Replace phases with goals relevant to your project aft
 
 ## Phase 0: Install & Configure
 - Copy `.genie/` and `.claude/commands/` into your repo
-- Run `./genie help` and a `/plan` smoke
+- Run `./genie --help` and a `/plan` smoke
 - Customize `.genie/product/*` placeholders
 
 ## Phase 1: Plan → Wish → Forge
@@ -13,7 +13,7 @@ This roadmap is a canvas. Replace phases with goals relevant to your project aft
 
 ## Phase 2: Implementation & Review
 - Use template-implementor/tests/qa/quality agents
-- Record Done/Death Testaments
+- Record Done Reports
 
 ## Phase 3: Iterate
 - Expand agents or prompts as needed

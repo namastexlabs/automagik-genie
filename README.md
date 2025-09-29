@@ -44,8 +44,8 @@ Phase 1: Template sweep in progress (neutralizing project-specific content).
 - `AGENTS.md`
 
 2) Run the CLI:
-- `./genie help`
-- `./genie agent run plan "[Discovery] baseline scan [Implementation] propose wish [Verification] next steps" --no-background`
+- `./genie --help`
+- `./genie run plan "[Discovery] Load @.genie/product/mission.md and @.genie/product/roadmap.md. [Implementation] Evaluate feature 'user-notes' (not on roadmap) and prepare a wish brief. [Verification] Provide wish-readiness checklist + blockers." --no-background`
 
 3) Customize `.genie/product/*` (mission, roadmap, environment) and start your first wish.
 
@@ -72,3 +72,43 @@ See `vendors/README.md` for managing external references if needed for your proj
 ## Philosophy
 
 Orchestration-first. Evidence-first. Human-approved. Domain-agnostic templates that install cleanly anywhere.
+
+## Quick Start Examples
+
+Plan → Wish → Forge → Review:
+```bash
+# Plan: off-roadmap feature
+./genie run plan "[Discovery] mission @.genie/product/mission.md, roadmap @.genie/product/roadmap.md. [Implementation] Assess 'user-notes' scope + risks; prepare wish brief. [Verification] Wish readiness + blockers."
+
+# Wish: create the contract
+./genie run wish "slug: user-notes; title: User notes MVP; context: @.genie/product/mission.md, @.genie/product/tech-stack.md; <spec_contract> { deliverables, acceptance, risks }"
+
+# Forge: break into execution groups
+./genie run forge "[Discovery] Use @.genie/wishes/user-notes-wish.md. [Implementation] Execution groups + commands. [Verification] Validation hooks + evidence paths."
+
+# Review: replay validations and produce QA verdict
+./genie run review "[Discovery] Use @.genie/wishes/user-notes-wish.md. [Implementation] Replay checks. [Verification] QA verdict + follow-ups."
+
+# Resume a planning session
+./genie list sessions
+./genie view RUN-1234 --full
+./genie resume RUN-1234 "Follow-up: address risk #2 with options + trade-offs."
+```
+
+CLI Help:
+```bash
+./genie --help
+./genie run --help
+```
+
+### Conversations & Resume
+`resume` enables an actual, continuous conversation with agents and is how you continue multi‑turn tasks.
+
+- Start a session: `./genie run <agent> "<prompt>"`
+- Resume the same session: `./genie resume <sessionId> "<next prompt>"`
+- Inspect context so far: `./genie view <sessionId> --full`
+- Discover session ids: `./genie list sessions`
+
+Tips
+- Use one session per wish/feature/bug to keep transcripts focused.
+- Prefer `resume` for follow‑ups; start a new `run` when scope changes significantly and reference the prior session.

@@ -7,7 +7,7 @@ function buildAgentCatalogView(params) {
     const badgeRow = {
         type: 'layout',
         direction: 'row',
-        gap: 1,
+        gap: 0,
         children: [
             { type: 'badge', text: `Total ${total}`, tone: 'info' },
             { type: 'badge', text: `${groups.length} folders`, tone: 'muted' }
@@ -19,7 +19,7 @@ function buildAgentCatalogView(params) {
         body: {
             type: 'layout',
             direction: 'column',
-            gap: 1,
+            gap: 0,
             children: [
                 { type: 'heading', level: 1, text: 'Agent Catalog', accent: 'primary' },
                 badgeRow,
@@ -29,25 +29,17 @@ function buildAgentCatalogView(params) {
                     icon: '🧭',
                     title: 'Usage',
                     body: [
-                        'Run an agent: `genie run <agent-id> "<prompt>"`.',
-                        'List active work: `genie list sessions`.'
+                        'Run an agent: `genie run <agent-id> "<prompt>"`. List active work: `genie list sessions`.'
                     ]
                 },
-                { type: 'divider', variant: 'solid', accent: 'muted' },
-                ...groups.flatMap((group, index) => {
-                    const section = buildGroupSection(group);
-                    return index < groups.length - 1
-                        ? [section, { type: 'divider', variant: 'solid', accent: 'muted' }]
-                        : [section];
-                }),
+                ...groups.map((group, index) => buildGroupSection(group)),
                 {
                     type: 'callout',
                     tone: 'success',
                     icon: '🧪',
                     title: 'Next steps',
                     body: [
-                        'Pair `/forge` plans with `/implementor` runs for structured delivery.',
-                        'Keep wish context updated as you add or retire agents.'
+                        'Pair `/forge` plans with `/implementor` runs for structured delivery. Keep wish context updated as you add or retire agents.'
                     ]
                 }
             ]
@@ -58,7 +50,7 @@ function buildGroupSection(group) {
     const badges = {
         type: 'layout',
         direction: 'row',
-        gap: 1,
+        gap: 0,
         children: [
             { type: 'badge', text: `${group.rows.length} agents`, tone: 'info' }
         ]
@@ -66,7 +58,7 @@ function buildGroupSection(group) {
     return {
         type: 'layout',
         direction: 'column',
-        gap: 1,
+        gap: 0,
         children: [
             { type: 'heading', level: 2, text: group.label, accent: 'secondary' },
             badges,

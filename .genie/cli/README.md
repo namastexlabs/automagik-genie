@@ -30,7 +30,7 @@ Key source modules (`src/`):
 * Delegates actual execution to an executor (defaults to `codex`).
 * Manages background runs via `BackgroundManager`, wiring environment variables for the detached process.
 * Tracks sessions using `session-store` (stores state in `.genie/state/agents/sessions.json`).
-* Provides inspection tooling (`genie runs`, `genie view`) leveraging executor-supplied log viewers.
+* Provides inspection tooling (`genie list sessions`, `genie view`) leveraging executor-supplied log viewers.
 
 ### `background-manager.ts`
 * Thin wrapper around `child_process.spawn` that launches `node genie.js ...` in a detached mode.
@@ -65,7 +65,7 @@ Key source modules (`src/`):
 3. Agent spec (`.genie/agents/hello-coder.md`) is loaded for instructions.
 4. `executors/codex.js` builds the Codex command and optional resume metadata.
 5. `genie.js` launches the process (foreground or background) and streams logs to `.genie/state/agents/logs/...`.
-6. Session metadata is persisted via `session-store` – enabling `genie runs` and `genie continue` later.
+6. Session metadata is persisted via `session-store` – enabling `genie list sessions` and `genie resume` later.
 7. On completion, Codex JSONL logs are parsed through the executor’s `logViewer` when a human runs `genie view`.
 
 ## Build & Test Workflow
@@ -82,7 +82,7 @@ after a successful build (compiled artifacts are committed alongside the sources
 
 * Background runs reuse the same entrypoint (`genie.js`) but are spawned in a separate Node process.
 * Launch metadata is stored both in-memory (`BackgroundManager`) and on disk (`sessions.json`).
-* `genie runs` surfaces the status by combining session information with `BackgroundManager.isAlive()` checks.
+* `genie list sessions` surfaces the status by combining session information with `BackgroundManager.isAlive()` checks.
 
 ## Adding a New Executor
 

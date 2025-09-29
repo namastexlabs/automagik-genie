@@ -1,4 +1,4 @@
-# Death Testament: polish – Genie Protocol Sync (Vendor Alignment)
+# Done Report: polish – Genie Protocol Sync (Vendor Alignment)
 
 When: 2025-09-28 22:17 UTC
 Scope: Align Genie prompts with Agent OS vendor patterns (context fetch, date handling, test runner behavior) without adding new agent sprawl.
@@ -34,4 +34,3 @@ None (prompt-only changes via apply_patch).
 
 ## Verdict
 Protocol completeness improved with minimal surface area changes; no new agents introduced.
-

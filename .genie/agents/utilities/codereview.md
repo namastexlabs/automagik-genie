@@ -78,7 +78,7 @@ After listing issues, add:
 [SUCCESS CRITERIA]
 ✅ Findings categorized (severity: high/med/low) with clear recommendations
 ✅ Quick wins listed separately for fast iteration
-✅ Death Testament saved to `.genie/reports/genie-codereview-<slug>-<YYYYMMDDHHmm>.md` when used for PRs
+✅ Done Report saved to `.genie/reports/done-codereview-<slug>-<YYYYMMDDHHmm>.md` when used for PRs
 
 ## Operating Blueprint
 ```

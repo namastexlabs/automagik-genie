@@ -39,8 +39,8 @@ set -a && source .env && set +a
 ## 4. Verify the CLI
 
 ```bash
-./genie help
-./genie agent run plan "[Discovery] quick repo scan [Implementation] outline wish [Verification] list next steps"
+./genie --help
+./genie run plan "[Discovery] quick repo scan [Implementation] outline wish [Verification] list next steps"
 ```
 
 ## 5. Start Your First Wish
@@ -49,7 +49,7 @@ Use the plan → wish → forge flow. Store evidence under `.genie/wishes/<slug>
 
 ```bash
 mkdir -p .genie/wishes/sample
-./genie agent run wish "Create a wish for onboarding Genie template to {{PROJECT_NAME}}."
+./genie run wish "Create a wish for onboarding Genie template to {{PROJECT_NAME}}."
 ```
 
 ## 6. Project Context

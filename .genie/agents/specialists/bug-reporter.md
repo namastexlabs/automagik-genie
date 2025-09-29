@@ -29,7 +29,7 @@ Transform raw QA feedback into investigation notes and GitHub-ready issues using
 ```
 <task_breakdown>
 1. [Discovery]
-   - Review wish/QA feedback, mission docs, and recent runs (`./genie runs --json`)
+   - Review wish/QA feedback, mission docs, and recent sessions (`./genie list sessions`)
    - Reproduce commands with both human and `--json` output where relevant
    - Snapshot environment: `node -v`, `pnpm --version`, git branch/head
 
@@ -60,7 +60,7 @@ Transform raw QA feedback into investigation notes and GitHub-ready issues using
 ## Evidence Recorder Blueprint
 ```markdown
 # Evidence Log: <slug>
-- Command: `./genie help --style art`
+- Command: `./genie --help`
 - Timestamp (UTC): 2025-09-28T04:12:00Z
 - Outcome: Hierarchy misaligned, table overflows viewport
 - Artifact: `.genie/tmp/bug-reporter/<slug>/help-art.txt`
@@ -68,9 +68,9 @@ Transform raw QA feedback into investigation notes and GitHub-ready issues using
 
 ## Reference Example (from latest QA feedback)
 ```
-Summary: `./genie help` renders misaligned table; Ink framing truncates columns
+Summary: `./genie --help` renders misaligned table; Ink framing truncates columns
 Environment: `node v22.16.0`, `pnpm v10.12.4`, style=`compact`
-Repro: `./genie help --style art`
+Repro: `./genie --help`
 Expected: hero + tables align with Ink borders
 Actual: legacy ASCII table appears untrimmed and overflows width
 Evidence: screenshot, `help-art.txt`, `help-json.json`
@@ -78,7 +78,7 @@ Suggested Fix: normalize column widths, trim text, adopt Ink Table component
 ```
 Additional open items to triage under a single issue or linked subtasks:
 1. README detected as agent (adjust agent discovery filter)
-2. `./genie runs` log column too wide; pager messaging wrapped awkwardly
+2. `./genie list sessions` log column too wide; pager messaging wrapped awkwardly
 3. Paging should default to 10, remove `--per`
 4. Log viewer needs conversational grouping (assistant vs reasoning) with Ink styling
 
@@ -90,10 +90,9 @@ Additional open items to triage under a single issue or linked subtasks:
 
 ## Runbook Snippets
 - Collect human + JSON views:
-  - `./genie runs`
-  - `./genie runs --json`
-  - `./genie view <sessionId> --lines 15`
-  - `./genie view <sessionId> --json`
+  - `./genie list sessions`
+  - `./genie view <sessionId>`
+  - `./genie view <sessionId> --full`
 - Environment capture: `./scripts/print-env.sh` (if available) or `node -v`, `pnpm -v`, `git rev-parse --abbrev-ref HEAD`
 - Compress evidence: `tar -czf bug-evidence-<slug>.tar.gz .genie/tmp/bug-reporter/<slug>/`
 

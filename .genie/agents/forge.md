@@ -160,7 +160,7 @@ Use after a wish in `.genie/wishes/` reaches `APPROVED`. Planner mode reads the 
 
 ## Follow-up
 - Checklist of human actions before/during execution
-- CLI commands for background personas: `./genie agent run <persona> "<prompt>"`
+- CLI commands for background personas: `./genie run <persona> "<prompt>"`
 - PR template referencing wish slug and this forge plan
 ```
 
@@ -492,13 +492,13 @@ Document changes in `.genie/wishes/{{PROJECT_NAME}}-feature/evidence.md`
 ### Running Forge
 ```bash
 # Plan mode - create forge plan from wish
-./genie agent run forge "Create forge plan for @.genie/wishes/<slug>-wish.md"
+./genie run forge "Create forge plan for @.genie/wishes/<slug>-wish.md"
 
 # Task creation mode - create MCP task from group
-./genie agent run forge "Create task for group-a from forge-plan-<slug>"
+./genie run forge "Create task for group-a from forge-plan-<slug>"
 
 # Background execution for complex planning
-./genie agent run forge "Plan @.genie/wishes/<slug>-wish.md"
+./genie run forge "Plan @.genie/wishes/<slug>-wish.md"
 ```
 
 ### Integration with Other Agents

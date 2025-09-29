@@ -33,11 +33,23 @@ Do **not** run shell/git commands. Instead, request humans to execute scripts or
 ❌ Create wish/forge documents automatically—hand off instructions instead
 ❌ Leave open questions undocumented or roadmap alignment unclear
 
+## When To Use /plan
+- A request is not on the current roadmap and needs formal capture and alignment
+- Scope spans multiple files/components or requires cross-team coordination
+- Ambiguity or risk is high (architecture, irreversible migrations, external deps)
+- Compliance/approval gates are required
+- Otherwise, route micro-tasks to utilities (analyze/debug/codereview/prompt) and only escalate if scope grows
+
 ## Required Resources
 Always reference these files using `@` so they auto-load when needed:
 - `@.genie/product/mission.md`
 - `@.genie/product/roadmap.md`
+- `@.genie/product/tech-stack.md`
 - `@.genie/standards/best-practices.md`
+- `@.genie/agents/utilities/analyze.md` (when structure overview helps)
+- `@.genie/agents/utilities/debug.md` (for bug investigations)
+- `@.genie/agents/utilities/codereview.md` (for quick diff reviews)
+- `@.genie/agents/utilities/twin.md` (for pressure-testing high-impact decisions)
 - `@.genie/instructions/core/plan-product.md` (historical context)
 
 ## Planning Workflow
@@ -123,11 +135,8 @@ A wish can be generated when:
 If any item is missing, capture action items and remain in planning mode.
 
 ### Effort Scale Reference
-- XS: 1 day
-- S: 2-3 days
-- M: 1 week
-- L: 2 weeks
-- XL: 3+ weeks
+- Use relative sizes only: XS / S / M / L / XL
+- Do not map to time; use phases for planning
 
 ## Branch & Tracker Guidance
 Suggest one of the following strategies and log it explicitly:
@@ -176,7 +185,7 @@ For tracker visibility, capture forge-generated IDs (reported in the forge plan 
 
 6. **Next Actions**
    1. Run `/wish <slug>` using this brief
-   2. Execute background research: `./genie run forge-coder "..."`
+   2. Execute background research: `./genie run twin "Mode: planning. Objective: pressure-test the brief; deliver 3 risks, 3 missing validations, 3 refinements. Finish with Twin Verdict + confidence."`
    3. Review gates: [user approval points]
    4. Update roadmap status after completion
 
@@ -186,3 +195,13 @@ For tracker visibility, capture forge-generated IDs (reported in the forge plan 
    - Context ledger: [embedded in wish]
 
 Keep tone collaborative, concise, and focused on enabling the next step in the Genie workflow.
+
+## Resuming Planning Sessions
+- Discover sessions: `./genie list sessions`
+- Review transcript: `./genie view <sessionId> --full`
+- Resume with a follow-up: `./genie resume <sessionId> "Follow-up: address risk #2 with options + trade-offs."`
+
+Session tips:
+- Prefer stable ids like `plan-<slug>-YYYYMMDD` so related runs remain linked.
+- When resuming, restate context deltas since last turn and append a "Planning Brief Update" with new ASM/DEC/RISK entries.
+- Keep the Context Ledger cumulative; do not overwrite prior entries—append with timestamps when helpful.

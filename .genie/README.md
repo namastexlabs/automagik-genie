@@ -10,7 +10,7 @@ GENIE is a self-contained framework for managing AI agent conversations, wishes,
 .genie/
 ├── agents/          # Agent personalities (forge-coder, forge-tests, etc.)
 ├── wishes/          # Structured development wishes
-├── reports/         # Death Testaments and execution reports
+├── reports/         # Done Reports and execution reports
 ├── cli/            # Command-line tools
 │   └── genie.ts    # Universal agent conversation manager
 ├── templates/      # Wish and report templates
@@ -28,12 +28,12 @@ Start a conversation with any agent:
 
 Continue the conversation:
 ```bash
-./genie continue <sessionId> "add OAuth support"
+./genie resume <sessionId> "add OAuth support"
 ```
 
 List active sessions:
 ```bash
-./genie runs
+./genie list sessions
 ```
 
 ### Available Agents
@@ -60,7 +60,7 @@ Instead of using one-shot Task tools, use the CLI for full conversations:
 ./genie run template-implementor "@.genie/wishes/auth-wish.md implement Group A"
 
 # Continue with error handling
-./genie continue <sessionId> "tests failing, debug the issue"
+./genie resume <sessionId> "tests failing, debug the issue"
 ```
 
 ## Conventions
@@ -71,8 +71,8 @@ Instead of using one-shot Task tools, use the CLI for full conversations:
 - Contain structured implementation plans
 
 ### Reports
-- Death Testaments in `.genie/reports/`
-- Named as `<agent>-<slug>-<YYYYMMDDHHmm>.md`
+- Done Reports in `.genie/reports/`
+- Named as `done-<agent>-<slug>-<YYYYMMDDHHmm>.md`
 - Document execution evidence and risks
 
 ### Agents

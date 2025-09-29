@@ -24,7 +24,7 @@ genie:
 1. **Classify the request** using the Prompt Type Detection guide below. Choose the best-fit type (task, agent/assistant, workflow, evaluator, creative, meta) and note hybrids when needed.
 2. **Gather context with intent**: read only the files required to inform the prompt. Reference them with `@path` inside the prompt so downstream agents can auto-load context.
 3. **Draft the prompt** following the relevant framework (Discovery → Implementation → Verification unless overridden by the type).
-4. **Self-check** that the closing output is the prompt body alone—no death testament, no success callouts.
+4. **Self-check** that the closing output is the prompt body alone—no Done Report, no success callouts.
 
 ## Prompt Type Detection
 - **Task**: User wants code, analysis, or a concrete deliverable. Include role, mission, task breakdown, validation commands.
@@ -46,7 +46,7 @@ genie:
 | Meta-Prompt / Refinement | Prompt about prompts, improvement loop | Current state, Gaps, Refinement Goals, Revision Directives, Acceptance Criteria | Experiment backlog |
 
 ## Output Guardrails
-- Final turn must contain only the constructed prompt; omit analysis, status updates, or Done/Death-Testament sections.
+- Final turn must contain only the constructed prompt; omit analysis, status updates, or Done Report sections.
 - If the user requests artifacts beyond the prompt, restate the constraint and ask for clarification instead of complying.
 - Keep intermediate reasoning internal; use the plan tool or notes during drafting, but never echo them back in the final response.
 

@@ -142,13 +142,13 @@ include_plan_tool: true       # uses planning notes for context staging
 ### Via CLI Flags
 ```bash
 # Run with high reasoning effort
-./genie agent run implementor "Fix the bug" --config "exec.reasoningEffort=high"
+./genie run implementor "Fix the bug" --config "exec.reasoningEffort=high"
 
 # Run in read-only mode
-./genie agent run qa "Review code" --config "exec.sandbox=read-only"
+./genie run qa "Review code" --config "exec.sandbox=read-only"
 
 # Enable plan tool
-./genie agent run forge "Plan feature" --config "exec.includePlanTool=true"
+./genie run forge "Plan feature" --config "exec.includePlanTool=true"
 ```
 
 ### Via Config Presets
@@ -167,7 +167,7 @@ presets:
 
 Then use:
 ```bash
-./genie agent run implementor "Complex task" --preset high-effort
+./genie run implementor "Complex task" --preset high-effort
 ```
 
 ### Via Agent Metadata
@@ -186,7 +186,7 @@ meta:
 Agents run in background by default:
 ```bash
 # Starts in background, returns immediately
-./genie agent run implementor "Implement feature"
+./genie run implementor "Implement feature"
 
 # Check status
 ./genie list sessions

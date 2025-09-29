@@ -155,18 +155,38 @@ async function main() {
         await flushStartupWarnings(parsed.options);
         switch (parsed.command) {
             case 'run':
+                if (parsed.options.requestHelp) {
+                    await emitView((0, help_1.buildRunHelpView)(), parsed.options);
+                    return;
+                }
                 await runChat(parsed, config, paths);
                 break;
             case 'resume':
+                if (parsed.options.requestHelp) {
+                    await emitView((0, help_1.buildResumeHelpView)(), parsed.options);
+                    return;
+                }
                 await runContinue(parsed, config, paths);
                 break;
             case 'list':
+                if (parsed.options.requestHelp) {
+                    await emitView((0, help_1.buildListHelpView)(), parsed.options);
+                    return;
+                }
                 await runList(parsed, config, paths);
                 break;
             case 'view':
+                if (parsed.options.requestHelp) {
+                    await emitView((0, help_1.buildViewHelpView)(), parsed.options);
+                    return;
+                }
                 await runView(parsed, config, paths);
                 break;
             case 'stop':
+                if (parsed.options.requestHelp) {
+                    await emitView((0, help_1.buildStopHelpView)(), parsed.options);
+                    return;
+                }
                 await runStop(parsed, config, paths);
                 break;
             case 'help':
@@ -811,10 +831,7 @@ function formatRelativeTime(value) {
     return new Date(value).toLocaleDateString();
 }
 async function runContinue(parsed, config, paths) {
-    if (parsed.options.requestHelp) {
-        await runHelp(parsed, config, paths);
-        return;
-    }
+    // Help is handled in the main switch statement
     const cmdArgs = parsed.commandArgs;
     if (cmdArgs.length < 2) {
         throw new Error('Usage: genie resume <sessionId> "<prompt>"');
@@ -939,7 +956,11 @@ async function runRuns(parsed, config, paths) {
 }
 async function runList(parsed, config, paths) {
     const [targetRaw] = parsed.commandArgs;
-    const target = (targetRaw || 'agents').toLowerCase();
+    if (!targetRaw) {
+        await emitView((0, help_1.buildListHelpView)(), parsed.options);
+        return;
+    }
+    const target = targetRaw.toLowerCase();
     if (target === 'agents') {
         await emitAgentCatalog(parsed, config, paths);
         return;
@@ -1216,6 +1237,7 @@ function resolveDisplayStatus(entry) {
     return baseStatus;
 }
 async function runHelp(parsed, config, paths) {
+    // Always show main help - no subcommand help through 'genie help <command>'
     const backgroundDefault = Boolean(config.defaults && config.defaults.background);
     const commandRows = [
         { command: 'run', args: '<agent> "<prompt>"', description: 'Start or attach to an agent' },
@@ -1240,8 +1262,9 @@ async function runHelp(parsed, config, paths) {
         },
         examples: [
             'genie run plan "[Discovery] mission @.genie/product/mission.md"',
+            'genie run --help  # Show help for run command',
             'genie view RUN-1234',
-            'genie list agents'
+            'genie list agents --help  # Show help for list command'
         ]
     });
     await emitView(envelope, parsed.options);

@@ -60,7 +60,7 @@ Supports multiple runtime strategies via {{TECH_STACK}} with configurable valida
 - **Agent Orchestration:** Plan → Wish → Forge → Review → Commit workflow with full evidence trail
 - **Specialist Agents:** Template implementor, QA, quality, tests, self-learn, bug-reporter
 - **CLI Management:** Background execution, session persistence, log viewing
-- **Evidence Capture:** Done/Death Testaments, validation hooks, metrics tracking
+- **Evidence Capture:** Done Reports, validation hooks, metrics tracking
 - **Flexible Storage:** Wish-defined evidence paths, no hardcoded structure
 - **Safety Guardrails:** Approval gates, non-destructive defaults, blocker protocols
 

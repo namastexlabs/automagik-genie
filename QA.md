@@ -1,15 +1,14 @@
 ### 1. Top-Level Help
-- `./genie help`
+- `./genie --help`
 - Verify hero header, command table, and tips render with the Genie theme.
 
 ### 2. Agent Catalog
-- `./genie agent list`
 - `./genie list agents`
 - Confirm entrypoint vs utility vs specialist grouping reflects folder structure (root files, `utilities/`, `specialists/`).
 
 ### 3. Session Listings
 - `./genie list sessions`
-- Trigger a background run (`./genie agent run implementor "[Discovery] hello" --background`) and confirm the session appears under **Active**.
+- Trigger a background run (`./genie run implementor "[Discovery] hello" --background`) and confirm the session appears under **Active**.
 - Stop the run: `./genie stop <sessionId>`; the entry should move to **Recent**.
 
 ### 4. Transcript View
@@ -25,10 +24,10 @@ Use a recent session id:
 
 ### 6. Background Detach Preview
 Pick a specialist agent with a lightweight prompt (e.g., `polish`):
-- `./genie agent run polish "[Discovery] sanity ping" --no-background`
-- `./genie agent run polish "[Discovery] background" --background`
+- `./genie run polish "[Discovery] sanity ping" --no-background`
+- `./genie run polish "[Discovery] background" --background`
   - Ensure detach callout displays log path + session id.
-- `./genie resume <sessionId> "[Verification] follow-up" --background`
+- `./genie resume <sessionId> "[Verification] follow-up"`
 - `./genie list sessions` should briefly show the session under **Active**.
 - Clean up with `./genie stop <sessionId>`.
 

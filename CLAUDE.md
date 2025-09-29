@@ -27,7 +27,7 @@ All commands in `.claude/commands/` simply `@include` the corresponding `.genie/
 - `.genie/standards/` – coding rules, naming, language-specific style guides
 - `.genie/instructions/` – legacy Agent OS playbooks retained for reference
 - `.genie/guides/` – getting-started docs, onboarding
-- `.genie/state/` – CLI-managed data (e.g., `agents/sessions.json` for session tracking, agent logs, forge plans, commit advisories). Inspect via `./genie list sessions` or `./genie view <session>` rather than manual edits.
+- `.genie/state/` – CLI-managed data (e.g., `agents/sessions.json` for session tracking, agent logs, forge plans, commit advisories). Inspect via `./genie list sessions` or `./genie view <sessionId>` rather than manual edits.
 - `.genie/wishes/` – active wish contracts (`<slug>-wish.md`)
 - `.genie/agents/utilities/` – portable Genie prompts and modes (planner, twin, analysis, etc.)
 - `.genie/agents/specialists/` – delivery/QA/learning specialists
@@ -37,7 +37,7 @@ All commands in `.claude/commands/` simply `@include` the corresponding `.genie/
 1. **/plan** – single-entry agent for product mode. Loads mission/roadmap/standards, gathers context via `@` references, requests background personas via CLI, and decides if item is wish-ready.
 2. **/wish** – creates `.genie/wishes/<slug>-wish.md`, embedding context ledger, execution groups, inline `<spec_contract>`, branch/tracker strategy, and blocker protocol.
 3. **/forge** – surfaces execution groups, evidence expectations, validation hooks, and pointers back to the wish for tracker updates (capture the plan summary inside the wish).
-4. **Implementation** – humans/agents follow forge plan, storing evidence exactly where the wish specifies (no default folders). Specialist agents run via `./genie agent run <specialist-agent> "..."`. Replace `<specialist-agent>` using the Local Agent Map and tailor the files in `.genie/agents/specialists/` during installation.
+4. **Implementation** – humans/agents follow forge plan, storing evidence exactly where the wish specifies (no default folders). Specialist agents run via `./genie run <specialist-agent> "..."`. Replace `<specialist-agent>` using the Local Agent Map and tailor the files in `.genie/agents/specialists/` during installation.
 5. **/review** (optional) – aggregates QA artefacts, replays validation commands, and writes a review summary back into the wish (create a dedicated section or file path if needed).
 6. **/commit** – groups diffs, recommends commit message/checklist, and outputs a commit advisory (log highlights inside the wish or PR draft).
 7. **Git workflow** – Branch names typically `feat/<wish-slug>`; alternatives logged in the wish. PRs reference the wish and forge plan, and reuse tracker IDs recorded in the wish itself. Update roadmap status after merge.
@@ -80,17 +80,17 @@ A common snippet:
 ## CLI Quick Reference
 ```bash
 # Helper
-./genie help
+./genie --help
 
 # Start a Genie Mode (preferred for built-in flows)
-./genie agent run planner "[Discovery] … [Implementation] … [Verification] …"
+./genie run plan "[Discovery] … [Implementation] … [Verification] …"
 
 # Start a Core/Specialized Agent
-./genie agent run forge "[Discovery] … [Implementation] … [Verification] …"
+./genie run forge "[Discovery] … [Implementation] … [Verification] …"
 
 # Inspect runs and view logs (friendly)
 ./genie list sessions
-./genie view <sessionId> [--full]
+./genie view <sessionId> --full
 
 # Continue a specific run by session id
 ./genie resume <sessionId> "Follow-up …"
@@ -100,7 +100,7 @@ A common snippet:
 ```
 
 ## Subagents & Twin via CLI
-- Start subagent: `./genie agent run <agent> "<prompt>" [--preset <name>]`
+- Start subagent: `./genie run <agent> "<prompt>" [--preset <name>]`
 - Continue session: `./genie resume <sessionId> "<prompt>"`
 - List sessions: `./genie list sessions`
 - Stop session: `./genie stop <sessionId>`
@@ -231,7 +231,7 @@ Agent aliases map to agent files. Keep this updated as new agents are added.
 - Evidence: declared by each wish (pick a clear folder or append directly in-document).
 - Forge plans: recorded in CLI output—mirror essentials back into the wish.
 - Blockers: logged inside the wish under a **Blockers** or status section.
-- Reports: `.genie/reports/` (Death Testaments, etc.).
+- Reports: `.genie/reports/` (Done Reports).
 </file_and_naming_rules>
 
 <tool_requirements>
@@ -250,10 +250,10 @@ Agent aliases map to agent files. Keep this updated as new agents are added.
 
 [SUCCESS CRITERIA]
 ✅ Approved wish → forge execution groups → implementation via subagents → review → commit advisory.
-✅ Each subagent produces a Death Testament and references it in the final reply.
+✅ Each subagent produces a Done Report and references it in the final reply.
 
-### Death Testament
-- Location: `.genie/reports/<agent>-<slug>-<YYYYMMDDHHmm>.md` (UTC).
+### Done Report
+- Location: `.genie/reports/done-<agent>-<slug>-<YYYYMMDDHHmm>.md` (UTC).
 - Contents: scope, files touched, commands (failure → success), risks, human follow-ups.
 </strategic_orchestration_rules>
 
@@ -302,7 +302,7 @@ Agent aliases map to agent files. Keep this updated as new agents are added.
 - Use it to reduce risk, surface blind spots, and document reasoning without blocking implementation work.
 
 [SUCCESS CRITERIA]
-✅ Clear purpose, chosen mode, and outcomes logged (wish discovery or Death Testament).
+✅ Clear purpose, chosen mode, and outcomes logged (wish discovery or Done Report).
 ✅ Human reviews Twin Verdict (with confidence) before high-impact decisions.
 ✅ Evidence captured when Twin recommendations change plan/implementation.
 
@@ -316,8 +316,8 @@ Agent aliases map to agent files. Keep this updated as new agents are added.
 - Retrospective: extract wins/misses/lessons for future work.
 
 ### How To Run (CLI)
-- Start: `./genie mode twin "Mode: planning. Objective: pressure-test @.genie/wishes/<slug>-wish.md. Deliver 3 risks, 3 missing validations, 3 refinements. Finish with Twin Verdict + confidence."`
-- Continue: `./genie continue <sessionId> "Follow-up: address risk #2 with options + trade-offs."`
+- Start: `./genie run twin "Mode: planning. Objective: pressure-test @.genie/wishes/<slug>-wish.md. Deliver 3 risks, 3 missing validations, 3 refinements. Finish with Twin Verdict + confidence."`
+- Resume: `./genie resume <sessionId> "Follow-up: address risk #2 with options + trade-offs."`
 - Sessions: reuse the same agent name; the CLI persists session id automatically and can be viewed with `./genie list sessions`.
 - Logs: check full transcript with `./genie view <sessionId>`.
 
@@ -327,7 +327,7 @@ Agent aliases map to agent files. Keep this updated as new agents are added.
 
 ### Outputs & Evidence
 - Low-stakes: append a short summary to the wish discovery section.
-- High-stakes: save a Death Testament at `.genie/reports/twin-<slug>-<YYYYMMDDHHmm>.md` with scope, findings, recommendations, disagreements.
+- High-stakes: save a Done Report at `.genie/reports/done-twin-<slug>-<YYYYMMDDHHmm>.md` with scope, findings, recommendations, disagreements.
 - Always include “Twin Verdict: <summary> (confidence: <low|med|high>)”.
 
 ### Twin Verdict Format (per mode)

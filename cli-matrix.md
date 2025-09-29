@@ -23,7 +23,7 @@ Each subsection lists: current behaviour in code, the desired end-state, and con
 
 ### 1. `run <name> "<prompt>"`
 - **Current behaviour**
-  - Entry points: `genie run`, `genie agent run`, `genie mode` (see dispatcher switch at `.genie/cli/src/genie.ts:203-235`).
+  - Entry points: `genie run` (legacy aliases `agent`/`mode` slated for removal; see dispatcher switch at `.genie/cli/src/genie.ts:203-235`).
   - Agent lookup is segmented into entrypoints (root files), `utilities/`, and `specialists/` directories (`listAgents()` at `.genie/cli/src/genie.ts:1866-1889`).
   - Numerous runtime flags are accepted (preset, executor, background toggles, etc. in `parseArguments()` at `.genie/cli/src/genie.ts:250-323`).
 - **Target**
@@ -46,7 +46,7 @@ Each subsection lists: current behaviour in code, the desired end-state, and con
 
 ### 3. `list sessions`
 - **Current behaviour**
-  - Exposed as `genie runs` with pagination, status filters, and JSON output (see `runRuns()` in `.genie/cli/src/genie.ts:1231-1397`).
+  - Exposed as `genie list sessions` with active/recent tables (see `runRuns()` in `.genie/cli/src/genie.ts:1231-1397`).
 - **Target**
 - Present two tables: **Active** (running / pending) and **Recent** (last 10 completions), sorted by `lastUsed` descending.
 - No manual filters or pagination knobs by default; hints guide the user to `view`, `resume`, `stop`. (If we ever exceed terminal width we can reintroduce simple pagination later.)
@@ -57,7 +57,7 @@ Each subsection lists: current behaviour in code, the desired end-state, and con
 
 ### 4. `resume <session> "<prompt>"`
 - **Current behaviour**
-  - `genie continue` resumes background sessions (`runContinue()` in `.genie/cli/src/genie.ts:1106-1224`).
+  - `genie resume` continues background sessions (`runContinue()` in `.genie/cli/src/genie.ts:1106-1224`).
   - Picks up many of the same runtime overrides as `run`.
 - **Target**
   - Alias becomes `resume`; inherits stored executor/sandbox from the session metadata without CLI overrides.
@@ -88,7 +88,7 @@ Each subsection lists: current behaviour in code, the desired end-state, and con
 
 ### 7. `help [command]`
 - **Current behaviour**
-  - `genie help` renders a command palette with styles/preset tables (`buildHelpView` in `.genie/cli/src/views/help.ts`).
+  - `genie --help` renders a command palette with styles/preset tables (`buildHelpView` in `.genie/cli/src/views/help.ts`).
   - JSON / style overrides exist (`--json`, `--style`, `GENIE_CLI_STYLE`).
 - **Target**
   - Single Genie theme (no style flag / env override). Examples and tips aligned with new verbs.
@@ -213,7 +213,7 @@ $ pnpm run check
 [Assistant] ✅ Verification complete. Tests: pnpm run check → passed.
 ```
 
-### `genie help`
+### `genie --help`
 ```
                                    GENIE CLI
 

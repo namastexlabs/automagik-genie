@@ -18,8 +18,8 @@ After implementation work, `/commit` first runs a structured pre-commit gate (li
 ✅ Summaries of modified files grouped by area (prompts, tooling, docs, etc.)
 ✅ Recommended commit title/body aligned with wish slug or tracker ID
 ✅ Validation checklist with status markers and outstanding next actions
-✅ Advisory report saved to `.genie/state/reports/commit-advice-<wish-slug>-<timestamp>.md`
-✅ Death Testament prepared for high-impact changes when policy requires it
+✅ Advisory report saved to `.genie/reports/commit-advice-<wish-slug>-<timestamp>.md`
+✅ Done Report prepared for high-impact changes when policy requires it
 
 [NEVER DO]
 ❌ Execute git commands (`add`, `commit`, `push`, `reset`, etc.)
@@ -95,6 +95,6 @@ Verdict: <ready|needs-fixes> (confidence: <low|med|high>)
 2. Bullet summary of change domains
 3. Recommended commit message
 4. Validation checklist status (pass/pending)
-5. `Commit Advisory: @.genie/state/reports/commit-advice-...md`
+5. `Commit Advisory: @.genie/reports/commit-advice-...md`
 
-Keep the tone advisory and concise, enabling humans to finish the git workflow confidently. When commits carry significant blast radius, attach or reference the required Death Testament in the report.
+Keep the tone advisory and concise, enabling humans to finish the git workflow confidently. When commits carry significant blast radius, attach or reference the required Done Report in the report.
