@@ -212,7 +212,7 @@ function renderKeyValueNode(node: KeyValueNode): React.ReactElement {
 function renderTableNode(node: TableNode): React.ReactElement {
   const { Box: InkBox, Text: InkText } = useInk();
   const columns = node.columns;
-  const MAX_COL_WIDTH = 40;
+  const MAX_COL_WIDTH = 50;
   const MIN_COL_WIDTH = 6;
   const rowGap = node.rowGap ?? 0;
   const sanitized = (value: string) => value.replace(/\s+/g, ' ').trim();

@@ -483,7 +483,8 @@ async function maybeHandleBackgroundLaunch(params: {
     paths,
     entry.sessionId,
     logFile,
-    async (frame) => emitStatus(null, frame)
+    async (frame) => emitStatus(null, frame),
+    5000  // 5-second timeout
   );
 
   const finalSessionId = resolvedSessionId || entry.sessionId;
@@ -1595,7 +1596,7 @@ function resolveAgentIdentifier(input: string): string {
 
   if (normalizedLower === 'forge-master' && agentExists('forge')) return 'forge';
 
-  throw new Error(`❌ Agent '${input}' not found. Try 'genie agent list' to see available ids.`);
+  throw new Error(`❌ Agent '${input}' not found. Try 'genie list agents' to see available ids.`);
 }
 
 function agentExists(id: string): boolean {
@@ -1737,6 +1738,11 @@ function sliceTranscriptForRecent(messages: ChatMessage[]): ChatMessage[] {
         break;
       }
     }
+  }
+
+  // Fallback for sessions with < 2 assistant messages
+  if (assistantCount < 2) {
+    cutoff = Math.max(0, messages.length - maxMessages);
   }
 
   return messages.slice(Math.max(0, cutoff));

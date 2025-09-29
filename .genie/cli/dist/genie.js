@@ -398,7 +398,8 @@ async function maybeHandleBackgroundLaunch(params) {
         return true;
     }
     await emitStatus(null, '⠙');
-    const resolvedSessionId = await resolveSessionIdForBanner(agentName, config, paths, entry.sessionId, logFile, async (frame) => emitStatus(null, frame));
+    const resolvedSessionId = await resolveSessionIdForBanner(agentName, config, paths, entry.sessionId, logFile, async (frame) => emitStatus(null, frame), 5000 // 5-second timeout
+    );
     const finalSessionId = resolvedSessionId || entry.sessionId;
     if (finalSessionId && !entry.sessionId) {
         entry.sessionId = finalSessionId;
@@ -1367,7 +1368,7 @@ function resolveAgentIdentifier(input) {
     }
     if (normalizedLower === 'forge-master' && agentExists('forge'))
         return 'forge';
-    throw new Error(`❌ Agent '${input}' not found. Try 'genie agent list' to see available ids.`);
+    throw new Error(`❌ Agent '${input}' not found. Try 'genie list agents' to see available ids.`);
 }
 function agentExists(id) {
     if (!id)
@@ -1513,6 +1514,10 @@ function sliceTranscriptForRecent(messages) {
                 break;
             }
         }
+    }
+    // Fallback for sessions with < 2 assistant messages
+    if (assistantCount < 2) {
+        cutoff = Math.max(0, messages.length - maxMessages);
     }
     return messages.slice(Math.max(0, cutoff));
 }

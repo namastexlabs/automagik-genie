@@ -17,11 +17,11 @@ When agents are invoked through the GENIE CLI, they inherit a set of default par
 
 | Parameter | Default | Description | Override Method |
 |-----------|---------|-------------|-----------------|
-| **model** | `gpt-5-codex` | AI model to use | Config preset or CLI flag |
-| **reasoning-effort** | `low` | Reasoning depth (`low`, `medium`, `high`) | Agent metadata or config |
-| **sandbox** | `workspace-write` | File system access level | CLI flag or config |
-| **approval-policy** | `on-failure` | When to ask for approval | CLI flag or config |
-| **include-plan-tool** | `false` | Enable planning capabilities | Agent metadata or flag |
+| **model** | `gpt-5-codex` | AI model to use | Agent metadata |
+| **reasoning-effort** | `low` | Reasoning depth (`low`, `medium`, `high`) | Agent metadata |
+| **sandbox** | `workspace-write` | File system access level | Agent metadata |
+| **approval-policy** | `on-failure` | When to ask for approval | Agent metadata |
+| **include-plan-tool** | `false` | Enable planning capabilities | Agent metadata |
 | **base-instructions** | (from agent file) | Agent-specific instructions | Loaded from agent markdown |
 
 ### Parameter Inheritance Hierarchy
@@ -30,9 +30,9 @@ When agents are invoked through the GENIE CLI, they inherit a set of default par
    - Defined in agent markdown frontmatter
    - Example: `reasoning_effort: medium`
 
-2. **Preset Configuration** (`config.yaml`)
-   - Named presets for common scenarios
-   - Applied via `--preset <name>`
+2. **Execution Mode Configuration** (`config.yaml`)
+   - Named execution modes for common scenarios (default, careful, danger, debug)
+   - Applied automatically based on agent frontmatter settings
 
 3. **Global Defaults** (`codex.ts`)
    - Fallback values for all parameters
@@ -140,21 +140,24 @@ include_plan_tool: true       # uses planning notes for context staging
 ## Running Agents with Custom Parameters
 
 ### Via CLI Flags
-```bash
-# Run with high reasoning effort
-./genie run implementor "Fix the bug" --config "exec.reasoningEffort=high"
-
-# Run in read-only mode
-./genie run qa "Review code" --config "exec.sandbox=read-only"
-
-# Enable plan tool
-./genie run forge "Plan feature" --config "exec.includePlanTool=true"
+Configure these settings in the agent's frontmatter instead:
+```yaml
+---
+genie:
+  executor: codex
+  exec:
+    reasoningEffort: high
+    sandbox: read-only
+    includePlanTool: true
+---
 ```
 
-### Via Config Presets
-Define in `config.yaml`:
+Then run: `./genie run <agent> "<prompt>"`
+
+### Via Execution Modes
+Optional convenience modes defined in `config.yaml`:
 ```yaml
-presets:
+executionModes:
   high-effort:
     exec:
       reasoningEffort: high
@@ -165,10 +168,7 @@ presets:
       approvalPolicy: on-request
 ```
 
-Then use:
-```bash
-./genie run implementor "Complex task" --preset high-effort
-```
+Agents reference these via frontmatter, but direct configuration is preferred.
 
 ### Via Agent Metadata
 Add to agent markdown frontmatter:
@@ -224,9 +224,9 @@ Current agent routing (see AGENTS.md for updates):
    - Development: `on-failure` or `on-request`
    - Production changes: `untrusted`
 
-4. **Leverage presets for consistency**
-   - Define team-standard configurations
-   - Share via `config.yaml`
+4. **Use frontmatter for consistency**
+   - Define agent configurations in YAML frontmatter
+   - Share standard patterns via agent templates
 
 5. **Override parameters judiciously**
    - Start with defaults

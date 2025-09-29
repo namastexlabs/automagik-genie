@@ -11,7 +11,7 @@ tooling for inspection.
 ├── dist/                 # Compiled JavaScript emitted by `pnpm run build:genie`
 ├── src/                  # TypeScript sources
 ├── tsconfig.json         # TypeScript compiler configuration
-├── config.yaml           # Default presets/paths merged into runtime config
+├── config.yaml           # Default configuration merged into runtime config
 └── README.md             # This document
 ```
 
@@ -115,7 +115,7 @@ To integrate another backend (e.g., a Rust binary or different AI service):
 
 ## Codex Parameters
 
-The CLI supports all standard Codex execution parameters. These can be configured via defaults in `config.yaml`, presets, or runtime overrides:
+The CLI supports all standard Codex execution parameters. These are configured via agent frontmatter (sandbox, approvalPolicy, reasoningEffort) or defaults in `config.yaml`:
 
 ### Core Parameters
 | Parameter | Type | Default | Description |

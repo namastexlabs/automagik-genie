@@ -1,5 +1,5 @@
 # Genie CLI configuration. Update values here to change defaults across all commands.
-# Anything you can tweak via CLI flags or presets should live in this file for easy auditing.
+# Agent-specific settings (sandbox, approvalPolicy) are configured in agent frontmatter.
 
 defaults:
   executor: codex        # default executor used for run/resume when none is specified

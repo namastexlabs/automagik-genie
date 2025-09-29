@@ -65,7 +65,7 @@ mkdir -p .genie/wishes/sample
 
 ## Troubleshooting
 
-- **Permissions**: If a run fails due to rollout recorder permissions, rerun with `--preset careful` or adjust write paths.
+- **Permissions**: If a run fails due to write permissions, create an agent with `sandbox: read-only` in the frontmatter or adjust write paths.
 - **Missing system packages**: Ensure runtime/toolchains for your project are installed.
 
 ## Additional Resources
