@@ -40,6 +40,7 @@ export interface ExecutorLogViewer {
 
 export interface ExecutorDefaults {
   binary?: string;
+  packageSpec?: string;
   sessionsDir?: string;
   exec?: Record<string, unknown>;
   resume?: Record<string, unknown>;

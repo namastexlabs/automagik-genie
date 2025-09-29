@@ -39,8 +39,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const logViewer = __importStar(require("./codex-log-viewer"));
+const CODEX_PACKAGE_SPEC = '@namastexlabs/codex@0.43.0-alpha.4';
 const defaults = {
-    binary: 'codex',
+    binary: 'npx',
+    packageSpec: CODEX_PACKAGE_SPEC,
     sessionsDir: '.genie/state/agents/codex-sessions',
     exec: {
         fullAuto: true,
@@ -72,9 +74,21 @@ const defaults = {
 function buildRunCommand({ config = {}, instructions, prompt, agentPath }) {
     const execConfig = mergeExecConfig(config.exec);
     const command = config.binary || defaults.binary;
-    const args = ['exec', ...collectExecOptions(execConfig)];
+    const packageSpec = config.packageSpec || defaults.packageSpec;
+    const args = [];
+    if (packageSpec) {
+        if (command === 'npx') {
+            args.push('-y', String(packageSpec));
+        }
+        else {
+            args.push(String(packageSpec));
+        }
+    }
+    args.push('exec', ...collectExecOptions(execConfig));
     if (agentPath) {
-        args.push('-c', `experimental_instructions_file="${agentPath}"`);
+        const instructionsFile = path_1.default.isAbsolute(agentPath) ? agentPath : path_1.default.resolve(agentPath);
+        const escapedInstructionsFile = instructionsFile.replace(/"/g, '\\"');
+        args.push('-c', `append_user_instructions_file="${escapedInstructionsFile}"`);
     }
     if (prompt) {
         args.push(prompt);
@@ -84,7 +98,17 @@ function buildRunCommand({ config = {}, instructions, prompt, agentPath }) {
 function buildResumeCommand({ config = {}, sessionId, prompt }) {
     const resumeConfig = mergeResumeConfig(config.resume);
     const command = config.binary || defaults.binary;
-    const args = ['exec', 'resume'];
+    const packageSpec = config.packageSpec || defaults.packageSpec;
+    const args = [];
+    if (packageSpec) {
+        if (command === 'npx') {
+            args.push('-y', String(packageSpec));
+        }
+        else {
+            args.push(String(packageSpec));
+        }
+    }
+    args.push('exec', 'resume');
     if (resumeConfig.includePlanTool)
         args.push('--include-plan-tool');
     if (resumeConfig.search)

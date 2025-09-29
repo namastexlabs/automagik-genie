@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "build:genie": "tsc -p .genie/cli/tsconfig.json",
-    "test:genie": "pnpm run build:genie && node tests/genie-cli.test.js"
+    "test:genie": "pnpm run build:genie && node tests/genie-cli.test.js && tests/identity-smoke.sh"
   },
   "dependencies": {
     "gradient-string": "^2.0.2",

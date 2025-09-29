@@ -92,7 +92,7 @@ The agent CLI uses presets for different scenarios:
 
 Each file in `.genie/agents/` can override executor behaviour by adding a YAML
 front matter block. The CLI loads that block, merges it with `config.yaml`, and
-translates it to `codex exec` flags. The structure is:
+translates it to `npx -y @namastexlabs/codex@0.43.0-alpha.4 exec` flags. The structure is:
 
 ```yaml
 ---
@@ -101,7 +101,8 @@ description: Optional prompt summary
 genie:
   executor: codex            # Which executor profile to use (defaults to `codex`)
   background: false          # Force foreground (otherwise inherits CLI default)
-  binary: codex              # Override executable name if needed
+  binary: npx                # Override executable name if needed
+  packageSpec: "@namastexlabs/codex@0.43.0-alpha.4"
   sessionsDir: .genie/state/agents/codex-sessions
   sessionExtractionDelayMs: 2000
   exec:
@@ -131,7 +132,7 @@ genie:
 
 Supported keys are derived from the codex executor defaults
 (`.genie/cli/src/executors/codex.ts`). Any value omitted in front matter keeps
-the executor default. Unknown keys under `genie.exec` become additional `codex
+the executor default. Unknown keys under `genie.exec` become additional `npx ...
 exec` overrides, so the safest pattern is to use the fields above. Put extra
 flags in `additionalArgs` to avoid accidentally shadowing future options.
 

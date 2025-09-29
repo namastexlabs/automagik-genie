@@ -16,7 +16,8 @@ paths:
 
 executors:
   codex:
-    binary: codex                            # binary or absolute path used to launch the executor
+    binary: npx                              # executable used to launch the executor (npx recommended)
+    packageSpec: "@namastexlabs/codex@0.43.0-alpha.4"  # package passed to npx before `exec` (CLI adds `-y` automatically)
     sessionExtractionDelayMs: null           # override delay (ms) before reading sessions; null -> use background.sessionExtractionDelayMs
     exec:
       fullAuto: true
@@ -32,13 +33,13 @@ executors:
       cd: null
       outputSchema: null
       outputLastMessage: null
-      additionalArgs: []                     # extra CLI flags forwarded to `codex exec`
+      additionalArgs: []                     # extra CLI flags forwarded to `npx ... exec`
       images: []                             # image paths forwarded via repeated -i flags
     resume:
       includePlanTool: false
       search: false
       last: false
-      additionalArgs: []                     # extra CLI flags forwarded to `codex exec resume`
+      additionalArgs: []                     # extra CLI flags forwarded to `npx ... exec resume`
 
 executionModes:
   default:

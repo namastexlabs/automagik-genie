@@ -3,8 +3,11 @@ import path from 'path';
 import { Executor, ExecutorCommand, ExecutorDefaults } from './types';
 import * as logViewer from './codex-log-viewer';
 
+const CODEX_PACKAGE_SPEC = '@namastexlabs/codex@0.43.0-alpha.4';
+
 const defaults: ExecutorDefaults = {
-  binary: 'codex',
+  binary: 'npx',
+  packageSpec: CODEX_PACKAGE_SPEC,
   sessionsDir: '.genie/state/agents/codex-sessions',
   exec: {
     fullAuto: true,
@@ -37,10 +40,23 @@ const defaults: ExecutorDefaults = {
 function buildRunCommand({ config = {}, instructions, prompt, agentPath }: { config?: Record<string, any>; instructions?: string; prompt?: string; agentPath?: string }): ExecutorCommand {
   const execConfig = mergeExecConfig(config.exec) as Record<string, any>;
   const command = config.binary || defaults.binary!;
-  const args = ['exec', ...collectExecOptions(execConfig)];
+  const packageSpec = config.packageSpec || defaults.packageSpec;
+  const args: string[] = [];
+
+  if (packageSpec) {
+    if (command === 'npx') {
+      args.push('-y', String(packageSpec));
+    } else {
+      args.push(String(packageSpec));
+    }
+  }
+
+  args.push('exec', ...collectExecOptions(execConfig));
 
   if (agentPath) {
-    args.push('-c', `experimental_instructions_file="${agentPath}"`);
+    const instructionsFile = path.isAbsolute(agentPath) ? agentPath : path.resolve(agentPath);
+    const escapedInstructionsFile = instructionsFile.replace(/"/g, '\\"');
+    args.push('-c', `append_user_instructions_file="${escapedInstructionsFile}"`);
   }
 
   if (prompt) {
@@ -53,7 +69,18 @@ function buildRunCommand({ config = {}, instructions, prompt, agentPath }: { con
 function buildResumeCommand({ config = {}, sessionId, prompt }: { config?: Record<string, any>; sessionId?: string; prompt?: string }): ExecutorCommand {
   const resumeConfig = mergeResumeConfig(config.resume) as Record<string, any>;
   const command = config.binary || defaults.binary!;
-  const args = ['exec', 'resume'];
+  const packageSpec = config.packageSpec || defaults.packageSpec;
+  const args: string[] = [];
+
+  if (packageSpec) {
+    if (command === 'npx') {
+      args.push('-y', String(packageSpec));
+    } else {
+      args.push(String(packageSpec));
+    }
+  }
+
+  args.push('exec', 'resume');
   if (resumeConfig.includePlanTool) args.push('--include-plan-tool');
   if (resumeConfig.search) args.push('--search');
   if (Array.isArray(resumeConfig.additionalArgs)) {
