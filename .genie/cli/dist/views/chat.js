@@ -8,7 +8,7 @@ function buildChatView(params) {
         { label: 'Session', value: sessionId ?? 'n/a', tone: sessionId ? 'success' : 'muted' },
         { label: 'Log', value: logPath }
     ];
-    const metaRows = headerRows.concat(meta);
+    const metaRows = headerRows.concat(meta ?? []);
     const children = [
         { type: 'heading', level: 1, text: agent, accent: 'primary' },
         { type: 'keyValue', columns: 1, items: metaRows }
