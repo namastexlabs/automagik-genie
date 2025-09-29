@@ -373,22 +373,39 @@ async function maybeHandleBackgroundLaunch(params) {
     (0, session_store_1.saveSessions)(paths, store);
     // Print directly to stdout instead of using Ink for background
     process.stdout.write(`▸ Launching ${agentName} in background...\n`);
-    // Poll for session ID (up to 3 seconds)
-    const startTime = Date.now();
-    while (Date.now() - startTime < 3000) {
+    // Poll for session ID (up to 20 seconds with progress indicator)
+    const pollStart = Date.now();
+    const pollTimeout = 20000; // 20 seconds
+    const spinner = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+    let spinnerIndex = 0;
+    while (Date.now() - pollStart < pollTimeout) {
         await sleep(250);
         const liveStore = (0, session_store_1.loadSessions)(paths, config, DEFAULT_CONFIG);
         const liveEntry = liveStore.agents?.[agentName];
         if (liveEntry?.sessionId) {
+            // Clear spinner line
+            process.stdout.write('\r\x1b[K');
             entry.sessionId = liveEntry.sessionId;
-            process.stdout.write(`▸ Session ID: ${liveEntry.sessionId}\n`);
-            process.stdout.write(`▸ View: ./genie view ${liveEntry.sessionId}\n`);
-            process.stdout.write(`▸ Stop: ./genie stop ${liveEntry.sessionId}\n`);
+            process.stdout.write(`▸ Session ID: ${liveEntry.sessionId}\n\n`);
+            process.stdout.write(`  View output:\n`);
+            process.stdout.write(`    ./genie view ${liveEntry.sessionId}\n\n`);
+            process.stdout.write(`  Continue conversation:\n`);
+            process.stdout.write(`    ./genie resume ${liveEntry.sessionId} "<your message>"\n\n`);
+            process.stdout.write(`  Stop session:\n`);
+            process.stdout.write(`    ./genie stop ${liveEntry.sessionId}\n`);
             return true;
         }
+        // Show spinner while waiting
+        const elapsed = Math.floor((Date.now() - pollStart) / 1000);
+        process.stdout.write(`\r${spinner[spinnerIndex++ % spinner.length]} Waiting for session ID... (${elapsed}s)`);
     }
-    // Timeout - show pending
-    process.stdout.write(`▸ Session pending - run './genie list sessions' to see session ID\n`);
+    // Timeout - show pending with helpful commands
+    process.stdout.write('\r\x1b[K');
+    process.stdout.write(`▸ Session started but ID not available yet\n\n`);
+    process.stdout.write(`  List sessions to find ID:\n`);
+    process.stdout.write(`    ./genie list sessions\n\n`);
+    process.stdout.write(`  Then view output:\n`);
+    process.stdout.write(`    ./genie view <sessionId>\n`);
     return true;
 }
 async function runChat(parsed, config, paths) {
