@@ -27,7 +27,7 @@ All commands in `.claude/commands/` simply `@include` the corresponding `.genie/
 - `.genie/standards/` – coding rules, naming, language-specific style guides
 - `.genie/instructions/` – legacy Agent OS playbooks retained for reference
 - `.genie/guides/` – getting-started docs, onboarding
-- `.genie/state/` – CLI-managed data (e.g., `agents/sessions.json` for session tracking, agent logs, forge plans, commit advisories). Inspect via `./genie runs|list|view` rather than manual edits.
+- `.genie/state/` – CLI-managed data (e.g., `agents/sessions.json` for session tracking, agent logs, forge plans, commit advisories). Inspect via `./genie list sessions` or `./genie view <session>` rather than manual edits.
 - `.genie/wishes/` – active wish contracts (`<slug>-wish.md`)
 - `.genie/agents/core/` – portable Genie prompts and modes (planner, twin, analysis, etc.)
 - `.genie/agents/specialized/` – delivery/QA/learning specialists
@@ -89,11 +89,11 @@ A common snippet:
 ./genie agent run forge "[Discovery] … [Implementation] … [Verification] …"
 
 # Inspect runs and view logs (friendly)
-./genie runs --status running
-./genie view <sessionId> [--lines 120]
+./genie list sessions
+./genie view <sessionId> [--full]
 
 # Continue a specific run by session id
-./genie continue <sessionId> "Follow-up …"
+./genie resume <sessionId> "Follow-up …"
 
 # Stop a session
 ./genie stop <sessionId>
@@ -101,8 +101,8 @@ A common snippet:
 
 ## Subagents & Twin via CLI
 - Start subagent: `./genie agent run <agent> "<prompt>" [--preset <name>]`
-- Continue session: `./genie continue <sessionId> "<prompt>"`
-- List sessions: `./genie runs`
+- Continue session: `./genie resume <sessionId> "<prompt>"`
+- List sessions: `./genie list sessions`
 - Stop session: `./genie stop <sessionId>`
 
 Twin prompt patterns (run through any agent, typically `plan`):
@@ -327,7 +327,7 @@ Keep this document synced when introducing new agents, changing folder layouts, 
 ### How To Run (CLI)
 - Start: `./genie mode twin "Mode: planning. Objective: pressure-test @.genie/wishes/<slug>-wish.md. Deliver 3 risks, 3 missing validations, 3 refinements. Finish with Twin Verdict + confidence."`
 - Continue: `./genie continue <sessionId> "Follow-up: address risk #2 with options + trade-offs."`
-- Sessions: reuse the same agent name; the CLI persists session id automatically and can be viewed with `./genie runs`.
+- Sessions: reuse the same agent name; the CLI persists session id automatically and can be viewed with `./genie list sessions`.
 - Logs: check full transcript with `./genie view <sessionId>`.
 
 ### Modes (quick reference)

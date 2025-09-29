@@ -1,208 +1,227 @@
 # Genie CLI Command Matrix
 
-## Current Command Tree
-```text
-genie
-├── agent
-│   ├── list
-│   ├── run <agent-id> "<prompt>"
-│   ├── start <agent-id> "<prompt>" (alias of run)
-│   ├── launch <agent-id> "<prompt>" (alias of run)
-│   └── <agent-id> "<prompt>" (implicit shortcut for run)
-├── run <agent-id> "<prompt>"
-├── mode <mode-name> "<prompt>" (auto-resolves to genie-<mode-name>)
-├── continue <sessionId> "<prompt>"
-├── view <sessionId> [--lines N] [--json]
-├── runs [--status <filter>] [--page N] [--per N] [--json]
-├── stop <sessionId|pid>
-└── help
-```
-
-The switch statement in `.genie/cli/src/genie.ts:203` branches into dedicated handlers (`runChat`, `runMode`, `runRuns`, etc.), which drives this structure today.
+This document captures the **approved target UX** for the Genie CLI and contrasts it with the **current implementation** (as of `.genie/cli/src/genie.ts` in this repository). Use it as the source of truth while refactoring; every statement below is backed by code references so the engineering work can be tracked and verified.
 
 ---
 
-## Refactored Command Model (Clean-Slate UX)
-Focus: universal verbs, zero runtime overrides, and minimal assumptions about agent categories. Any `.md` under `.genie/agents/` is runnable. The redesigned CLI keeps six verbs only.
-
-### Command Tree (Expanded)
+## Target Command Tree
 ```text
 genie
 ├── run <name> "<prompt>"
-│   └── no runtime flags (execution posture comes from configuration)
 ├── list [agents|sessions]
-│   ├── agents         # default; shows everything under .genie/agents/**
-│   └── sessions       # shows active table + 10 most recent completions
 ├── resume <session> "<prompt>"
-│   └── no runtime flags (reuses session’s stored execution posture)
 ├── view <session> [--full]
-│   └── no runtime flags (renderer fixed to `art`; `--full` shows the entire run)
 ├── stop <session>
 └── help [command]
 ```
-
-### Command Semantics
-- **run** – Accepts a simple identifier (`plan`, `implementor`, `twin`, etc.). The resolver mirrors `.genie/cli/src/genie.ts:1896`, scanning `.genie/agents/**` recursively and matching by filename (without `.md`) or front-matter alias. No notion of “mode” vs “agent”; everything is just an agent definition.
-- **list agents** – Enumerates every agent detected under `.genie/agents/`, regardless of subfolder (`core/`, `specialized/`, or future groupings). Output includes each agent’s summary and execution posture derived from metadata.
-- **list sessions** – Renders two tables: active runs and the most recent 10 completions. No filters or pagination.
-- **resume** – Continues a background session using stored configuration with zero CLI overrides.
-- **log** – Streams/tails session output using the default renderer (style hardcoded to `art`).
-- **stop** – Ends a session by id. No PID support; the CLI looks up the session and terminates associated processes automatically.
-- **help** – Provides a fully rendered overview (via Ink) that includes the command tree and examples; no extra flags required.
-
-### Execution Modes & Defaults
-Execution posture (sandbox, network, approvals) comes solely from configuration:
-- `.genie/cli/src/genie.ts` base defaults (`executionModes` replacing `presets`).
-- Agent front matter (e.g., `.genie/agents/core/prompt.md` or `.genie/agents/specialized/implementor.md`) declaring `executor` settings.
-
-Suggested mode keys aligned with `codex --help`:
-| Mode key | Sandbox | Network | Approval policy | Intended use |
-| --- | --- | --- | --- | --- |
-| `workspace-write` | `workspace-write` | disabled | `on-failure` | Default development.
-| `workspace-read` | `read-only` | disabled | `on-request` | Safe review/exploration.
-| `full-access` | `danger-full-access` | enabled | `never` | Trusted environments needing broader access.
-| `analysis` | `workspace-read` | enabled | `on-request` | Research/planning with network.
-
-Agents declare their mode via metadata, for example:
-```yaml
----
-name: twin
-summary: Second-opinion loop with verdict + confidence
-executor:
-  sandbox: workspace-read
-  network: enabled
-  approvalPolicy: on-request
----
-```
-The CLI simply reads these values; subfolders exist for human organization but have no semantic meaning to the command itself.
-
-### Runtime Override Flags – Removed
-All runtime override options must be removed from the parser and help:
-- `-b`, `--background`
-- `-f`, `--no-background`
-- `-C`, `--config`
-- `-s`, `--style`
-- `-J`, `--json`
-- `--preset`, `-p`, `--executor`
-- Session filters (`--status`, `--page`, `--per`)
-- Legacy `--prefix`
-
-Migration task: clean `parseArguments` in `.genie/cli/src/genie.ts:263-324`, remove dependent logic in dispatcher and view builders, and hardcode renderer style to `art` only.
-
-### UX Advantages
-1. **Universal launch verb** – `run` works for every agent definition without category awareness.
-2. **Simplified discovery** – `list agents` shows everything detected under `.genie/agents/`; humans can organize files in subfolders as they see fit.
-3. **Zero surprise overrides** – Runtime behavior adheres strictly to declarative configuration in YAML/front matter.
-4. **Streamlined session overview** – `list sessions` shows active and recent runs without filters.
-5. **Transparent execution policy** – Modes live alongside agent definitions and mirror `codex` semantics.
-6. **Installation roadmap** – Packaging work (see Implementation Notes) will evolve `genie` into an installable CLI.
-
-### Migration Map
-| Legacy command | Replacement |
-| --- | --- |
-| `genie agent list` | `genie list agents` |
-| `genie agent run <id> "..."` | `genie run <id> "..."` |
-| `genie mode <mode> "..."` | `genie run <mode> "..."` (mode files live in `.genie/agents/`) |
-| `genie runs --status running` | `genie list sessions` |
-| `genie continue <session> "..."` | `genie resume <session> "..."` |
-| `genie view <session>` | `genie log <session>` |
-| `genie stop <session|pid>` | `genie stop <session>` |
+*Goal:* collapse the legacy entry points (`agent`, `mode`, `runs`, `continue`, `view --lines`, `stop <pid>`, etc.) into these six verbs.
 
 ---
 
-## Sample CLI Outputs (Illustrative)
+## Command Deep Dive
+Each subsection lists: current behaviour in code, the desired end-state, and concrete change notes.
+
+### 1. `run <name> "<prompt>"`
+- **Current behaviour**
+  - Entry points: `genie run`, `genie agent run`, `genie mode` (see dispatcher switch at `.genie/cli/src/genie.ts:203-235`).
+  - Agent lookup is segmented into `core`, `modes`, and `specialists` directories (`listAgents()` at `.genie/cli/src/genie.ts:1866-1889`).
+  - Numerous runtime flags are accepted (preset, executor, background toggles, etc. in `parseArguments()` at `.genie/cli/src/genie.ts:250-323`).
+- **Target**
+  - Single verb `run` that resolves any `.md` under `.genie/agents/**` (folder prefix optional when unique).
+  - Runtime posture comes exclusively from agent metadata / YAML defaults; CLI no longer accepts ad-hoc overrides.
+- **Change notes**
+  - Replace segmented `segments` logic in `listAgents()` with recursive directory walk (done in plan above).
+  - Remove legacy aliases `agent`/`mode` once routing logic is migrated.
+  - Audit flag stripping in `parseArguments()` (see Runtime Flag Audit below).
+
+### 2. `list agents`
+- **Current behaviour**
+  - Implemented via `genie agent list` (catalog view grouped by `Modes/Core/Specialized`).
+- **Target**
+  - `genie list agents` should display every `.genie/agents/**.md`, grouped by folder (e.g. `root`, `core`, `specialized`, custom subfolders).
+- **Change notes**
+  - Catalog view is already refactored to use folder grouping (`buildAgentCatalogView` in `.genie/cli/src/views/agent-catalog.ts`).
+  - Wire new top-level command when dispatcher is updated; keep `agent list` as compatibility alias until migration completes.
+
+### 3. `list sessions`
+- **Current behaviour**
+  - Exposed as `genie runs` with pagination, status filters, and JSON output (see `runRuns()` in `.genie/cli/src/genie.ts:1231-1397`).
+- **Target**
+  - Present two tables: **Active** (running / pending) and **Recent** (last 10 completions), sorted by `lastUsed` descending.
+  - No manual filters or pagination knobs; hints guide the user to `view`, `resume`, `stop`.
+- **Change notes**
+  - `buildRunsOverviewView()` already renders the desired layout (`.genie/cli/src/views/runs.ts`).
+  - Remove paging/status logic and switch `runs` verb to `list sessions`.
+  - Update helpers like `buildBackgroundActions()` to reference `list sessions` (already done).
+
+### 4. `resume <session> "<prompt>"`
+- **Current behaviour**
+  - `genie continue` resumes background sessions (`runContinue()` in `.genie/cli/src/genie.ts:1106-1224`).
+  - Picks up many of the same runtime overrides as `run`.
+- **Target**
+  - Alias becomes `resume`; inherits stored executor/sandbox from the session metadata without CLI overrides.
+- **Change notes**
+  - Rename command when dispatcher is refactored; strip deprecated flags from argument parsing.
+  - Background status view already updated to use the new copy.
+
+### 5. `view <session> [--full]`
+- **Current behaviour**
+  - `genie view` tails raw log lines with optional `--lines`/`--json` (`runView()` in `.genie/cli/src/genie.ts:1399-1489`).
+  - Executor-specific JSONL view rendered via `logViewer.buildJsonlView`.
+- **Target**
+  - Parse JSONL events and render a chat-style transcript (assistant / reasoning / tool / action messages) via new `buildChatView`.
+  - Default output shows the latest assistant reply; `--full` replays the entire run.
+  - Header should include status, session id, log path.
+- **Change notes**
+  - Transcript builder + Ink view are implemented (`buildTranscriptFromEvents`, `buildChatView`).
+  - Next steps: wire the parser to drop `--lines`, `--json`, and ensure status appears in the header (TODO).
+
+### 6. `stop <session>`
+- **Current behaviour**
+  - Accepts session id **or** PID, sending SIGTERM through `backgroundManager` (`runStop()` in `.genie/cli/src/genie.ts:1489-1585`).
+- **Target**
+  - Session-id only. PID support is risky and will be removed; stop view already renders without style parameter.
+- **Change notes**
+  - Code path for numeric PID has been removed; ensure downstream docs/tests reflect the new behaviour.
+
+### 7. `help [command]`
+- **Current behaviour**
+  - `genie help` renders a command palette with styles/preset tables (`buildHelpView` in `.genie/cli/src/views/help.ts`).
+  - JSON / style overrides exist (`--json`, `--style`, `GENIE_CLI_STYLE`).
+- **Target**
+  - Single Genie theme (no style flag / env override). Examples and tips aligned with new verbs.
+- **Change notes**
+  - Help view already simplified to fixed theme and updated examples; ensure dispatcher routes `help run`, etc., to the new copy.
+
+---
+
+## Execution Modes & Defaults
+- **Current code**
+  - `BASE_CONFIG.presets` in `.genie/cli/src/genie.ts:82-144` defines `default`, `careful`, `danger`, `debug`.
+- **Plan**
+  - Rename `presets` → `executionModes` with explicit sandbox/network/approval fields.
+  - Update agent front matter (e.g., `.genie/agents/core/prompt.md`) to declare mode metadata; CLI should only read these values.
+- **Why**
+  - Eliminates confusing preset names and keeps execution posture declarative.
+
+---
+
+## Runtime Flag Audit
+| Flag | Code reference | Action |
+| --- | --- | --- |
+| `--preset` | `parseArguments()` `.genie/cli/src/genie.ts:268-274` | Remove once execution modes move to config. |
+| `--background` / `--no-background` | `.genie/cli/src/genie.ts:275-283` | Drop; agent metadata should drive background defaults. |
+| `--executor` | `.genie/cli/src/genie.ts:284-290` | Remove per-run overrides. |
+| `-c/--config` | `.genie/cli/src/genie.ts:291-296` | Remove; use config files instead. |
+| `--full` | `.genie/cli/src/genie.ts:302-305` | Keep (only transcript toggle). |
+| `--style`, `--json`, `--status`, `--lines`, `--page`, `--per`, `--prefix` | `.genie/cli/src/genie.ts:306-337` | Delete; functionality replaced by fixed theme and simplified listing. |
+
+---
+
+## Sample CLI Outputs (Target UX)
+These mock outputs reflect the desired experience after refactor.
 
 ### `genie run implementor "[Discovery] Review backlog"`
 ```
 ▸ GENIE • run implementor (mode: workspace-write)
   session: RUN-8A2Q4
-  watch : genie log RUN-8A2Q4
+  watch : genie view RUN-8A2Q4
   resume: genie resume RUN-8A2Q4 "<prompt>"
   stop  : genie stop RUN-8A2Q4
 ```
 
 ### `genie list agents`
 ```
-Agents • Detected in .genie/agents/
-┌────────────────┬────────────────────────────────────────────┬───────────────┐
-│ id             │ summary                                     │ mode          │
-├────────────────┼────────────────────────────────────────────┼───────────────┤
-│ core/plan      │ Orchestrates discovery → wish readiness     │ analysis      │
-│ core/forge     │ Breaks wish into execution groups + checks  │ workspace-write│
-│ core/twin      │ Second-opinion loop with verdict + confidence│ analysis      │
-│ specialized/implementor │ Applies forge plan to this repo    │ workspace-write│
-│ specialized/qa │ Validation specialist for repo standards    │ workspace-read │
-│ ...            │ ...                                         │ ...           │
-└────────────────┴────────────────────────────────────────────┴───────────────┘
-Run with: `genie run core/plan "..."` or `genie run twin "..."` (folder prefix optional when unique)
+Agents • .genie/agents
+┌────────────────────────┬────────────────────────────────────────────┐
+│ folder/id              │ summary                                    │
+├────────────────────────┼────────────────────────────────────────────┤
+│ core/plan              │ Orchestrates discovery → wish readiness    │
+│ core/forge             │ Breaks wish into execution groups + checks │
+│ core/twin              │ Second-opinion loop with verdict + confidence │
+│ specialized/implementor│ Applies forge plan to this repo            │
+│ specialized/qa         │ Validation specialist for repo standards   │
+└────────────────────────┴────────────────────────────────────────────┘
 ```
 
 ### `genie list sessions`
 ```
 Sessions • Active
 ┌──────────────┬──────────────┬───────────────┬──────────────┐
-│ agent        │ session      │ updated       │ log          │
-├──────────────┼──────────────┼───────────────┼──────────────┤
-│ implementor  │ RUN-8A2Q4    │ 2m ago        │ state/logs/...│
-│ qa           │ RUN-3NZP1    │ 7m ago        │ state/logs/...│
+│ agent        │ session      │ updated       │ view         │
+├──────────────┼────────────────────────────────────────────┼───────────────┼────────────────────────────────────────────┤
+│ implementor  │ 01998ef3-5bc0-76c1-8aae-77bc8790d2d9        │ 2m ago        │ genie view 01998ef3-5bc0-76c1-8aae-77bc8790d2d9 │
+│ qa           │ 01998ef3-7c44-7b09-8a9b-3d9c7501c223        │ 7m ago        │ genie view 01998ef3-7c44-7b09-8a9b-3d9c7501c223  │
 └──────────────┴──────────────┴───────────────┴──────────────┘
 
 Sessions • Recent (10)
 ┌──────────────┬──────────────┬───────────────┬──────────────┐
-│ agent        │ session      │ completed     │ log          │
-├──────────────┼──────────────┼───────────────┼──────────────┤
-│ forge        │ RUN-91KLT    │ 12m ago       │ state/logs/...│
-│ prompt       │ RUN-7JSB2    │ 18m ago       │ state/logs/...│
-│ ...          │ ...          │ ...           │ ...           │
+│ agent        │ session      │ completed     │ view         │
+├──────────────┼────────────────────────────────────────────┼───────────────┼────────────────────────────────────────────┤
+│ forge        │ 01998ef3-6d24-78f0-95bb-0de4d9517d11        │ 12m ago       │ genie view 01998ef3-6d24-78f0-95bb-0de4d9517d11  │
+│ prompt       │ 01998ef3-4306-7d61-9c3d-9d0f4c0c6a01        │ 18m ago       │ genie view 01998ef3-4306-7d61-9c3d-9d0f4c0c6a01  │
+│ …            │ …            │ …             │ …                    │
 └──────────────┴──────────────┴───────────────┴──────────────┘
 ```
 
 ### `genie resume RUN-8A2Q4 "[Verification] Capture evidence"`
 ```
-▸ GENIE • resume RUN-8A2Q4 (mode: workspace-write)
+▸ GENIE • resume 01998ef3-5bc0-76c1-8aae-77bc8790d2d9 (mode: workspace-write)
   status: background
   actions:
-    watch : genie log RUN-8A2Q4
-    stop  : genie stop RUN-8A2Q4
+  • View: genie view 01998ef3-5bc0-76c1-8aae-77bc8790d2d9
+  • Stop: genie stop 01998ef3-5bc0-76c1-8aae-77bc8790d2d9
 ```
 
-### `genie log RUN-8A2Q4`
+### `genie view 01998ef3-5bc0-76c1-8aae-77bc8790d2d9`
 ```
-Log • RUN-8A2Q4 (implementor)
-last prompt: [Verification] Capture evidence
-─ tail (60 lines default) ────────────────────────────────────
-[00:12:54] ✅ Tests: pnpm run check
-[00:12:59] 📎 Evidence saved @.genie/wishes/voice-auth-wish.md#metrics
-[00:13:04] 🤖 Awaiting next instruction…
-──────────────────────────────────────────────────────────────
-Next: `genie resume RUN-8A2Q4 "<prompt>"`
+Transcript • 01998ef3-5bc0-76c1-8aae-77bc8790d2d9 (implementor)
+Session: 01998ef3-5bc0-76c1-8aae-77bc8790d2d9  │  Status: running  │  Log: .genie/state/agents/logs/implementor-01998ef3.log
+
+[Assistant] ✅ Verification complete. Tests: pnpm run check → passed.
+[Reasoning] Evidence saved @.genie/wishes/voice-auth-wish.md#metrics
+
+Tip: run `genie view 01998ef3-5bc0-76c1-8aae-77bc8790d2d9 --full` to replay the entire session.
+```
+
+### `genie view 01998ef3-5bc0-76c1-8aae-77bc8790d2d9 --full`
+```
+Transcript • 01998ef3-5bc0-76c1-8aae-77bc8790d2d9 (implementor)
+Session: 01998ef3-5bc0-76c1-8aae-77bc8790d2d9  │  Status: completed  │  Log: .genie/state/agents/logs/implementor-01998ef3.log
+
+[Reasoning] Preparing verification plan…
+[Action] Shell command
+$ pnpm run check
+→ exit 0 (4.2s)
+[Assistant] ✅ Verification complete. Tests: pnpm run check → passed.
 ```
 
 ### `genie help run`
 ```
-Help • run
-Usage: genie run <name> "<prompt>"
-- Launch any agent markdown under .genie/agents/
-- Execution mode is defined in agent metadata (workspace-write/read/full-access/analysis)
-Prompt scaffold:
-  [Discovery] …
-  [Implementation] …
-  [Verification] …
-Examples:
-  genie run plan "[Discovery] mission @.genie/product/mission.md"
-  genie run twin "[Discovery] Pressure-test @.genie/wishes/auth-wish.md"
+GENIE CLI • Command Palette
+Usage: genie <command> [options]
+Background default: Enabled (detached)
+
+Command        Arguments                 Description
+run            <agent> "<prompt>"        Start or attach to an agent
+list agents                               Show available agents
+list sessions                             Display active + recent runs
+resume         <session> "<prompt>"      Continue a background session
+view           <session> [--full]         Render transcript for a session
+stop           <session>                  Terminate a background session
+help           [command]                  Show this panel
 ```
 
 ---
 
-## Implementation Notes & Packaging Plan
-1. **Dispatcher update** – Replace the case statement in `.genie/cli/src/genie.ts:203` with the new verb set (`run`, `list`, `resume`, `log`, `stop`, `help`).
-2. **Agent discovery** – Update `listAgents()` to recursively scan `.genie/agents/**`, return normalized ids (including folder prefix when needed), and expose metadata without categorization. Remove assumptions about `modes/` or `specialists/`.
-3. **Resolver merge** – Collapse `runMode` into `runChat` so `run` handles every agent file seamlessly. Allow shorthand names when unique; otherwise require folder-qualified ids.
-4. **Listing engine** – Refactor `runRuns` into a helper producing the active/recent session tables. Remove pagination/state filters.
-5. **Configuration cleanup** – Replace `presets` in `BASE_CONFIG` with `executionModes`. Ensure agent front matter declares executor settings. Hardcode renderer style to `art` and strip style toggles from help/views.
-6. **Parser purge** – Delete runtime override flags from `parseArguments` and downstream logic. Remove JSON and PID stop codepaths; `stop` should operate on session ids only.
-7. **CLI distribution** – Package `genie` as an npm binary (`bin` entry) for broader use; provide interim symlink instructions until publishing.
-8. **Documentation refresh** – Update `README.md`, `.genie/guides/`, and agent playbooks to reflect the simplified command surface, folder-agnostic discovery, and declarative execution modes.
+## Migration Checklist
+1. **Dispatcher** – rewrite switch in `.genie/cli/src/genie.ts:203-235` to the six target verbs. Maintain aliases (`agent`, `mode`, `runs`, `continue`, `log`) until rollout is complete.
+2. **Argument parsing** – strip deprecated flags from `parseArguments()`; keep only `--full`. Remove related environment overrides (`GENIE_CLI_STYLE`, etc.).
+3. **Execution modes** – replace `presets` with descriptive execution modes; update front matter and default config accordingly.
+4. **Agent discovery** – ensure recursive discovery is wired to the new command set (done in plan; verify again post-dispatcher update).
+5. **Session listing** – simplify `runRuns()` to produce the active/recent tables and rename command to `list sessions`.
+6. **Transcript view** – finalize chat transcript rendering in `runView()` and ensure status metadata is displayed.
+7. **Stop semantics** – verify PID-based stop paths are removed and QA documentation reflects session-id only.
+8. **Documentation refresh** – update README, AGENTS.md, QA.md, CLI tests, and onboarding scripts once code migration lands.
 
-This plan eliminates mode distinctions, treats every agent markdown uniformly, relies on a richer `help` output, and finalizes the zero-override CLI experience.
+With this matrix, the engineering team can tackle the CLI refactor confidently while keeping documentation, code, and sample UX in sync.

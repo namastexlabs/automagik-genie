@@ -189,7 +189,7 @@ Agents run in background by default:
 ./genie agent run implementor "Implement feature"
 
 # Check status
-./genie runs
+./genie list sessions
 
 # View output
 ./genie view <sessionId>
@@ -198,15 +198,15 @@ Agents run in background by default:
 ## Agent Routing Map
 
 Current agent routing (see AGENTS.md for updates):
-- `implementor` → `specialists/implementor.md`
-- `qa` → `specialists/qa.md`
-- `polish` → `specialists/polish.md`
-- `tests` → `specialists/tests.md`
-- `git` | `git-workflow` → `specialists/git-workflow.md`
-- `project-manager` → `specialists/project-manager.md`
-- `planner` → `modes/planner.md`
-- `twin` → `modes/twin.md`
-- Additional mode files live in `.genie/agents/modes/`
+- `implementor` → `specialized/implementor.md`
+- `qa` → `specialized/qa.md`
+- `polish` → `specialized/polish.md`
+- `tests` → `specialized/tests.md`
+- `git` | `git-workflow` → `specialized/git-workflow.md`
+- `project-manager` → `specialized/project-manager.md`
+- `planner` → `core/planner.md`
+- `twin` → `core/twin.md`
+- Additional portable prompts live in `.genie/agents/core/`
 
 ## Best Practices
 
