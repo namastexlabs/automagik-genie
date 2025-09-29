@@ -9,7 +9,7 @@ import os from 'os';
 import { spawn, SpawnOptionsWithoutStdio } from 'child_process';
 import { loadExecutors, DEFAULT_EXECUTOR_KEY } from './executors';
 import type { Executor, ExecutorCommand } from './executors/types';
-import { renderEnvelope, ViewEnvelope, ViewStyle } from './view';
+import { renderEnvelope, ViewEnvelope, ViewStyle, Tone } from './view';
 import { buildHelpView } from './views/help';
 import { buildAgentCatalogView } from './views/agent-catalog';
 import { buildRunsOverviewView, RunRow } from './views/runs';
@@ -253,16 +253,6 @@ function parseArguments(argv: string[]): ParsedCommand {
     if (token === '--preset') {
       if (i + 1 >= raw.length) throw new Error('Missing value for --preset');
       options.preset = raw[++i];
-      continue;
-    }
-    if (token === '--background') {
-      options.background = true;
-      options.backgroundExplicit = true;
-      continue;
-    }
-    if (token === '--no-background') {
-      options.background = false;
-      options.backgroundExplicit = true;
       continue;
     }
     if (token === '--executor') {
@@ -647,7 +637,7 @@ async function runChat(parsed: ParsedCommand, config: GenieConfig, paths: Requir
       return;
     }
 
-    await emitStatus(null, '⠋');
+    await emitStatus(null, '⠙');
 
     const resolvedSessionId = await resolveSessionIdForBanner(
       agentName,
@@ -1247,7 +1237,7 @@ async function runContinue(parsed: ParsedCommand, config: GenieConfig, paths: Re
       return;
     }
 
-    await emitStatus(null, '⠋');
+    await emitStatus(null, '⠙');
 
     const resolvedSessionId = await resolveSessionIdForBanner(
       agentName,
@@ -1384,12 +1374,19 @@ async function runView(parsed: ParsedCommand, config: GenieConfig, paths: Requir
 
   const transcript = buildTranscriptFromEvents(jsonl);
   const displayTranscript = parsed.options.full ? transcript : sliceTranscriptForLatest(transcript);
+  const metaItems: Array<{ label: string; value: string; tone?: Tone }> = [];
+  if (entry.executor) metaItems.push({ label: 'Executor', value: String(entry.executor) });
+  if (entry.preset) metaItems.push({ label: 'Preset', value: String(entry.preset) });
+  if (entry.background !== undefined) {
+    metaItems.push({ label: 'Background', value: entry.background ? 'detached' : 'attached' });
+  }
+
   const envelope = buildChatView({
     agent: entry.agent ?? 'unknown',
     sessionId: entry.sessionId ?? null,
     status: entry.status ?? null,
     messages: displayTranscript,
-    meta: entry.executor ? [{ label: 'Executor', value: entry.executor }] : undefined,
+    meta: metaItems.length ? metaItems : undefined,
     showFull: Boolean(parsed.options.full),
     hint: !parsed.options.full && transcript.length > displayTranscript.length
       ? 'Add --full to replay the entire session.'

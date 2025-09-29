@@ -595,7 +595,7 @@ async function runChat(parsed, config, paths) {
             await emitStatus(entry.sessionId);
             return;
         }
-        await emitStatus(null, '⠋');
+        await emitStatus(null, '⠙');
         const resolvedSessionId = await resolveSessionIdForBanner(agentName, config, paths, entry.sessionId, logFile, async (frame) => emitStatus(null, frame));
         const finalSessionId = resolvedSessionId || entry.sessionId;
         if (finalSessionId && !entry.sessionId) {
@@ -1120,7 +1120,7 @@ async function runContinue(parsed, config, paths) {
             await emitStatus(session.sessionId);
             return;
         }
-        await emitStatus(null, '⠋');
+        await emitStatus(null, '⠙');
         const resolvedSessionId = await resolveSessionIdForBanner(agentName, config, paths, session.sessionId, logFile, async (frame) => emitStatus(null, frame));
         const finalSessionId = resolvedSessionId || session.sessionId;
         if (finalSessionId && !session.sessionId) {
@@ -1228,12 +1228,20 @@ async function runView(parsed, config, paths) {
     }
     const transcript = buildTranscriptFromEvents(jsonl);
     const displayTranscript = parsed.options.full ? transcript : sliceTranscriptForLatest(transcript);
+    const metaItems = [];
+    if (entry.executor)
+        metaItems.push({ label: 'Executor', value: String(entry.executor) });
+    if (entry.preset)
+        metaItems.push({ label: 'Preset', value: String(entry.preset) });
+    if (entry.background !== undefined) {
+        metaItems.push({ label: 'Background', value: entry.background ? 'detached' : 'attached' });
+    }
     const envelope = (0, chat_1.buildChatView)({
         agent: entry.agent ?? 'unknown',
         sessionId: entry.sessionId ?? null,
         status: entry.status ?? null,
         messages: displayTranscript,
-        meta: entry.executor ? [{ label: 'Executor', value: entry.executor }] : undefined,
+        meta: metaItems.length ? metaItems : undefined,
         showFull: Boolean(parsed.options.full),
         hint: !parsed.options.full && transcript.length > displayTranscript.length
             ? 'Add --full to replay the entire session.'
@@ -1305,7 +1313,7 @@ async function runStop(parsed, config, paths) {
 function buildBackgroundActions(sessionId, options) {
     if (!sessionId) {
         const lines = [
-            '• Watch: session pending – run `./genie list sessions` then `./genie view <sessionId>`'
+            '• View: session pending – run `./genie list sessions` then `./genie view <sessionId>`'
         ];
         if (options.resume) {
             lines.push('• Resume: session pending – run `./genie resume <sessionId> "<prompt>"` once available');
@@ -1315,7 +1323,7 @@ function buildBackgroundActions(sessionId, options) {
         }
         return lines;
     }
-    const lines = [`• Watch: ./genie view ${sessionId}`];
+    const lines = [`• View: ./genie view ${sessionId}`];
     if (options.resume) {
         lines.push(`• Resume: ./genie resume ${sessionId} "<prompt>"`);
     }

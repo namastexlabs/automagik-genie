@@ -73,7 +73,7 @@ Each subsection lists: current behaviour in code, the desired end-state, and con
 - **Target**
   - Parse JSONL events and render a chat-style transcript (assistant / reasoning / tool / action messages) via new `buildChatView`.
   - Default output shows the latest assistant reply; `--full` replays the entire run.
-- Header should include session id and current status; log paths must not be exposed (current CLI still prints them, so hide them as part of the refactor).
+- Header should include session id, current status, executor/preset/background metadata; log paths must not be exposed (current CLI still prints them, so hide them as part of the refactor).
 - **Change notes**
   - Transcript builder + Ink view are implemented (`buildTranscriptFromEvents`, `buildChatView`).
   - Next steps: wire the parser to drop `--lines`, `--json`, and ensure status appears in the header (TODO).
@@ -111,12 +111,13 @@ Each subsection lists: current behaviour in code, the desired end-state, and con
 ## Runtime Flag Audit
 | Flag | Code reference | Action |
 | --- | --- | --- |
-| `--preset` | `parseArguments()` `.genie/cli/src/genie.ts:268-274` | Remove once execution modes move to config. |
-| `--background` / `--no-background` | `.genie/cli/src/genie.ts:275-283` | Drop; agent metadata should drive background defaults. |
+| `--preset` | `parseArguments()` `.genie/cli/src/genie.ts:268-274` | Remove once execution modes move to `.genie/cli/config.yaml` / agent metadata. |
+| `--background` / `--no-background` | `.genie/cli/src/genie.ts:275-283` | Drop; defaults live in config/metadata. |
 | `--executor` | `.genie/cli/src/genie.ts:284-290` | Remove per-run overrides. |
-| `-c/--config` | `.genie/cli/src/genie.ts:291-296` | Remove; use config files instead. |
-| `--full` | `.genie/cli/src/genie.ts:302-305` | Keep (only transcript toggle). |
-| `--style`, `--json`, `--status`, `--lines`, `--page`, `--per`, `--prefix` | `.genie/cli/src/genie.ts:306-337` | Delete; functionality replaced by fixed theme and simplified listing. |
+| `-c/--config` | `.genie/cli/src/genie.ts:291-296` | Remove; rely on config files. |
+| `--full` | `.genie/cli/src/genie.ts:302-305` | Keep (transcript toggle). |
+| `--style`, `--json`, `--lines`, `--per`, `--prefix` | `.genie/cli/src/genie.ts:306-337` | Delete; replaced by fixed Genie theme & simplified views. |
+| `--status`, `--page` | `.genie/cli/src/genie.ts:308-331` | Legacy filters; consider reintroducing simple `--page` only if session list grows beyond 10 entries. |
 
 ---
 
@@ -125,6 +126,8 @@ These mock outputs reflect the desired experience after refactor.
 
 ### `genie run implementor "[Discovery] Review backlog"`
 ```
+⠋ Starting background agent…
+⠙ Obtaining session id…
 ▸ GENIE • run implementor (mode: workspace-write)
   session: 01998ef3-5bc0-76c1-8aae-77bc8790d2d9
   • View: genie view 01998ef3-5bc0-76c1-8aae-77bc8790d2d9
@@ -170,6 +173,8 @@ Hint: `genie view <sessionId>` → `genie resume <sessionId> "<prompt>"` → `ge
 
 ### `genie resume 01998ef3-5bc0-76c1-8aae-77bc8790d2d9 "[Verification] Capture evidence"`
 ```
+⠋ Starting background agent…
+⠙ Obtaining session id…
 ▸ GENIE • resume 01998ef3-5bc0-76c1-8aae-77bc8790d2d9 (mode: workspace-write)
   status: background
   actions:
@@ -180,9 +185,11 @@ Hint: `genie view <sessionId>` → `genie resume <sessionId> "<prompt>"` → `ge
 ### `genie view 01998ef3-5bc0-76c1-8aae-77bc8790d2d9`
 ```
 Transcript • 01998ef3-5bc0-76c1-8aae-77bc8790d2d9 (implementor)
-Session   01998ef3-5bc0-76c1-8aae-77bc8790d2d9
-Status    running
-Executor  codex
+Session     01998ef3-5bc0-76c1-8aae-77bc8790d2d9
+Status      running
+Executor    codex
+Preset      default
+Background  detached
 
 [Assistant] ✅ Verification complete. Tests: pnpm run check → passed.
 [Reasoning] Evidence saved @.genie/wishes/voice-auth-wish.md#metrics
@@ -193,9 +200,11 @@ Tip: run `genie view 01998ef3-5bc0-76c1-8aae-77bc8790d2d9 --full` to replay the 
 ### `genie view 01998ef3-5bc0-76c1-8aae-77bc8790d2d9 --full`
 ```
 Transcript • 01998ef3-5bc0-76c1-8aae-77bc8790d2d9 (implementor)
-Session   01998ef3-5bc0-76c1-8aae-77bc8790d2d9
-Status    completed
-Executor  codex
+Session     01998ef3-5bc0-76c1-8aae-77bc8790d2d9
+Status      completed
+Executor    codex
+Preset      default
+Background  detached
 
 [Reasoning] Preparing verification plan…
 [Action] Shell command
