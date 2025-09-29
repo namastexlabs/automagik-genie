@@ -93,6 +93,36 @@ Bullet list of low-effort changes offering immediate value.
 ### Long-Term Roadmap Suggestions
 High-level guidance for phased improvements (optional—include only if explicitly requested).
 
+## FIELD INSTRUCTIONS
+
+### Step Management
+- **step**: The analysis plan. Step 1: State your strategy, including how you will map the codebase structure, understand business logic, and assess code quality, performance implications, and architectural patterns. Later steps: Report findings and adapt the approach as new insights emerge.
+- **step_number**: The index of the current step in the analysis sequence, beginning at 1. Each step should build upon or revise the previous one.
+- **total_steps**: Your current estimate for how many steps will be needed to complete the analysis. Adjust as new findings emerge.
+- **next_step_required**: Set to true if you plan to continue the investigation with another step. False means you believe the analysis is complete and ready for expert validation.
+
+### Investigation Tracking
+- **findings**: Summary of discoveries from this step, including architectural patterns, tech stack assessment, scalability characteristics, performance implications, maintainability factors, and strategic improvement opportunities. IMPORTANT: Document both strengths (good patterns, solid architecture) and concerns (tech debt, overengineering, unnecessary complexity). In later steps, confirm or update past findings with additional evidence.
+- **files_checked**: List all files examined (absolute paths). Include even ruled-out files to track exploration path.
+- **relevant_files**: Subset of files_checked directly relevant to analysis findings (absolute paths). Include files with significant patterns, architectural decisions, or strategic improvement opportunities.
+- **relevant_context**: List methods/functions central to analysis findings, in 'ClassName.methodName' or 'functionName' format. Prioritize those demonstrating key patterns, architectural decisions, or improvement opportunities.
+
+### Additional Analysis Fields
+- **issues_found**: Issues or concerns identified during analysis, each with severity level (critical, high, medium, low)
+- **backtrack_from_step**: If an earlier finding needs revision, specify the step number to backtrack from.
+- **images**: Optional absolute paths to architecture diagrams or visual references that help with analysis context.
+- **confidence**: Your confidence in the analysis: exploring, low, medium, high, very_high, almost_certain, or certain. 'certain' indicates the analysis is complete and ready for validation.
+- **analysis_type**: Type of analysis to perform (architecture, performance, security, quality, general)
+- **output_format**: How to format the output (summary, detailed, actionable)
+
+## COMMON FIELD SUPPORT
+- **model**: Model to use. See tool's input schema for available models. Use 'auto' to let Claude select the best model for the task.
+- **temperature**: Lower values: focused/deterministic; higher: creative. Tool-specific defaults apply if unspecified.
+- **thinking_mode**: Thinking depth: minimal (0.5%), low (8%), medium (33%), high (67%), max (100% of model max). Higher modes: deeper reasoning but slower.
+- **use_websearch**: Enable web search for docs and current info. Model can request Claude to perform web-search for best practices, framework docs, solution research, latest API information.
+- **continuation_id**: Unique thread continuation ID for multi-turn conversations. Reuse last continuation_id when continuing discussion (unless user provides different ID) using exact unique identifier. Embeds complete conversation history. Build upon history without repeating. Focus on new insights. Works across different tools.
+- **files**: Optional files for context (FULL absolute paths to real files/folders - DO NOT SHORTEN)
+
 ## Context Sweep (Fetch Protocol)
 Adopt a light-weight context fetch before deep analysis to keep inputs precise and deduplicated.
 

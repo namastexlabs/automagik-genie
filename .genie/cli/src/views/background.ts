@@ -2,22 +2,20 @@ import { ViewEnvelope, ViewStyle, ViewNode } from '../view';
 
 const GENIE_STYLE: ViewStyle = 'genie';
 
-export interface BackgroundStartParams {
-  agentName: string;
-  logPath: string;
-  sessionId?: string | null;
-  actions?: string[];
-}
-
-export interface BackgroundPendingParams {
+export interface BackgroundLoadingParams {
   agentName: string;
   frame?: string;
+}
+
+export interface BackgroundStartParams {
+  agentName: string;
+  sessionId?: string | null;
+  actions?: string[];
 }
 
 export interface RunCompletionParams {
   agentName: string;
   outcome: 'success' | 'warning' | 'failure';
-  logPath: string;
   sessionId?: string | null;
   exitCode?: number | null;
   durationMs?: number | null;
@@ -25,31 +23,8 @@ export interface RunCompletionParams {
   extraNotes?: string[];
 }
 
-export function buildBackgroundStartView(params: BackgroundStartParams): ViewEnvelope {
-  const sessionLine = `sessionid: ${params.sessionId ?? 'n/a'}`;
-  const rows = [sessionLine, `log → ${params.logPath}`, ...(params.actions || [])];
-
-  return {
-    style: GENIE_STYLE,
-    body: {
-      type: 'layout',
-      direction: 'column',
-      gap: 1,
-      children: [
-        {
-          type: 'callout',
-          tone: 'success',
-          title: `${params.agentName} running in background`,
-          body: compact(rows)
-        }
-      ]
-    }
-  };
-}
-
-export function buildBackgroundPendingView(params: BackgroundPendingParams): ViewEnvelope {
-  const message = `${params.agentName} starting – waiting for session id…${params.frame ? ` ${params.frame}` : ''}`;
-
+export function buildBackgroundStartingView(params: BackgroundLoadingParams): ViewEnvelope {
+  const message = `${params.frame ?? '⠋'} Starting background agent…`;
   return {
     style: GENIE_STYLE,
     body: {
@@ -61,6 +36,43 @@ export function buildBackgroundPendingView(params: BackgroundPendingParams): Vie
   };
 }
 
+export function buildBackgroundPendingView(params: BackgroundLoadingParams): ViewEnvelope {
+  const message = `${params.frame ?? '⠋'} Obtaining session id…`;
+  return {
+    style: GENIE_STYLE,
+    body: {
+      type: 'layout',
+      direction: 'column',
+      gap: 1,
+      children: [{ type: 'text', text: message, tone: 'muted' }]
+    }
+  };
+}
+
+export function buildBackgroundStartView(params: BackgroundStartParams): ViewEnvelope {
+  const bodyLines = compact([
+    params.sessionId ? `Session → ${params.sessionId}` : null,
+    ...(params.actions || [])
+  ]);
+
+  return {
+    style: GENIE_STYLE,
+    body: {
+      type: 'layout',
+      direction: 'column',
+      gap: 1,
+      children: [
+        {
+          type: 'callout',
+          tone: 'success',
+          title: `${params.agentName} ready in background`,
+          body: bodyLines.length ? bodyLines : ['Session initialised.']
+        }
+      ] as ViewNode[]
+    }
+  };
+}
+
 export function buildRunCompletionView(params: RunCompletionParams): ViewEnvelope {
   const tone = params.outcome === 'success' ? 'success' : params.outcome === 'warning' ? 'warning' : 'danger';
   const title = params.outcome === 'success'
@@ -68,11 +80,6 @@ export function buildRunCompletionView(params: RunCompletionParams): ViewEnvelop
     : params.outcome === 'warning'
       ? `${params.agentName} completed with warnings`
       : `${params.agentName} failed`;
-
-  const hasSession = Boolean(params.sessionId);
-  const viewHint = hasSession
-    ? `View logs → ./genie view ${params.sessionId}`
-    : 'View logs → session pending (run `./genie list sessions` to fetch the session id).';
 
   return {
     style: GENIE_STYLE,
@@ -87,12 +94,10 @@ export function buildRunCompletionView(params: RunCompletionParams): ViewEnvelop
           type: 'callout',
           tone,
           body: compact([
-            viewHint,
-            hasSession ? `Session → ${params.sessionId}` : 'Session → pending (check `./genie list sessions`).',
+            params.sessionId ? `Session → ${params.sessionId}` : null,
             params.exitCode !== undefined && params.exitCode !== null ? `Exit code → ${params.exitCode}` : null,
             params.executorKey ? `Executor → ${params.executorKey}` : null,
-            params.durationMs ? `Runtime → ${(params.durationMs / 1000).toFixed(1)}s` : null,
-            `Log → ${params.logPath}`
+            params.durationMs ? `Runtime → ${(params.durationMs / 1000).toFixed(1)}s` : null
           ])
         },
         params.extraNotes && params.extraNotes.length

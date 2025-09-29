@@ -13,7 +13,7 @@ import { renderEnvelope, ViewEnvelope, ViewStyle } from './view';
 import { buildHelpView } from './views/help';
 import { buildAgentCatalogView } from './views/agent-catalog';
 import { buildRunsOverviewView, RunRow } from './views/runs';
-import { buildBackgroundPendingView, buildBackgroundStartView, buildRunCompletionView } from './views/background';
+import { buildBackgroundStartingView, buildBackgroundPendingView, buildBackgroundStartView, buildRunCompletionView } from './views/background';
 import { buildStopView, StopEvent } from './views/stop';
 import { buildErrorView, buildWarningView, buildInfoView } from './views/common';
 import { buildChatView, ChatMessage } from './views/chat';
@@ -618,6 +618,12 @@ async function runChat(parsed: ParsedCommand, config: GenieConfig, paths: Requir
     entry.runnerPid = runnerPid;
     entry.status = 'running';
     saveSessions(paths as SessionPathsConfig, store);
+
+    const emitStarting = async (frame?: string) => {
+      const startingView = buildBackgroundStartingView({ agentName, frame });
+      await emitView(startingView, parsed.options);
+    };
+
     const emitStatus = async (sessionId: string | null | undefined, frame?: string) => {
       if (!sessionId) {
         const pendingView = buildBackgroundPendingView({ agentName, frame });
@@ -628,12 +634,13 @@ async function runChat(parsed: ParsedCommand, config: GenieConfig, paths: Requir
       const actions = buildBackgroundActions(sessionId, { resume: true, includeStop: true });
       const statusView = buildBackgroundStartView({
         agentName,
-        logPath: formatPathRelative(logFile, paths.baseDir || '.'),
         sessionId,
         actions
       });
       await emitView(statusView, parsed.options);
     };
+
+    await emitStarting('⠋');
 
     if (entry.sessionId) {
       await emitStatus(entry.sessionId);
@@ -1215,6 +1222,10 @@ async function runContinue(parsed: ParsedCommand, config: GenieConfig, paths: Re
     session.runnerPid = runnerPid;
     session.status = 'running';
     saveSessions(paths as SessionPathsConfig, store);
+    const emitStarting = async (frame?: string) => {
+      const startingView = buildBackgroundStartingView({ agentName, frame });
+      await emitView(startingView, parsed.options);
+    };
     const emitStatus = async (sessionId: string | null | undefined, frame?: string) => {
       if (!sessionId) {
         const pendingView = buildBackgroundPendingView({ agentName, frame });
@@ -1225,12 +1236,13 @@ async function runContinue(parsed: ParsedCommand, config: GenieConfig, paths: Re
       const actions = buildBackgroundActions(sessionId, { resume: false, includeStop: true });
       const statusView = buildBackgroundStartView({
         agentName,
-        logPath: formatPathRelative(logFile, paths.baseDir || '.'),
         sessionId,
         actions
       });
       await emitView(statusView, parsed.options);
     };
+
+    await emitStarting('⠋');
 
     if (session.sessionId) {
       await emitStatus(session.sessionId);

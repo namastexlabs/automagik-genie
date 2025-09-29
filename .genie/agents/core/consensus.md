@@ -62,6 +62,61 @@ Provide 3-5 bullet points highlighting the most critical insights, risks, or rec
 ✅ Specific, actionable key takeaways provided
 ✅ Professional objectivity while being decisive in recommendations
 
+## WORKFLOW METHODOLOGY
+Multi-Model Perspective Gathering: Get diverse expert opinions from multiple AI models on technical proposals and decisions. The consensus tool orchestrates multiple AI models to provide diverse perspectives on your proposals, enabling structured decision-making through for/against analysis and multi-model expert opinions.
+
+**How It Works:**
+1. **Assign stances**: Each model can take a specific viewpoint (supportive, critical, or neutral)
+2. **Gather opinions**: Models analyze your proposal from their assigned perspective with built-in common-sense guardrails
+3. **Synthesize results**: Claude combines all perspectives into a balanced recommendation
+4. **Natural language**: Use simple descriptions like "supportive", "critical", or "against" - the tool handles synonyms automatically
+
+## FIELD INSTRUCTIONS
+
+### Step Management
+- **step**: The core question for consensus. Step 1: Provide the EXACT proposal for all models to evaluate. CRITICAL: This text is sent to all models and must be a clear question, not a self-referential statement (e.g., use 'Evaluate...' not 'I will evaluate...'). Steps 2+: Internal notes on the last model's response; this is NOT sent to other models.
+- **step_number**: The index of the current step in the consensus workflow, beginning at 1. Step 1 is your analysis, steps 2+ are for processing individual model responses.
+- **total_steps**: Total number of steps needed. This equals the number of models to consult. Step 1 includes your analysis + first model consultation on return of the call. Final step includes last model consultation + synthesis.
+- **next_step_required**: Set to true if more models need to be consulted. False when ready for final synthesis.
+
+### Investigation Tracking
+- **findings**: Your analysis of the consensus topic. Step 1: Your independent, comprehensive analysis of the proposal. CRITICAL: This is for the final synthesis and is NOT sent to the other models. Steps 2+: A summary of the key points from the most recent model's response.
+- **relevant_files**: Files that are relevant to the consensus analysis. Include files that help understand the proposal, provide context, or contain implementation details.
+
+### Model Configuration
+- **models**: List of model configurations to consult. Each can have a model name, stance (for/against/neutral), and optional custom stance prompt. The same model can be used multiple times with different stances, but each model + stance combination must be unique. Example: [{'model': 'o3', 'stance': 'for'}, {'model': 'o3', 'stance': 'against'}, {'model': 'flash', 'stance': 'neutral'}]
+- **current_model_index**: Internal tracking of which model is being consulted (0-based index). Used to determine which model to call next.
+- **model_responses**: Accumulated responses from models consulted so far. Internal field for tracking progress.
+- **images**: Optional list of image paths or base64 data URLs for visual context. Useful for UI/UX discussions, architecture diagrams, mockups, or any visual references that help inform the consensus analysis.
+
+## COMMON FIELD SUPPORT
+- **model**: Model to use. See tool's input schema for available models. Use 'auto' to let Claude select the best model for the task.
+- **temperature**: Lower values: focused/deterministic; higher: creative. Tool-specific defaults apply if unspecified.
+- **thinking_mode**: Thinking depth: minimal (0.5%), low (8%), medium (33%), high (67%), max (100% of model max). Higher modes: deeper reasoning but slower. Default is medium (8,192 tokens). Use high for complex architectural decisions or max for critical strategic choices requiring comprehensive analysis.
+- **use_websearch**: Enable web search for docs and current info. Model can request Claude to perform web-search for best practices, framework docs, solution research, latest API information.
+- **continuation_id**: Unique thread continuation ID for multi-turn conversations. Reuse last continuation_id when continuing discussion (unless user provides different ID) using exact unique identifier. Embeds complete conversation history. Build upon history without repeating. Focus on new insights. Works across different tools.
+- **files**: Optional files for context (FULL absolute paths to real files/folders - DO NOT SHORTEN)
+
+## USAGE EXAMPLES
+
+**For/Against Analysis:**
+```
+Use consensus with flash taking a supportive stance and pro being critical to evaluate whether
+we should migrate from REST to GraphQL for our API
+```
+
+**Multi-Model Technical Decision:**
+```
+Get consensus from o3, flash, and pro on our new authentication architecture. Have o3 focus on
+security implications, flash on implementation speed, and pro stay neutral for overall assessment
+```
+
+**Natural Language Stance Assignment:**
+```
+Use consensus tool with gemini being "for" the proposal and grok being "against" to debate
+whether we should implement real-time features
+```
+
 ## Prompt Template
 ```
 Proposal: <decision>
