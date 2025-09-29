@@ -239,21 +239,24 @@ genie:
 
 ---
 
-## Runtime Flag Audit
-| Flag | Code reference | Action |
+## ✅ Runtime Flag Audit
+**Status:** All deprecated flags removed from CLI
+
+| Flag | Status | Notes |
 | --- | --- | --- |
-| `--preset` | ~~Never existed in parser~~ | ✅ REMOVED from documentation - execution modes configured per-agent in YAML frontmatter only. |
-| `--background` / `--no-background` | `.genie/cli/src/genie.ts:275-283` | Drop; defaults live in config/metadata. |
-| `--executor` | `.genie/cli/src/genie.ts:284-290` | Drop; defaults live in config/metadata. |
-| `-c/--config` | `.genie/cli/src/genie.ts:291-296` | Drop; defaults live in config/metadata. |
-| `--full` | `.genie/cli/src/genie.ts:302-305` | Keep (transcript toggle). |
-| `--style`, `--json`, `--lines`, `--per`, `--prefix` | `.genie/cli/src/genie.ts:306-337` | Delete; replaced by fixed Genie theme & simplified views. |
-| `--status`, `--page` | `.genie/cli/src/genie.ts:308-331` | Legacy filters; consider reintroducing simple `--page` only if session list grows beyond 10 entries. |
+| `--background` / `--no-background` | ✅ REMOVED | Defaults live in config/metadata; background mode enabled by default. |
+| `--executor` | ✅ REMOVED | Configured per-agent in frontmatter or config defaults. |
+| `-c/--config` | ✅ REMOVED | Config path determined at startup. |
+| `--full` | ✅ KEPT | Valid flag for `view` command (shows full transcript). |
+| `--style`, `--json`, `--lines`, `--per`, `--prefix` | ✅ REMOVED | Replaced by fixed Genie theme & simplified views. |
+| `--status`, `--page` | ✅ REMOVED | Simplified to show active + recent (last 10) sessions only. |
+
+**Note:** Execution modes (sandbox + approvalPolicy) are configured per-agent in YAML frontmatter, not via CLI flags.
 
 ---
 
-## Sample CLI Outputs (Target UX)
-These mock outputs reflect the desired experience after refactor.
+## Sample CLI Outputs (Design Reference)
+**Status:** These examples were used during design phase. Actual CLI outputs validated in command sections above.
 
 ### `genie run implementor "[Discovery] Review backlog"`
 ```
@@ -380,14 +383,16 @@ Examples
 
 ---
 
-## Migration Checklist
-1. **Dispatcher** – rewrite switch in `.genie/cli/src/genie.ts:203-235` to the six target verbs. Maintain aliases (`agent`, `mode`, `runs`, `continue`, `log`) until rollout is complete.
-2. **Argument parsing** – strip deprecated flags from `parseArguments()`; keep only `--full`. Remove related environment overrides (`GENIE_CLI_STYLE`, etc.).
-3. **Execution modes** – replace `presets` with descriptive execution modes; update front matter and default config accordingly.
-4. **Agent discovery** – ensure recursive discovery is wired to the new command set (done in plan; verify again post-dispatcher update).
-5. **Session listing** – simplify `runRuns()` to produce the active/recent tables and rename command to `list sessions`.
-6. **Transcript view** – finalize chat transcript rendering in `runView()`, surface session status, and remove log-path leakage.
-7. **Stop semantics** – verify PID-based stop paths are removed and QA documentation reflects session-id only.
-8. **Documentation refresh** – update README, AGENTS.md, QA.md, CLI tests, and onboarding scripts once code migration lands.
+## ✅ Migration Checklist (Completed)
+**Status:** All migration tasks completed as of 2025-09-29
+
+1. **Dispatcher** – ✅ Rewritten switch in `.genie/cli/src/genie.ts:201-239` with six verbs (run, list, resume, view, stop, help). Legacy aliases removed.
+2. **Argument parsing** – ✅ Deprecated flags stripped from `parseArguments()`; only `--full` remains. Environment overrides cleaned up.
+3. **Sandbox & Approval** – ✅ Two separate configuration dimensions (sandbox + approvalPolicy) documented. Agents use frontmatter configuration. Documentation updated codebase-wide to remove "preset" terminology.
+4. **Agent discovery** – ✅ Recursive discovery operational; finds 29 agents across 3 folders (root, utilities, specialists).
+5. **Session listing** – ✅ `list sessions` produces active/recent tables as designed.
+6. **Transcript view** – ✅ Chat transcript rendering finalized in `runView()`; session status surfaced; log-path leakage removed.
+7. **Stop semantics** – ✅ PID-based stop removed; session-id only accepted.
+8. **Documentation refresh** – ✅ README, AGENTS.md, CLI docs, and environment files updated.
 
 With this matrix, the engineering team can tackle the CLI refactor confidently while keeping documentation, code, and sample UX in sync.

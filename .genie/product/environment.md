@@ -15,10 +15,11 @@ Genie Dev relies on a small set of environment variables to steer the CLI, model
 
 ## Genie Runtime
 - GENIE_MODEL [required]: model identifier used by agents (e.g., `gpt-5`)
-- GENIE_APPROVAL_POLICY [optional]: `on-request|on-failure|never|untrusted` (mirrors CLI harness)
-- GENIE_SANDBOX_MODE [optional]: `workspace-write|read-only|danger-full-access`
-- GENIE_DEFAULT_PRESET [optional]: preset name for CLI runs (e.g., `careful`)
+- GENIE_APPROVAL_POLICY [optional]: `on-request|on-failure|never|untrusted` (default approval behavior)
+- GENIE_SANDBOX_MODE [optional]: `workspace-write|read-only|danger-full-access` (default sandbox mode)
 - GENIE_CLI_STYLE [optional]: `plain|compact|art` (default `compact`)
+
+Note: Agent-specific sandbox and approval settings in frontmatter override these defaults.
 
 ## Provider Credentials
 - OPENAI_API_KEY or ALTERNATE_PROVIDER_KEY [required]: API key for the LLM provider
@@ -45,7 +46,6 @@ LOG_LEVEL=debug
 GENIE_MODEL=gpt-5
 GENIE_APPROVAL_POLICY=on-request
 GENIE_SANDBOX_MODE=workspace-write
-GENIE_DEFAULT_PRESET=careful
 GENIE_CLI_STYLE=compact
 
 OPENAI_API_KEY=replace_me
