@@ -1,4 +1,4 @@
-import { ViewEnvelope, ViewStyle, ViewNode } from '../view';
+import { ViewEnvelope, ViewNode, ViewStyle } from '../view';
 
 export interface RunRow {
   agent: string;
@@ -9,32 +9,18 @@ export interface RunRow {
   log: string | null;
 }
 
-export interface RunsPagerInfo {
-  page: number;
-  per: number;
-  hints: string[];
-}
-
-interface RunsOverviewParams {
-  style: ViewStyle;
+interface RunsViewParams {
   active: RunRow[];
   recent: RunRow[];
-  pager: RunsPagerInfo;
   warnings?: string[];
 }
 
-interface RunsScopedParams {
-  style: ViewStyle;
-  scopeTitle: string;
-  rows: RunRow[];
-  pager: RunsPagerInfo;
-  warnings?: string[];
-}
+const GENIE_STYLE: ViewStyle = 'genie';
 
-export function buildRunsOverviewView(params: RunsOverviewParams): ViewEnvelope {
-  const { style, active, recent, pager } = params;
+export function buildRunsOverviewView(params: RunsViewParams): ViewEnvelope {
+  const { active, recent, warnings } = params;
   return {
-    style,
+    style: GENIE_STYLE,
     title: 'Background Sessions',
     body: {
       type: 'layout',
@@ -43,79 +29,27 @@ export function buildRunsOverviewView(params: RunsOverviewParams): ViewEnvelope 
       children: [
         { type: 'heading', level: 1, text: 'Background Sessions', accent: 'primary' },
         sectionWithTable('Active Sessions', active, 'No active sessions'),
-        sectionWithTable('Recent Sessions', recent, 'No recent sessions'),
-        {
-          type: 'layout',
-          direction: 'row',
-          gap: 2,
-          children: [
-            { type: 'badge', text: `Page ${pager.page}`, tone: 'info' },
-            { type: 'text', text: `Showing ${pager.per} per page`, tone: 'muted' }
-          ]
-        },
-        hintList(pager.hints),
-        params.warnings && params.warnings.length
+        sectionWithTable('Recent Sessions (last 10)', recent, 'No recent sessions'),
+        warnings && warnings.length
           ? {
               type: 'callout',
               tone: 'warning',
               title: 'Session store warning',
-              body: params.warnings
+              body: warnings
             }
-          : null
-      ].filter(Boolean) as ViewNode[]
-    },
-    meta: {
-      active,
-      recent,
-      pager,
-      warnings: params.warnings
-    }
-  };
-}
-
-export function buildRunsScopedView(params: RunsScopedParams): ViewEnvelope {
-  const { style, scopeTitle, rows, pager } = params;
-  return {
-    style,
-    title: scopeTitle,
-    body: {
-      type: 'layout',
-      direction: 'column',
-      gap: 1,
-      children: [
-        { type: 'heading', level: 1, text: scopeTitle, accent: 'primary' },
-        sectionWithTable(scopeTitle, rows, 'No sessions in this scope'),
+          : null,
         {
-          type: 'layout',
-          direction: 'row',
-          gap: 2,
-          children: [
-            { type: 'badge', text: `Page ${pager.page}`, tone: 'info' },
-            { type: 'text', text: `Showing ${pager.per} per page`, tone: 'muted' }
-          ]
-        },
-        hintList(pager.hints),
-        params.warnings && params.warnings.length
-          ? {
-              type: 'callout',
-              tone: 'warning',
-              title: 'Session store warning',
-              body: params.warnings
-            }
-          : null
+          type: 'callout',
+          tone: 'info',
+          title: 'Tips',
+          body: ['View details: `genie view <sessionId>`', 'Resume work: `genie resume <sessionId> "<prompt>"`']
+        }
       ].filter(Boolean) as ViewNode[]
-    },
-    meta: {
-      scope: scopeTitle,
-      rows,
-      pager,
-      warnings: params.warnings
     }
   };
 }
 
 function sectionWithTable(title: string, rows: RunRow[], emptyText: string): ViewNode {
-  const logItems = rows.filter((row) => Boolean(row.log)).map((row) => `${row.agent}: ${truncateLogPath(row.log!)}`);
   return {
     type: 'layout' as const,
     direction: 'column' as const,
@@ -136,18 +70,8 @@ function sectionWithTable(title: string, rows: RunRow[], emptyText: string): Vie
           updated: row.updated || 'n/a'
         })),
         emptyText
-      },
-      logItems.length
-        ? {
-            type: 'layout' as const,
-            direction: 'column' as const,
-            children: [
-              { type: 'text', text: 'Logs:', tone: 'muted' },
-              { type: 'list', tone: 'muted', items: logItems }
-            ]
-          }
-        : null
-    ].filter(Boolean) as ViewNode[]
+      }
+    ]
   };
 }
 
@@ -164,18 +88,4 @@ function statusEmoji(status: string): string {
   if (status.startsWith('failed')) return '❌';
   if (status.startsWith('stopped')) return '🔚';
   return '⌛️';
-}
-
-function hintList(items: string[]): ViewNode {
-  return {
-    type: 'list' as const,
-    tone: 'muted',
-    items: items.filter((item) => typeof item === 'string' && item.trim().length)
-  };
-}
-
-function truncateLogPath(value: string): string {
-  const max = 56;
-  if (value.length <= max) return value;
-  return `…${value.slice(-max + 1)}`;
 }

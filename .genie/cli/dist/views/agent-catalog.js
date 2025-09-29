@@ -1,10 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.buildAgentCatalogView = buildAgentCatalogView;
+const GENIE_STYLE = 'genie';
 function buildAgentCatalogView(params) {
-    const { style, totals, groups } = params;
+    const { total, groups } = params;
     return {
-        style,
+        style: GENIE_STYLE,
         title: 'Agent Catalog',
         body: {
             type: 'layout',
@@ -15,12 +16,7 @@ function buildAgentCatalogView(params) {
                 {
                     type: 'keyValue',
                     columns: 1,
-                    items: [
-                        { label: 'Total', value: String(totals.all) },
-                        { label: 'Modes', value: String(totals.modes) },
-                        { label: 'Core agents', value: String(totals.core) },
-                        { label: 'Specialized', value: String(totals.specialized) }
-                    ]
+                    items: [{ label: 'Total agents', value: String(total) }]
                 },
                 ...groups.map((group) => buildGroupSection(group)),
                 {
@@ -28,8 +24,8 @@ function buildAgentCatalogView(params) {
                     tone: 'info',
                     title: 'Usage',
                     body: [
-                        'Run an entry: `genie agent run <agent-id> "<prompt>"`.',
-                        'Modes accept aliases: `genie agent run planner "..."` resolves to `modes/planner`.'
+                        'Run an agent: `genie run <agent-id> "<prompt>"`.',
+                        'List active work: `genie list sessions`.'
                     ]
                 }
             ]
@@ -46,14 +42,14 @@ function buildGroupSection(group) {
             {
                 type: 'table',
                 columns: [
-                    { key: 'id', label: 'Agent' },
+                    { key: 'id', label: 'Identifier' },
                     { key: 'summary', label: 'Summary' }
                 ],
                 rows: group.rows.map((row) => ({
                     id: row.id,
                     summary: row.summary
                 })),
-                emptyText: group.emptyText
+                emptyText: 'No agents found in this folder'
             }
         ]
     };

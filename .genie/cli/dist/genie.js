@@ -51,7 +51,7 @@ const runs_1 = require("./views/runs");
 const background_1 = require("./views/background");
 const stop_1 = require("./views/stop");
 const common_1 = require("./views/common");
-const log_tail_1 = require("./views/log-tail");
+const chat_1 = require("./views/chat");
 const background_manager_1 = __importStar(require("./background-manager"));
 const session_store_1 = require("./session-store");
 let YAML = null;
@@ -72,7 +72,6 @@ const CONFIG_PATH = path_1.default.join(SCRIPT_DIR, 'config.yaml');
 const backgroundManager = new background_manager_1.default();
 const startupWarnings = [];
 const runtimeWarnings = [];
-const DEFAULT_RUNS_PER_PAGE = 10;
 function recordStartupWarning(message) {
     startupWarnings.push(message);
 }
@@ -182,7 +181,7 @@ async function main() {
                 await runHelp(parsed, config, paths);
                 break;
             default: {
-                await emitView((0, common_1.buildErrorView)(parsed.options.style, 'Unknown command', `Unknown command: ${parsed.command}`), parsed.options, { stream: process.stderr });
+                await emitView((0, common_1.buildErrorView)('Unknown command', `Unknown command: ${parsed.command}`), parsed.options, { stream: process.stderr });
                 await runHelp(parsed, config, paths);
                 process.exitCode = 1;
                 break;
@@ -205,14 +204,10 @@ function parseArguments(argv) {
         background: false,
         backgroundExplicit: false,
         backgroundRunner: false,
-        prefix: null,
+        preset: undefined,
         executor: undefined,
-        json: false,
-        style: 'compact',
-        status: null,
-        lines: 60,
-        page: 1,
-        per: 10
+        requestHelp: undefined,
+        full: false
     };
     const filtered = [];
     for (let i = 0; i < raw.length; i++) {
@@ -249,95 +244,42 @@ function parseArguments(argv) {
             options.requestHelp = true;
             continue;
         }
-        if (token === '--prefix') {
-            if (i + 1 >= raw.length)
-                throw new Error('Missing value for --prefix');
-            options.prefix = raw[++i];
-            continue;
-        }
-        if (token === '--json') {
-            options.json = true;
+        if (token === '--full') {
+            options.full = true;
             continue;
         }
         if (token === '--') {
             filtered.push(...raw.slice(i + 1));
             break;
         }
-        if (token === '--style') {
-            if (i + 1 >= raw.length)
-                throw new Error('Missing value for --style');
-            options.style = coerceStyle(raw[++i]);
-            continue;
-        }
-        if (token === '--status') {
-            if (i + 1 >= raw.length)
-                throw new Error('Missing value for --status');
-            options.status = raw[++i];
-            continue;
-        }
-        if (token === '--lines') {
-            if (i + 1 >= raw.length)
-                throw new Error('Missing value for --lines');
-            const n = parseInt(raw[++i], 10);
-            if (!Number.isFinite(n) || n <= 0)
-                throw new Error('Invalid --lines value');
-            options.lines = n;
-            continue;
-        }
-        if (token === '--page') {
-            if (i + 1 >= raw.length)
-                throw new Error('Missing value for --page');
-            const n = parseInt(raw[++i], 10);
-            if (!Number.isFinite(n) || n <= 0)
-                throw new Error('Invalid --page value');
-            options.page = n;
-            continue;
-        }
-        if (token === '--per') {
-            if (i + 1 >= raw.length)
-                throw new Error('Missing value for --per');
-            const n = parseInt(raw[++i], 10);
-            if (!Number.isFinite(n) || n <= 0)
-                throw new Error('Invalid --per value');
-            options.per = n;
-            continue;
-        }
         filtered.push(token);
     }
     return { command, commandArgs: filtered, options };
 }
-function coerceStyle(input) {
-    const token = (input || '').toLowerCase();
-    if (token === 'art')
-        return 'art';
-    if (token === 'plain')
-        return 'plain';
-    return 'compact';
-}
 async function emitView(envelope, options, opts = {}) {
-    const style = options.style || 'compact';
+    const style = 'genie';
     const styledEnvelope = { ...envelope, style };
     await (0, view_1.renderEnvelope)(styledEnvelope, {
-        json: opts.forceJson ?? options.json,
+        json: opts.forceJson ?? false,
         stream: opts.stream,
         style
     });
 }
 async function emitEmergencyError(message) {
-    const envelope = (0, common_1.buildErrorView)('compact', 'Fatal error', message);
-    await (0, view_1.renderEnvelope)(envelope, { json: false, stream: process.stderr, style: 'compact' });
+    const envelope = (0, common_1.buildErrorView)('Fatal error', message);
+    await (0, view_1.renderEnvelope)(envelope, { json: false, stream: process.stderr });
 }
 async function flushStartupWarnings(options) {
     if (!startupWarnings.length)
         return;
-    const envelope = (0, common_1.buildWarningView)(options.style, 'Configuration warnings', [...startupWarnings]);
+    const envelope = (0, common_1.buildWarningView)('Configuration warnings', [...startupWarnings]);
     await emitView(envelope, options);
     startupWarnings.length = 0;
 }
 async function flushRuntimeWarnings(options) {
     if (!runtimeWarnings.length)
         return;
-    const envelope = (0, common_1.buildWarningView)(options.style, 'Runtime warnings', [...runtimeWarnings]);
+    const envelope = (0, common_1.buildWarningView)('Runtime warnings', [...runtimeWarnings]);
     await emitView(envelope, options);
     runtimeWarnings.length = 0;
 }
@@ -350,10 +292,6 @@ function applyDefaults(options, defaults) {
     }
     if (!options.executor && defaults?.executor) {
         options.executor = defaults.executor;
-    }
-    const envStyle = process.env.GENIE_CLI_STYLE;
-    if (envStyle && options.style === 'compact') {
-        options.style = coerceStyle(envStyle);
     }
 }
 function loadConfig(overrides) {
@@ -636,17 +574,12 @@ async function runChat(parsed, config, paths) {
         (0, session_store_1.saveSessions)(paths, store);
         const emitStatus = async (sessionId, frame) => {
             if (!sessionId) {
-                const pendingView = (0, background_1.buildBackgroundPendingView)({
-                    style: parsed.options.style,
-                    agentName,
-                    frame
-                });
+                const pendingView = (0, background_1.buildBackgroundPendingView)({ agentName, frame });
                 await emitView(pendingView, parsed.options);
                 return;
             }
             const actions = buildBackgroundActions(sessionId, { resume: true, includeStop: true });
             const statusView = (0, background_1.buildBackgroundStartView)({
-                style: parsed.options.style,
                 agentName,
                 logPath: formatPathRelative(logFile, paths.baseDir || '.'),
                 sessionId,
@@ -696,7 +629,7 @@ async function runChat(parsed, config, paths) {
 async function runAgentCommand(parsed, config, paths) {
     const [maybeSubcommand, ...rest] = parsed.commandArgs;
     if (parsed.options.requestHelp) {
-        await emitView((0, common_1.buildInfoView)(parsed.options.style, 'Agent command', [
+        await emitView((0, common_1.buildInfoView)('Agent command', [
             'Usage:',
             '  genie agent list',
             '  genie agent run <agent-id> "<prompt>"',
@@ -718,7 +651,7 @@ async function runAgentCommand(parsed, config, paths) {
         return;
     }
     if (sub === 'help') {
-        await emitView((0, common_1.buildInfoView)(parsed.options.style, 'Agent command', [
+        await emitView((0, common_1.buildInfoView)('Agent command', [
             'Usage:',
             '  genie agent list',
             '  genie agent run <agent-id> "<prompt>"',
@@ -902,7 +835,6 @@ function executeRun(args) {
         const message = error instanceof Error ? error.message : String(error);
         if (!background) {
             const envelope = (0, background_1.buildRunCompletionView)({
-                style: cliOptions.style,
                 agentName,
                 outcome: 'failure',
                 logPath: formatPathRelative(logFile, paths.baseDir || '.'),
@@ -940,7 +872,6 @@ function executeRun(args) {
             const outcome = code === 0 ? 'success' : 'failure';
             const notes = signal ? [`Signal: ${signal}`] : [];
             const envelope = (0, background_1.buildRunCompletionView)({
-                style: cliOptions.style,
                 agentName,
                 outcome,
                 logPath: formatPathRelative(logFile, paths.baseDir || '.'),
@@ -1166,17 +1097,12 @@ async function runContinue(parsed, config, paths) {
         (0, session_store_1.saveSessions)(paths, store);
         const emitStatus = async (sessionId, frame) => {
             if (!sessionId) {
-                const pendingView = (0, background_1.buildBackgroundPendingView)({
-                    style: parsed.options.style,
-                    agentName,
-                    frame
-                });
+                const pendingView = (0, background_1.buildBackgroundPendingView)({ agentName, frame });
                 await emitView(pendingView, parsed.options);
                 return;
             }
             const actions = buildBackgroundActions(sessionId, { resume: false, includeStop: true });
             const statusView = (0, background_1.buildBackgroundStartView)({
-                style: parsed.options.style,
                 agentName,
                 logPath: formatPathRelative(logFile, paths.baseDir || '.'),
                 sessionId,
@@ -1221,104 +1147,47 @@ async function runContinue(parsed, config, paths) {
 async function runRuns(parsed, config, paths) {
     const warnings = [];
     const store = (0, session_store_1.loadSessions)(paths, config, DEFAULT_CONFIG, { onWarning: (message) => warnings.push(message) });
-    const entries = Object.entries(store.agents);
-    const dataAll = entries.map(([agent, entry]) => ({
-        agent,
-        status: resolveDisplayStatus(entry),
-        sessionId: entry.sessionId || null,
-        log: entry.logFile || null,
-        lastUsed: entry.lastUsed || entry.created || null
-    }));
-    const want = parsed.options.status;
-    const page = parsed.options.page && parsed.options.page > 0 ? parsed.options.page : 1;
-    const perCandidate = parsed.options.per && parsed.options.per > 0 ? parsed.options.per : DEFAULT_RUNS_PER_PAGE;
-    const per = perCandidate || DEFAULT_RUNS_PER_PAGE;
-    const byStatus = (status) => dataAll.filter((row) => (row.status || '').toLowerCase().startsWith(status));
-    const sortByTimeDesc = (arr) => arr.slice().sort((a, b) => {
-        const aTime = a.lastUsed ? new Date(a.lastUsed).getTime() : 0;
-        const bTime = b.lastUsed ? new Date(b.lastUsed).getTime() : 0;
-        return bTime - aTime;
-    });
-    const paginate = (arr) => arr.slice((page - 1) * per, (page - 1) * per + per);
-    const formatRow = (row) => {
-        const iso = row.lastUsed ? safeIsoString(row.lastUsed) : null;
+    const entries = Object.entries(store.agents || {});
+    const rows = entries.map(([agent, entry]) => {
+        const iso = entry.lastUsed ? safeIsoString(entry.lastUsed) : entry.created ? safeIsoString(entry.created) : null;
         return {
-            agent: row.agent,
-            status: row.status,
-            sessionId: row.sessionId,
+            agent,
+            status: resolveDisplayStatus(entry),
+            sessionId: entry.sessionId || null,
             updated: iso ? formatRelativeTime(iso) : 'n/a',
             updatedIso: iso,
-            log: row.log ? formatPathRelative(row.log, paths.baseDir || '.') : null
+            log: entry.logFile ? formatPathRelative(entry.logFile, paths.baseDir || '.') : null
         };
+    });
+    const isActive = (row) => {
+        const normalized = (row.status || '').toLowerCase();
+        return normalized.startsWith('running') || normalized.startsWith('pending');
     };
-    const baseHints = [
-        'View details: genie view <sessionId>',
-        'Resume background work: genie continue <sessionId> "<prompt>"',
-        'Stop session: genie stop <sessionId>'
-    ];
-    const scopeSuffix = want && want !== 'default' ? ` --status ${want}` : '';
-    const buildPagerHints = (total) => {
-        const hints = [];
-        if (total > page * per)
-            hints.push(`Next page: genie runs${scopeSuffix} --page ${page + 1}`);
-        if (page > 1)
-            hints.push(`Previous page: genie runs${scopeSuffix} --page ${page - 1}`);
-        return hints;
+    const sortByUpdated = (a, b) => {
+        const aTime = a.updatedIso ? new Date(a.updatedIso).getTime() : 0;
+        const bTime = b.updatedIso ? new Date(b.updatedIso).getTime() : 0;
+        return bTime - aTime;
     };
-    if (want && want !== 'default') {
-        let pool;
-        if (want === 'all')
-            pool = sortByTimeDesc([...dataAll]);
-        else if (want === 'running')
-            pool = sortByTimeDesc([...byStatus('running'), ...byStatus('pending-completion')]);
-        else
-            pool = sortByTimeDesc(dataAll.filter((row) => (row.status || '').toLowerCase().startsWith(want)));
-        const pageRows = paginate(pool).map(formatRow);
-        const pager = {
-            page,
-            per,
-            hints: [...buildPagerHints(pool.length), ...baseHints]
-        };
-        const envelope = (0, runs_1.buildRunsScopedView)({
-            style: parsed.options.style,
-            scopeTitle: `Runs • ${want}`,
-            rows: pageRows,
-            pager,
-            warnings
-        });
-        await emitView(envelope, parsed.options);
-        return;
-    }
-    const activePool = sortByTimeDesc([...byStatus('running'), ...byStatus('pending-completion')]);
-    const recentPool = sortByTimeDesc(dataAll.filter((row) => !['running', 'pending-completion'].includes((row.status || '').toLowerCase())));
-    const activeRows = paginate(activePool).map(formatRow);
-    const recentRows = paginate(recentPool).map(formatRow);
-    const statusHints = ['Focus on running sessions: genie runs --status running', 'See completed sessions: genie runs --status completed'];
-    const pager = {
-        page,
-        per,
-        hints: [...buildPagerHints(Math.max(activePool.length, recentPool.length)), ...statusHints, ...baseHints]
-    };
+    const active = rows.filter(isActive).sort(sortByUpdated);
+    const recent = rows.filter((row) => !isActive(row)).sort(sortByUpdated).slice(0, 10);
     const envelope = (0, runs_1.buildRunsOverviewView)({
-        style: parsed.options.style,
-        active: activeRows,
-        recent: recentRows,
-        pager,
-        warnings
+        active,
+        recent,
+        warnings: warnings.length ? warnings : undefined
     });
     await emitView(envelope, parsed.options);
 }
 async function runView(parsed, config, paths) {
     const [sessionId] = parsed.commandArgs;
     if (!sessionId) {
-        await emitView((0, common_1.buildInfoView)(parsed.options.style, 'View usage', ['Usage: genie view <sessionId> [--lines N]']), parsed.options);
+        await emitView((0, common_1.buildInfoView)('View usage', ['Usage: genie view <sessionId> [--full]']), parsed.options);
         return;
     }
     const warnings = [];
     const store = (0, session_store_1.loadSessions)(paths, config, DEFAULT_CONFIG, { onWarning: (message) => warnings.push(message) });
     const found = findSessionEntry(store, sessionId, paths);
     if (!found) {
-        await emitView((0, common_1.buildErrorView)(parsed.options.style, 'Run not found', `No run found with session id '${sessionId}'`), parsed.options, { stream: process.stderr });
+        await emitView((0, common_1.buildErrorView)('Run not found', `No run found with session id '${sessionId}'`), parsed.options, { stream: process.stderr });
         return;
     }
     const { entry } = found;
@@ -1327,14 +1196,10 @@ async function runView(parsed, config, paths) {
     const logViewer = executor.logViewer;
     const logFile = entry.logFile;
     if (!logFile || !fs_1.default.existsSync(logFile)) {
-        await emitView((0, common_1.buildErrorView)(parsed.options.style, 'Log missing', '❌ Log not found for this run'), parsed.options, { stream: process.stderr });
+        await emitView((0, common_1.buildErrorView)('Log missing', '❌ Log not found for this run'), parsed.options, { stream: process.stderr });
         return;
     }
     const raw = fs_1.default.readFileSync(logFile, 'utf8');
-    if (parsed.options.json) {
-        process.stdout.write(raw);
-        return;
-    }
     const allLines = raw.split(/\r?\n/);
     if (!entry.sessionId && logViewer?.extractSessionIdFromContent) {
         const sessionFromLog = logViewer.extractSessionIdFromContent(allLines);
@@ -1355,45 +1220,28 @@ async function runView(parsed, config, paths) {
         }
         catch { /* skip */ }
     }
-    if (jsonl.length && logViewer?.buildJsonlView) {
-        const envelope = logViewer.buildJsonlView({
-            render: { entry, jsonl, raw },
-            parsed,
-            paths,
-            store,
-            save: session_store_1.saveSessions,
-            formatPathRelative,
-            style: parsed.options.style
-        });
-        await emitView(envelope, parsed.options);
-        if (warnings.length) {
-            await emitView((0, common_1.buildWarningView)(parsed.options.style, 'Session warnings', warnings), parsed.options);
-        }
-        return;
-    }
-    const lastN = parsed.options.lines && parsed.options.lines > 0 ? parsed.options.lines : 60;
-    const instructions = entry.lastPrompt ? [entry.lastPrompt] : [];
-    const errorLines = allLines.filter((line) => /error/i.test(line)).slice(-5);
-    const envelope = (0, log_tail_1.buildLogTailView)({
-        style: parsed.options.style,
+    const transcript = buildTranscriptFromEvents(jsonl);
+    const displayTranscript = parsed.options.full ? transcript : sliceTranscriptForLatest(transcript);
+    const envelope = (0, chat_1.buildChatView)({
         agent: entry.agent ?? 'unknown',
         sessionId: entry.sessionId ?? null,
         logPath: formatPathRelative(logFile, paths.baseDir || '.'),
-        instructions,
-        errors: errorLines,
-        totalLines: allLines.length,
-        lastN,
-        tailLines: allLines.slice(-lastN)
+        messages: displayTranscript,
+        meta: entry.executor ? [{ label: 'Executor', value: entry.executor }] : undefined,
+        showFull: Boolean(parsed.options.full),
+        hint: !parsed.options.full && transcript.length > displayTranscript.length
+            ? 'Add --full to replay the entire session.'
+            : undefined
     });
     await emitView(envelope, parsed.options);
     if (warnings.length) {
-        await emitView((0, common_1.buildWarningView)(parsed.options.style, 'Session warnings', warnings), parsed.options);
+        await emitView((0, common_1.buildWarningView)('Session warnings', warnings), parsed.options);
     }
 }
 async function runStop(parsed, config, paths) {
     const [target] = parsed.commandArgs;
     if (!target) {
-        throw new Error('Usage: genie stop <sessionId|pid>');
+        throw new Error('Usage: genie stop <sessionId>');
     }
     const warnings = [];
     const store = (0, session_store_1.loadSessions)(paths, config, DEFAULT_CONFIG, { onWarning: (message) => warnings.push(message) });
@@ -1402,43 +1250,13 @@ async function runStop(parsed, config, paths) {
     let summary = '';
     const appendWarningView = async () => {
         if (warnings.length) {
-            await emitView((0, common_1.buildWarningView)(parsed.options.style, 'Session warnings', warnings), parsed.options);
+            await emitView((0, common_1.buildWarningView)('Session warnings', warnings), parsed.options);
         }
     };
     if (!found) {
-        const numericPid = Number(target);
-        if (Number.isInteger(numericPid)) {
-            const ok = backgroundManager.stop(numericPid);
-            if (ok) {
-                for (const entry of Object.values(store.agents || {})) {
-                    if (entry.runnerPid === numericPid || entry.executorPid === numericPid) {
-                        entry.status = 'stopped';
-                        entry.lastUsed = new Date().toISOString();
-                        entry.signal = entry.signal || 'SIGTERM';
-                        if (entry.exitCode === undefined)
-                            entry.exitCode = null;
-                        (0, session_store_1.saveSessions)(paths, store);
-                        break;
-                    }
-                }
-                events.push({ label: `PID ${numericPid}`, detail: 'SIGTERM sent', status: 'done' });
-                summary = `Sent SIGTERM to pid ${numericPid}.`;
-            }
-            else {
-                events.push({ label: `PID ${numericPid}`, detail: 'No running process', status: 'failed' });
-                summary = `No running process found for pid ${numericPid}.`;
-            }
-        }
-        else {
-            events.push({ label: target, status: 'failed', message: 'Session id not found' });
-            summary = `No run found with session id '${target}'.`;
-        }
-        const envelope = (0, stop_1.buildStopView)({
-            style: parsed.options.style,
-            target,
-            events,
-            summary
-        });
+        events.push({ label: target, status: 'failed', message: 'Session id not found' });
+        summary = `No run found with session id '${target}'.`;
+        const envelope = (0, stop_1.buildStopView)({ target, events, summary });
         await emitView(envelope, parsed.options);
         await appendWarningView();
         return;
@@ -1474,22 +1292,17 @@ async function runStop(parsed, config, paths) {
             entry.exitCode = null;
         (0, session_store_1.saveSessions)(paths, store);
     }
-    const envelope = (0, stop_1.buildStopView)({
-        style: parsed.options.style,
-        target,
-        events,
-        summary
-    });
+    const envelope = (0, stop_1.buildStopView)({ target, events, summary });
     await emitView(envelope, parsed.options);
     await appendWarningView();
 }
 function buildBackgroundActions(sessionId, options) {
     if (!sessionId) {
         const lines = [
-            '• Watch: session pending – run `./genie runs --status running` then `./genie view <sessionId>`'
+            '• Watch: session pending – run `./genie list sessions` then `./genie view <sessionId>`'
         ];
         if (options.resume) {
-            lines.push('• Resume: session pending – run `./genie continue <sessionId> "<prompt>"` once available');
+            lines.push('• Resume: session pending – run `./genie resume <sessionId> "<prompt>"` once available');
         }
         if (options.includeStop) {
             lines.push('• Stop: session pending – run `./genie stop <sessionId>` once available');
@@ -1498,7 +1311,7 @@ function buildBackgroundActions(sessionId, options) {
     }
     const lines = [`• Watch: ./genie view ${sessionId}`];
     if (options.resume) {
-        lines.push(`• Resume: ./genie continue ${sessionId} "<prompt>"`);
+        lines.push(`• Resume: ./genie resume ${sessionId} "<prompt>"`);
     }
     if (options.includeStop) {
         lines.push(`• Stop: ./genie stop ${sessionId}`);
@@ -1620,48 +1433,28 @@ function resolveDisplayStatus(entry) {
     return baseStatus;
 }
 async function runHelp(parsed, config, paths) {
-    const presetsEntries = Object.entries(config.presets || {});
     const backgroundDefault = Boolean(config.defaults && config.defaults.background);
     const commandRows = [
-        {
-            command: 'agent',
-            args: 'list | run <agent-id> "<prompt>"',
-            description: backgroundDefault
-                ? 'List agents or start a run (background default)'
-                : 'List agents or start a run (foreground default)'
-        },
-        { command: 'continue', args: '<sessionId> "<prompt>"', description: 'Continue a background session' },
-        { command: 'view', args: '<sessionId> [--lines N]', description: 'Stream the latest output' },
-        { command: 'runs', args: '[--status <s>] [--json]', description: 'Show background activity' },
-        { command: 'stop', args: '<sessionId>', description: 'Gracefully end a session' },
-        { command: 'help', args: '', description: 'Open this panel' }
+        { command: 'run', args: '<agent> "<prompt>"', description: 'Start or attach to an agent' },
+        { command: 'list agents', args: '', description: 'Show all available agents' },
+        { command: 'list sessions', args: '', description: 'Display active and recent runs' },
+        { command: 'resume', args: '<sessionId> "<prompt>"', description: 'Continue a background session' },
+        { command: 'view', args: '<sessionId> [--full]', description: 'Show transcript for a session' },
+        { command: 'stop', args: '<sessionId>', description: 'End a background session' },
+        { command: 'help', args: '', description: 'Show this panel' }
     ];
-    const optionRows = [
-        { flag: '--preset <name>', description: 'Switch execution posture (default: default)' },
-        { flag: '-c, --config <key=value>', description: 'Temporarily override a config key' },
-        { flag: '--no-background', description: 'Stay in foreground streaming output' },
-        { flag: 'runs -> --status <s>', description: 'Filter by running|completed|failed|stopped' },
-        { flag: 'runs -> --json', description: 'Emit JSON instead of the formatted table' }
-    ];
-    const presetsRows = presetsEntries.map(([name, info]) => ({
-        name,
-        description: (info && info.description) ? info.description : 'no description provided'
-    }));
     const envelope = (0, help_1.buildHelpView)({
-        style: parsed.options.style,
         backgroundDefault,
-        defaultPreset: config.defaults?.preset,
         commandRows,
-        optionRows,
-        presets: presetsRows,
         promptFramework: [
-            'Discovery -> load @ context, surface goals, spot blockers early.',
-            'Implementation -> follow the target agent playbook with evidence-first outputs.',
-            'Verification -> capture validation commands, metrics, and open questions.'
+            'Discovery → load @ context, restate goals, surface blockers early.',
+            'Implementation → follow wish/forge guidance with evidence-first outputs.',
+            'Verification → capture validation commands, metrics, and open questions.'
         ],
         examples: [
-            'genie agent run planner "[Discovery] mission @.genie/product/mission.md ..."',
-            'genie agent run implementor "[Discovery] Review @README.md ..."'
+            'genie run plan "[Discovery] mission @.genie/product/mission.md"',
+            'genie view RUN-1234',
+            'genie list agents'
         ]
     });
     await emitView(envelope, parsed.options);
@@ -1669,33 +1462,31 @@ async function runHelp(parsed, config, paths) {
 function listAgents() {
     const baseDir = '.genie/agents';
     const records = [];
-    const segments = [
-        { relative: '', category: 'core' },
-        { relative: 'modes', category: 'mode' },
-        { relative: 'specialists', category: 'specialized' }
-    ];
     if (!fs_1.default.existsSync(baseDir))
         return records;
-    segments.forEach(({ relative, category }) => {
-        const dirPath = relative ? path_1.default.join(baseDir, relative) : baseDir;
-        if (!fs_1.default.existsSync(dirPath))
-            return;
-        fs_1.default.readdirSync(dirPath).forEach((entry) => {
-            if (!entry.endsWith('.md') || entry === 'README.md')
+    const visit = (dirPath, relativePath) => {
+        const entries = fs_1.default.readdirSync(dirPath, { withFileTypes: true });
+        entries.forEach((entry) => {
+            const entryPath = path_1.default.join(dirPath, entry.name);
+            if (entry.isDirectory()) {
+                visit(entryPath, relativePath ? path_1.default.join(relativePath, entry.name) : entry.name);
                 return;
-            const fullPath = path_1.default.join(dirPath, entry);
-            if (!fs_1.default.statSync(fullPath).isFile())
+            }
+            if (!entry.isFile() || !entry.name.endsWith('.md') || entry.name === 'README.md')
                 return;
-            const relId = relative ? path_1.default.join(relative, entry.replace(/\.md$/, '')) : entry.replace(/\.md$/, '');
-            const content = fs_1.default.readFileSync(fullPath, 'utf8');
+            const rawId = relativePath ? path_1.default.join(relativePath, entry.name) : entry.name;
+            const normalizedId = rawId.replace(/\.md$/i, '').split(path_1.default.sep).join('/');
+            const content = fs_1.default.readFileSync(entryPath, 'utf8');
             const { meta } = extractFrontMatter(content);
             const metaObj = meta || {};
             if (metaObj.hidden === true || metaObj.disabled === true)
                 return;
-            const label = (metaObj.name || relId.split(/[\\/]/).pop() || relId).trim();
-            records.push({ id: relId, label, meta: metaObj, category });
+            const label = (metaObj.name || normalizedId.split('/').pop() || normalizedId).trim();
+            const folder = normalizedId.includes('/') ? normalizedId.split('/').slice(0, -1).join('/') : null;
+            records.push({ id: normalizedId, label, meta: metaObj, folder });
         });
-    });
+    };
+    visit(baseDir, null);
     return records;
 }
 async function emitAgentCatalog(parsed, _config, _paths) {
@@ -1704,40 +1495,30 @@ async function emitAgentCatalog(parsed, _config, _paths) {
         const description = (entry.meta?.description || entry.meta?.summary || '').replace(/\s+/g, ' ').trim();
         return truncateText(description || '—', 96);
     };
+    const grouped = new Map();
+    agents.forEach((entry) => {
+        const folder = entry.folder ?? '.';
+        if (!grouped.has(folder))
+            grouped.set(folder, []);
+        grouped.get(folder).push(entry);
+    });
+    const orderedFolders = Array.from(grouped.keys()).sort((a, b) => {
+        if (a === '.')
+            return -1;
+        if (b === '.')
+            return 1;
+        return a.localeCompare(b);
+    });
+    const groups = orderedFolders.map((folder) => ({
+        label: folder === '.' ? 'root' : folder,
+        rows: grouped
+            .get(folder)
+            .sort((a, b) => a.label.localeCompare(b.label))
+            .map((entry) => ({ id: entry.id, summary: summarize(entry) }))
+    }));
     const envelope = (0, agent_catalog_1.buildAgentCatalogView)({
-        style: parsed.options.style,
-        totals: {
-            all: agents.length,
-            modes: agents.filter((entry) => entry.category === 'mode').length,
-            specialized: agents.filter((entry) => entry.category === 'specialized').length,
-            core: agents.filter((entry) => entry.category === 'core').length
-        },
-        groups: [
-            {
-                label: 'Modes',
-                emptyText: 'No modes found',
-                rows: agents
-                    .filter((entry) => entry.category === 'mode')
-                    .sort((a, b) => a.label.localeCompare(b.label))
-                    .map((entry) => ({ id: entry.label, rawId: entry.id, summary: summarize(entry) }))
-            },
-            {
-                label: 'Core Agents',
-                emptyText: 'No core agents found',
-                rows: agents
-                    .filter((entry) => entry.category === 'core')
-                    .sort((a, b) => a.label.localeCompare(b.label))
-                    .map((entry) => ({ id: entry.label, rawId: entry.id, summary: summarize(entry) }))
-            },
-            {
-                label: 'Specialized Agents',
-                emptyText: 'No specialized agents found',
-                rows: agents
-                    .filter((entry) => entry.category === 'specialized')
-                    .sort((a, b) => a.label.localeCompare(b.label))
-                    .map((entry) => ({ id: entry.label, rawId: entry.id, summary: summarize(entry) }))
-            }
-        ]
+        total: agents.length,
+        groups
     });
     await emitView(envelope, parsed.options);
 }
@@ -1761,7 +1542,7 @@ function resolveAgentIdentifier(input) {
     if (byLabel)
         return byLabel.id;
     const legacy = normalizedLower.replace(/^genie-/, '').replace(/^template-/, '');
-    const legacyCandidates = [legacy, `modes/${legacy}`, `specialists/${legacy}`];
+    const legacyCandidates = [legacy, `core/${legacy}`, `specialized/${legacy}`];
     for (const candidate of legacyCandidates) {
         if (agentExists(candidate))
             return candidate;
@@ -1784,4 +1565,118 @@ function truncateText(text, maxLength = 64) {
         return text;
     const sliceLength = Math.max(0, maxLength - 3);
     return text.slice(0, sliceLength).trimEnd() + '...';
+}
+function buildTranscriptFromEvents(events) {
+    const messages = [];
+    const commandIndex = new Map();
+    const toolIndex = new Map();
+    const pushMessage = (message) => {
+        messages.push({
+            ...message,
+            body: message.body.filter((line) => Boolean(line?.trim()))
+        });
+        return messages.length - 1;
+    };
+    events.forEach((event) => {
+        if (!event || typeof event !== 'object')
+            return;
+        const type = String(event.type || '').toLowerCase();
+        if (type === 'item.completed') {
+            const item = event.item || {};
+            const itemType = String(item.item_type || '').toLowerCase();
+            const text = typeof item.text === 'string' ? item.text.trim() : '';
+            if (!text)
+                return;
+            if (itemType === 'assistant_message') {
+                pushMessage({ role: 'assistant', title: 'Assistant', body: [text] });
+            }
+            else if (itemType === 'reasoning') {
+                pushMessage({ role: 'reasoning', title: 'Reasoning', body: [text] });
+            }
+            else if (itemType === 'tool_call') {
+                const header = item.tool_name || item.tool || 'Tool call';
+                const idx = pushMessage({ role: 'tool', title: header, body: [text] });
+                if (item.id)
+                    toolIndex.set(item.id, idx);
+            }
+            else if (itemType === 'tool_result') {
+                const header = item.tool_name || item.tool || 'Tool result';
+                const idx = item.id && toolIndex.has(item.id)
+                    ? toolIndex.get(item.id)
+                    : pushMessage({ role: 'tool', title: header, body: [] });
+                messages[idx].body.push(text);
+            }
+            else {
+                pushMessage({ role: 'reasoning', title: itemType || 'Item', body: [text] });
+            }
+            return;
+        }
+        const payload = event.msg || event;
+        const callId = payload?.call_id || payload?.callId || null;
+        switch (type) {
+            case 'exec_command_begin': {
+                const command = Array.isArray(payload?.command) ? payload.command.join(' ') : payload?.command || '(unknown)';
+                const cwd = payload?.cwd ? `cwd: ${payload.cwd}` : null;
+                const idx = pushMessage({
+                    role: 'action',
+                    title: 'Shell command',
+                    body: [`$ ${command}`, cwd || undefined].filter(Boolean)
+                });
+                if (callId)
+                    commandIndex.set(callId, idx);
+                break;
+            }
+            case 'exec_command_end': {
+                if (!callId || !commandIndex.has(callId))
+                    break;
+                const idx = commandIndex.get(callId);
+                const exit = payload?.exit_code;
+                const duration = payload?.duration?.secs != null ? `${payload.duration.secs}s` : null;
+                const line = `→ exit ${exit ?? 'unknown'}${duration ? ` (${duration})` : ''}`;
+                messages[idx].body.push(line);
+                break;
+            }
+            case 'mcp_tool_call_begin': {
+                const server = payload?.invocation?.server;
+                const tool = payload?.invocation?.tool || 'MCP tool';
+                const idx = pushMessage({
+                    role: 'tool',
+                    title: 'MCP call',
+                    body: [`${tool}${server ? ` @ ${server}` : ''}`]
+                });
+                if (callId)
+                    toolIndex.set(callId, idx);
+                break;
+            }
+            case 'mcp_tool_call_end': {
+                if (!callId || !toolIndex.has(callId))
+                    break;
+                const idx = toolIndex.get(callId);
+                const duration = payload?.duration?.secs != null ? `${payload.duration.secs}s` : null;
+                messages[idx].body.push(`→ completed${duration ? ` in ${duration}` : ''}`);
+                break;
+            }
+            default:
+                break;
+        }
+    });
+    return messages;
+}
+function sliceTranscriptForLatest(messages) {
+    if (!messages.length)
+        return [];
+    let index = messages.length - 1;
+    for (let i = messages.length - 1; i >= 0; i -= 1) {
+        if (messages[i].role === 'assistant') {
+            index = i;
+            break;
+        }
+    }
+    if (index <= 0)
+        return messages.slice(index);
+    const prev = messages[index - 1];
+    if (prev && prev.role === 'reasoning') {
+        return messages.slice(index - 1);
+    }
+    return messages.slice(index);
 }

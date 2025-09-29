@@ -3,9 +3,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.buildErrorView = buildErrorView;
 exports.buildWarningView = buildWarningView;
 exports.buildInfoView = buildInfoView;
-function buildErrorView(style, title, message) {
+const GENIE_STYLE = 'genie';
+function buildErrorView(title, message) {
     return {
-        style,
+        style: GENIE_STYLE,
         title,
         body: {
             type: 'callout',
@@ -15,9 +16,9 @@ function buildErrorView(style, title, message) {
         }
     };
 }
-function buildWarningView(style, title, messages) {
+function buildWarningView(title, messages) {
     return {
-        style,
+        style: GENIE_STYLE,
         title,
         body: {
             type: 'callout',
@@ -27,9 +28,9 @@ function buildWarningView(style, title, messages) {
         }
     };
 }
-function buildInfoView(style, title, messages) {
+function buildInfoView(title, messages) {
     return {
-        style,
+        style: GENIE_STYLE,
         title,
         body: {
             type: 'callout',

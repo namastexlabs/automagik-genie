@@ -1,4 +1,4 @@
-import { ViewEnvelope, ViewStyle } from '../view';
+import { ViewEnvelope, ViewStyle, ViewNode } from '../view';
 
 export interface StopEvent {
   label: string;
@@ -8,16 +8,17 @@ export interface StopEvent {
 }
 
 interface StopViewParams {
-  style: ViewStyle;
   target: string;
   events: StopEvent[];
   summary: string;
   followUps?: string[];
 }
 
+const GENIE_STYLE: ViewStyle = 'genie';
+
 export function buildStopView(params: StopViewParams): ViewEnvelope {
   return {
-    style: params.style,
+    style: GENIE_STYLE,
     title: `Stop: ${params.target}`,
     body: {
       type: 'layout',
@@ -43,7 +44,7 @@ export function buildStopView(params: StopViewParams): ViewEnvelope {
         params.followUps && params.followUps.length
           ? { type: 'list', items: params.followUps, tone: 'muted' }
           : null
-      ].filter(Boolean) as any
+      ].filter(Boolean) as ViewNode[]
     }
   };
 }

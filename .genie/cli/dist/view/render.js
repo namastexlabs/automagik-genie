@@ -23,7 +23,7 @@ function useInk() {
 }
 async function renderEnvelope(envelope, options = {}) {
     const targetStream = options.stream ?? process.stdout;
-    const finalStyle = options.style ?? envelope.style ?? 'compact';
+    const finalStyle = envelope.style ?? 'genie';
     if (options.json) {
         const payload = JSON.stringify(envelope, null, 2);
         targetStream.write(payload + '\n');
@@ -95,7 +95,7 @@ function gapSpacer(direction, size, key) {
 function renderHeadingNode(node, style) {
     const { Box: InkBox, Text: InkText } = useInk();
     const color = (0, theme_1.accentToColor)(node.accent);
-    if (node.level === 1 && (0, theme_1.isArtStyle)(style)) {
+    if (node.level === 1) {
         const text = (0, gradient_string_1.default)([theme_1.palette.accent.primary, theme_1.palette.accent.secondary])(node.text);
         return ((0, jsx_runtime_1.jsx)(InkBox, { flexDirection: "column", alignItems: node.align === 'center' ? 'center' : 'flex-start', children: (0, jsx_runtime_1.jsx)(InkText, { children: text }) }));
     }

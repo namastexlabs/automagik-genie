@@ -1,8 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.buildHelpView = buildHelpView;
+const GENIE_STYLE = 'genie';
 function buildHelpView(params) {
-    const style = params.style;
     const commandTable = {
         type: 'table',
         columns: [
@@ -12,28 +12,8 @@ function buildHelpView(params) {
         ],
         rows: params.commandRows
     };
-    const optionTable = params.optionRows.length
-        ? {
-            type: 'table',
-            columns: [
-                { key: 'flag', label: 'Flag' },
-                { key: 'description', label: 'What it does' }
-            ],
-            rows: params.optionRows
-        }
-        : null;
-    const presetTable = params.presets.length
-        ? {
-            type: 'table',
-            columns: [
-                { key: 'name', label: 'Preset' },
-                { key: 'description', label: 'Persona' }
-            ],
-            rows: params.presets
-        }
-        : null;
     return {
-        style,
+        style: GENIE_STYLE,
         title: 'GENIE Command Palette',
         body: {
             type: 'layout',
@@ -44,34 +24,21 @@ function buildHelpView(params) {
                 { type: 'text', text: 'Genie Template :: Command Palette Quickstart', tone: 'muted', align: 'center' },
                 { type: 'divider', variant: 'double', accent: 'primary' },
                 {
-                    type: 'layout',
-                    direction: 'row',
-                    gap: 2,
-                    children: [
+                    type: 'keyValue',
+                    columns: 1,
+                    items: [
+                        { label: 'Usage', value: 'genie <command> [options]' },
                         {
-                            type: 'keyValue',
-                            columns: 1,
-                            items: [
-                                { label: 'Usage', value: 'genie <command> [options]' },
-                                {
-                                    label: 'Background',
-                                    value: params.backgroundDefault
-                                        ? 'Enabled (detached by default)'
-                                        : 'Disabled (attach unless --background)'
-                                }
-                            ]
-                        },
-                        params.defaultPreset
-                            ? { type: 'badge', text: `Preset: ${params.defaultPreset}`, tone: 'info' }
-                            : null
+                            label: 'Background',
+                            value: params.backgroundDefault
+                                ? 'Enabled (detached by default)'
+                                : 'Disabled (attach unless explicitly requested)'
+                        }
                     ]
                 },
                 { type: 'divider', variant: 'solid', accent: 'muted' },
                 commandTable,
-                optionTable ? { type: 'divider', variant: 'solid', accent: 'muted' } : null,
-                optionTable,
-                presetTable ? { type: 'divider', variant: 'solid', accent: 'muted' } : null,
-                presetTable,
+                { type: 'divider', variant: 'solid', accent: 'muted' },
                 {
                     type: 'layout',
                     direction: 'column',
@@ -93,11 +60,11 @@ function buildHelpView(params) {
                     tone: 'info',
                     title: 'Tips',
                     body: [
-                        'Monitor active sessions with `./genie runs --status running`.',
-                        'Use `genie agent list` to browse every agent and mode.'
+                        'Watch sessions: `genie list sessions`.',
+                        'Run an agent: `genie run <agent-id> "<prompt>"`.'
                     ]
                 }
-            ].filter(Boolean)
+            ]
         }
     };
 }

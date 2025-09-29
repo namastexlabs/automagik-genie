@@ -3,7 +3,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.palette = void 0;
 exports.toneToColor = toneToColor;
 exports.accentToColor = accentToColor;
-exports.isArtStyle = isArtStyle;
 exports.palette = {
     accent: {
         primary: '#8B5CF6',
@@ -49,7 +48,4 @@ function accentToColor(accent) {
     if (accent === 'muted')
         return exports.palette.accent.muted;
     return exports.palette.foreground.default;
-}
-function isArtStyle(style) {
-    return style === 'art';
 }

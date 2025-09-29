@@ -1,9 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.buildStopView = buildStopView;
+const GENIE_STYLE = 'genie';
 function buildStopView(params) {
     return {
-        style: params.style,
+        style: GENIE_STYLE,
         title: `Stop: ${params.target}`,
         body: {
             type: 'layout',
