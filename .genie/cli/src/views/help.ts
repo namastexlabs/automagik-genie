@@ -279,13 +279,12 @@ export function buildViewHelpView(): ViewEnvelope {
       { name: '<sessionId>', description: 'Session identifier to display' }
     ],
     options: [
-      { flag: '--full', description: 'Show complete session transcript (default: latest exchange)' },
+      { flag: '--full', description: 'Show complete session transcript (default: recent messages)' },
       { flag: '--help, -h', description: 'Show this help message' }
     ],
     examples: [
-      'genie view RUN-1234',
-      'genie view GENIE-567 --full',
-      'genie view FORGE-890'
+      'genie view 01999405-7d8e-7de3-a918-464ddd15',
+      'genie view 01999402-c007-7f82-87b9-0304c8e5 --full'
     ],
     notes: [
       'Session IDs can be found with: genie list sessions',

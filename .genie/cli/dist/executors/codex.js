@@ -69,12 +69,12 @@ const defaults = {
     },
     sessionExtractionDelayMs: null
 };
-function buildRunCommand({ config = {}, instructions, prompt }) {
+function buildRunCommand({ config = {}, instructions, prompt, agentPath }) {
     const execConfig = mergeExecConfig(config.exec);
     const command = config.binary || defaults.binary;
     const args = ['exec', ...collectExecOptions(execConfig)];
-    if (typeof instructions === 'string' && instructions.length) {
-        args.push('-c', `base-instructions=${JSON.stringify(instructions)}`);
+    if (agentPath) {
+        args.push('-c', `experimental_instructions_file="${agentPath}"`);
     }
     if (prompt) {
         args.push(prompt);

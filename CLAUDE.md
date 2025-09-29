@@ -29,7 +29,8 @@ All commands in `.claude/commands/` simply `@include` the corresponding `.genie/
 - `.genie/guides/` – getting-started docs, onboarding
 - `.genie/state/` – CLI-managed data (e.g., `agents/sessions.json` for session tracking, agent logs, forge plans, commit advisories). Inspect via `./genie list sessions` or `./genie view <sessionId>` rather than manual edits.
 - `.genie/wishes/` – active wish contracts (`<slug>-wish.md`)
-- `.genie/agents/utilities/` – portable Genie prompts and modes (planner, twin, analysis, etc.)
+- `.genie/agents/` – entrypoint agents (`plan.md`, `wish.md`, `forge.md`, `review.md`)
+- `.genie/agents/utilities/` – reusable helpers (twin, analyze, debug, commit workflow, prompt, etc.)
 - `.genie/agents/specialists/` – delivery/QA/learning specialists
 - `./genie` – CLI runner for agent conversations
 
@@ -37,7 +38,7 @@ All commands in `.claude/commands/` simply `@include` the corresponding `.genie/
 1. **/plan** – single-entry agent for product mode. Loads mission/roadmap/standards, gathers context via `@` references, requests background personas via CLI, and decides if item is wish-ready.
 2. **/wish** – creates `.genie/wishes/<slug>-wish.md`, embedding context ledger, execution groups, inline `<spec_contract>`, branch/tracker strategy, and blocker protocol.
 3. **/forge** – surfaces execution groups, evidence expectations, validation hooks, and pointers back to the wish for tracker updates (capture the plan summary inside the wish).
-4. **Implementation** – humans/agents follow forge plan, storing evidence exactly where the wish specifies (no default folders). Specialist agents run via `./genie run <specialist-agent> "..."`. Replace `<specialist-agent>` using the Local Agent Map and tailor the files in `.genie/agents/specialists/` during installation.
+4. **Implementation** – humans/agents follow forge plan, storing evidence exactly where the wish specifies (no default folders). Specialist agents run via `./genie run <specialist-agent> "..."`. Tailor the files in `.genie/agents/specialists/` during installation.
 5. **/review** (optional) – aggregates QA artefacts, replays validation commands, and writes a review summary back into the wish (create a dedicated section or file path if needed).
 6. **/commit** – groups diffs, recommends commit message/checklist, and outputs a commit advisory (log highlights inside the wish or PR draft).
 7. **Git workflow** – Branch names typically `feat/<wish-slug>`; alternatives logged in the wish. PRs reference the wish and forge plan, and reuse tracker IDs recorded in the wish itself. Update roadmap status after merge.
@@ -82,7 +83,7 @@ A common snippet:
 # Helper
 ./genie --help
 
-# Start a Genie Mode (preferred for built-in flows)
+# Start a Genie Flow (built-in agents)
 ./genie run plan "[Discovery] … [Implementation] … [Verification] …"
 
 # Start a Core/Specialized Agent
@@ -99,9 +100,34 @@ A common snippet:
 ./genie stop <sessionId>
 ```
 
+### Conversations & Resume
+`resume` enables an actual, continuous conversation with agents and is how you continue multi‑turn tasks.
+
+- Start a session: `./genie run <agent> "<prompt>"`
+- Resume the same session: `./genie resume <sessionId> "<next prompt>"`
+- Inspect context so far: `./genie view <sessionId> --full`
+- Discover session ids: `./genie list sessions`
+
+Guidance:
+- Treat each session as a thread with memory; use `resume` for follow‑ups instead of starting new `run`s.
+- Keep work per session focused (one wish/feature/bug) for clean transcripts and easier review.
+- When scope changes significantly, start a new `run` and reference the prior session in your prompt.
+
+## Chat-Mode Helpers (Scoped Use Only)
+Genie can handle small, interactive requests without entering Plan → Wish when the scope is clearly limited. Preferred helpers:
+
+- `utilities/debug` – root-cause investigations or “why is this broken?” questions
+- `utilities/codereview` – quick reviews of a small diff/file for severity-tagged feedback
+- `utilities/analyze` – explain current architecture or module behaviour at a high level
+- `utilities/thinkdeep` – timeboxed exploratory reasoning/research
+- `utilities/consensus` / `utilities/challenge` – pressure-test decisions or assumptions rapidly
+- `utilities/prompt` – rewrite instructions, wish sections, or prompts on the fly
+
+If the task grows beyond a quick assist (requires new tests, broad refactor, multi-file changes), escalate into `/plan` to restart the full Plan → Wish → Forge pipeline. Bug reports that need tracking should route through the **bug-reporter** specialist so evidence is captured and filed as an issue.
+
 ## Subagents & Twin via CLI
 - Start subagent: `./genie run <agent> "<prompt>" [--preset <name>]`
-- Continue session: `./genie resume <sessionId> "<prompt>"`
+- Resume session: `./genie resume <sessionId> "<prompt>"`
 - List sessions: `./genie list sessions`
 - Stop session: `./genie stop <sessionId>`
 
@@ -109,33 +135,6 @@ Twin prompt patterns (run through any agent, typically `plan`):
 - Twin Planning: "Act as an independent architect. Pressure-test this plan. Deliver 3 risks, 3 missing validations, 3 refinements. Finish with Twin Verdict + confidence."
 - Consensus Loop: "Challenge my conclusion. Provide counterpoints, evidence, and a recommendation. Finish with Twin Verdict + confidence."
 - Focused Deep-Dive: "Investigate <topic>. Provide findings, affected files, follow-ups."
-
-## Local Agent Map
-Agent aliases map to agent files. Keep this updated as new agents are added.
-- bug-reporter → `.genie/agents/specialists/bug-reporter.md`
-- git-workflow → `.genie/agents/specialists/git-workflow.md`
-- implementor → `.genie/agents/specialists/implementor.md`
-- polish → `.genie/agents/specialists/polish.md`
-- project-manager → `.genie/agents/specialists/project-manager.md`
-- qa → `.genie/agents/specialists/qa.md`
-- self-learn → `.genie/agents/specialists/self-learn.md`
-- tests → `.genie/agents/specialists/tests.md`
-- forge → `.genie/agents/forge.md`
-- planner → `.genie/agents/plan.md`
-- twin → `.genie/agents/utilities/twin.md`
- - planner-agent → `.genie/agents/plan.md`
- - consensus-agent → `.genie/agents/utilities/consensus.md`
- - debug-agent → `.genie/agents/utilities/debug.md`
- - analyze-agent → `.genie/agents/utilities/analyze.md`
- - refactor-agent → `.genie/agents/utilities/refactor.md`
- - docgen-agent → `.genie/agents/utilities/docgen.md`
- - thinkdeep-agent → `.genie/agents/utilities/thinkdeep.md`
- - tracer-agent → `.genie/agents/utilities/tracer.md`
- - challenge-agent → `.genie/agents/utilities/challenge.md`
- - codereview → `.genie/agents/utilities/codereview.md`
- - precommit → `.genie/agents/utilities/commit.md`
- - testgen → `.genie/agents/utilities/testgen.md`
- - secaudit → `.genie/agents/utilities/secaudit.md`
 
 ## Agent Playbook
 
@@ -170,6 +169,16 @@ Agent aliases map to agent files. Keep this updated as new agents are added.
       <validation>How to verify the correction is working</validation>
     </entry>
     -->
+    <entry date="2025-09-29" violation_type="DOC_INTEGRITY" severity="HIGH">
+      <trigger>Overwriting `AGENTS.md` wholesale without approval during restructuring.</trigger>
+      <correction>Perform targeted, line-level edits for documentation updates; never replace entire files unless explicitly authorized.</correction>
+      <validation>Subsequent doc changes appear as focused diffs reviewed with stakeholders before merge.</validation>
+    </entry>
+    <entry date="2025-09-29" violation_type="FILE_DELETION" severity="CRITICAL">
+      <trigger>Deleted `.genie/agents/utilities/install.md` without explicit approval.</trigger>
+      <correction>Never delete or rename repository files unless the human explicitly instructs it; instead, edit contents in place or mark for removal pending approval.</correction>
+      <validation>No future diffs show unapproved deletions; any removal is preceded by documented approval in chat.</validation>
+    </entry>
   </learning_entries>
 </behavioral_learnings>
 

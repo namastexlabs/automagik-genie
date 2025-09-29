@@ -11,7 +11,7 @@ function buildLogTailView(params) {
         ? {
             type: 'layout',
             direction: 'column',
-            gap: 1,
+            gap: 0,
             children: [
                 { type: 'heading', level: 2, text: 'Dialogue', accent: 'secondary' },
                 ...chatBubbles.map((bubble) => chatBubbleNode(bubble))
@@ -24,7 +24,7 @@ function buildLogTailView(params) {
         body: {
             type: 'layout',
             direction: 'column',
-            gap: 1,
+            gap: 0,
             children: [
                 { type: 'heading', level: 1, text: params.agent, accent: 'primary' },
                 {
@@ -128,7 +128,7 @@ function chatBubbleNode(bubble) {
     return {
         type: 'layout',
         direction: 'row',
-        gap: 1,
+        gap: 0,
         children: [
             badge,
             {

@@ -22,9 +22,10 @@ After implementation work, `/commit` first runs a structured pre-commit gate (li
 ✅ Done Report prepared for high-impact changes when policy requires it
 
 [NEVER DO]
-❌ Execute git commands (`add`, `commit`, `push`, `reset`, etc.)
-❌ Alter repository files or auto-fix issues
+❌ Execute git commands without explicit user approval
+❌ Alter repository files or auto-fix issues during analysis
 ❌ Invent test results or omit known risks
+❌ Skip the approval gate before performing git operations
 
 ## Workflow
 ```
@@ -33,7 +34,9 @@ After implementation work, `/commit` first runs a structured pre-commit gate (li
 2. [Diff Review] Inspect `git status`, `git diff`, and relevant context.
 3. [Assessment] Group changes, note risks, list validations still pending.
 4. [Message Draft] Suggest concise commit message (e.g., `feat/<slug>: …`).
-5. [Reporting] Save advisory and summarise findings for the human.
+5. [Approval Gate] Present options to user: commit now, edit message, stage more files, or cancel.
+6. [Execution] If approved, execute git commit and provide confirmation.
+7. [Reporting] Save advisory and summarise outcome for the human.
 </task_breakdown>
 ```
 
@@ -90,11 +93,47 @@ Verdict: <ready|needs-fixes> (confidence: <low|med|high>)
 - …
 ```
 
+## Approval Gate Template
+After analysis is complete, present clear options:
+
+```
+## Commit Ready ✅
+
+Recommended commit message:
+```
+feat: description of changes
+
+- bullet point 1
+- bullet point 2
+```
+
+**Choose your action:**
+1. **Commit now** - Execute git commit with this message
+2. **Edit message** - Modify the commit message, then commit
+3. **Stage more files** - Add additional files before committing
+4. **Cancel** - Exit without committing
+
+Reply with: "1", "2 [your message]", "3", or "4"
+```
+
+## Git Execution (Post-Approval)
+Only after explicit user approval:
+
+1. **Option 1 (Commit now)**: Execute `git commit -m "[message]"`
+2. **Option 2 (Edit message)**: Use user-provided message with `git commit -m "[user_message]"`
+3. **Option 3 (Stage more)**: Guide user to stage files, then restart analysis
+4. **Option 4 (Cancel)**: Confirm no actions taken
+
+After successful commit:
+- Report commit hash and branch status
+- Suggest next actions (push, PR creation, etc.)
+
 ## Final Chat Response
 1. Pre-commit checklist verdict with blockers/next actions
 2. Bullet summary of change domains
 3. Recommended commit message
-4. Validation checklist status (pass/pending)
-5. `Commit Advisory: @.genie/reports/commit-advice-...md`
+4. **Approval gate with numbered options**
+5. If committed: confirmation with commit hash
+6. `Commit Advisory: @.genie/reports/commit-advice-...md`
 
-Keep the tone advisory and concise, enabling humans to finish the git workflow confidently. When commits carry significant blast radius, attach or reference the required Done Report in the report.
+Keep the tone advisory and action-oriented. When commits carry significant blast radius, attach or reference the required Done Report in the report.

@@ -50,6 +50,7 @@ export interface ExecutorBuildRunArgs {
   config?: Record<string, any>;
   instructions?: string;
   prompt?: string;
+  agentPath?: string;
 }
 
 export interface ExecutorBuildResumeArgs {

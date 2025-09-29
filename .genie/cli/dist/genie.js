@@ -217,7 +217,8 @@ function parseArguments(argv) {
         backgroundExplicit: false,
         backgroundRunner: false,
         requestHelp: undefined,
-        full: false
+        full: false,
+        live: false
     };
     const filtered = [];
     for (let i = 0; i < raw.length; i++) {
@@ -228,6 +229,10 @@ function parseArguments(argv) {
         }
         if (token === '--full') {
             options.full = true;
+            continue;
+        }
+        if (token === '--live') {
+            options.live = true;
             continue;
         }
         if (token === '--') {
@@ -464,9 +469,10 @@ async function runChat(parsed, config, paths) {
     if (handledBackground) {
         return;
     }
+    const agentPath = path_1.default.join('.genie', 'agents', `${resolvedAgentName}.md`);
     const command = executor.buildRunCommand({
         config: executorConfig,
-        instructions: agentSpec.instructions,
+        agentPath,
         prompt
     });
     await executeRun({
@@ -956,11 +962,7 @@ async function runRuns(parsed, config, paths) {
 }
 async function runList(parsed, config, paths) {
     const [targetRaw] = parsed.commandArgs;
-    if (!targetRaw) {
-        await emitView((0, help_1.buildListHelpView)(), parsed.options);
-        return;
-    }
-    const target = targetRaw.toLowerCase();
+    const target = (targetRaw || 'agents').toLowerCase();
     if (target === 'agents') {
         await emitAgentCatalog(parsed, config, paths);
         return;
@@ -1016,7 +1018,11 @@ async function runView(parsed, config, paths) {
         catch { /* skip */ }
     }
     const transcript = buildTranscriptFromEvents(jsonl);
-    const displayTranscript = parsed.options.full ? transcript : sliceTranscriptForLatest(transcript);
+    const displayTranscript = parsed.options.full
+        ? transcript
+        : parsed.options.live
+            ? sliceTranscriptForLatest(transcript)
+            : sliceTranscriptForRecent(transcript);
     const metaItems = [];
     if (entry.executor)
         metaItems.push({ label: 'Executor', value: String(entry.executor) });
@@ -1034,7 +1040,9 @@ async function runView(parsed, config, paths) {
         meta: metaItems.length ? metaItems : undefined,
         showFull: Boolean(parsed.options.full),
         hint: !parsed.options.full && transcript.length > displayTranscript.length
-            ? 'Add --full to replay the entire session.'
+            ? parsed.options.live
+                ? 'Add --full to replay the entire session or remove --live to see more messages.'
+                : 'Add --full to replay the entire session.'
             : undefined
     });
     await emitView(envelope, parsed.options);
@@ -1489,4 +1497,22 @@ function sliceTranscriptForLatest(messages) {
         return messages.slice(index - 1);
     }
     return messages.slice(index);
+}
+function sliceTranscriptForRecent(messages) {
+    if (!messages.length)
+        return [];
+    // Show the last 20 messages or from the last 2 assistant messages, whichever is more
+    const maxMessages = 20;
+    let assistantCount = 0;
+    let cutoff = messages.length;
+    for (let i = messages.length - 1; i >= 0; i--) {
+        if (messages[i].role === 'assistant') {
+            assistantCount++;
+            if (assistantCount >= 2) {
+                cutoff = Math.min(i, messages.length - maxMessages);
+                break;
+            }
+        }
+    }
+    return messages.slice(Math.max(0, cutoff));
 }

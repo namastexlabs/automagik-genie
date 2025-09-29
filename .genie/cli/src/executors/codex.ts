@@ -34,16 +34,19 @@ const defaults: ExecutorDefaults = {
   sessionExtractionDelayMs: null
 };
 
-function buildRunCommand({ config = {}, instructions, prompt }: { config?: Record<string, any>; instructions?: string; prompt?: string }): ExecutorCommand {
+function buildRunCommand({ config = {}, instructions, prompt, agentPath }: { config?: Record<string, any>; instructions?: string; prompt?: string; agentPath?: string }): ExecutorCommand {
   const execConfig = mergeExecConfig(config.exec) as Record<string, any>;
   const command = config.binary || defaults.binary!;
   const args = ['exec', ...collectExecOptions(execConfig)];
-  if (typeof instructions === 'string' && instructions.length) {
-    args.push('-c', `base-instructions=${JSON.stringify(instructions)}`);
+
+  if (agentPath) {
+    args.push('-c', `experimental_instructions_file="${agentPath}"`);
   }
+
   if (prompt) {
     args.push(prompt);
   }
+
   return { command, args };
 }
 

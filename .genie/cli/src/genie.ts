@@ -54,6 +54,7 @@ interface CLIOptions {
   backgroundRunner: boolean;
   requestHelp?: boolean;
   full: boolean;
+  live: boolean;
 }
 
 interface ParsedCommand {
@@ -261,7 +262,8 @@ function parseArguments(argv: string[]): ParsedCommand {
     backgroundExplicit: false,
     backgroundRunner: false,
     requestHelp: undefined,
-    full: false
+    full: false,
+    live: false
   };
 
   const filtered: string[] = [];
@@ -273,6 +275,10 @@ function parseArguments(argv: string[]): ParsedCommand {
     }
     if (token === '--full') {
       options.full = true;
+      continue;
+    }
+    if (token === '--live') {
+      options.live = true;
       continue;
     }
     if (token === '--') {
@@ -557,9 +563,10 @@ async function runChat(parsed: ParsedCommand, config: GenieConfig, paths: Requir
     return;
   }
 
+  const agentPath = path.join('.genie', 'agents', `${resolvedAgentName}.md`);
   const command = executor.buildRunCommand({
     config: executorConfig,
-    instructions: agentSpec.instructions,
+    agentPath,
     prompt
   });
 
@@ -1187,7 +1194,11 @@ async function runView(parsed: ParsedCommand, config: GenieConfig, paths: Requir
   }
 
   const transcript = buildTranscriptFromEvents(jsonl);
-  const displayTranscript = parsed.options.full ? transcript : sliceTranscriptForLatest(transcript);
+  const displayTranscript = parsed.options.full
+    ? transcript
+    : parsed.options.live
+      ? sliceTranscriptForLatest(transcript)
+      : sliceTranscriptForRecent(transcript);
   const metaItems: Array<{ label: string; value: string; tone?: Tone }> = [];
   if (entry.executor) metaItems.push({ label: 'Executor', value: String(entry.executor) });
   const executionMode = entry.mode || entry.preset;
@@ -1204,7 +1215,9 @@ async function runView(parsed: ParsedCommand, config: GenieConfig, paths: Requir
     meta: metaItems.length ? metaItems : undefined,
     showFull: Boolean(parsed.options.full),
     hint: !parsed.options.full && transcript.length > displayTranscript.length
-      ? 'Add --full to replay the entire session.'
+      ? parsed.options.live
+        ? 'Add --full to replay the entire session or remove --live to see more messages.'
+        : 'Add --full to replay the entire session.'
       : undefined
   });
   await emitView(envelope, parsed.options);
@@ -1706,4 +1719,25 @@ function sliceTranscriptForLatest(messages: ChatMessage[]): ChatMessage[] {
     return messages.slice(index - 1);
   }
   return messages.slice(index);
+}
+
+function sliceTranscriptForRecent(messages: ChatMessage[]): ChatMessage[] {
+  if (!messages.length) return [];
+
+  // Show the last 20 messages or from the last 2 assistant messages, whichever is more
+  const maxMessages = 20;
+  let assistantCount = 0;
+  let cutoff = messages.length;
+
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === 'assistant') {
+      assistantCount++;
+      if (assistantCount >= 2) {
+        cutoff = Math.min(i, messages.length - maxMessages);
+        break;
+      }
+    }
+  }
+
+  return messages.slice(Math.max(0, cutoff));
 }
