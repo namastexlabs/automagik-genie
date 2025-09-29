@@ -371,42 +371,24 @@ async function maybeHandleBackgroundLaunch(params) {
     entry.status = 'running';
     entry.background = parsed.options.background;
     (0, session_store_1.saveSessions)(paths, store);
-    const emitStarting = async (frame) => {
-        const startingView = (0, background_1.buildBackgroundStartingView)({ agentName, frame });
-        await emitView(startingView, parsed.options);
-    };
-    const emitStatus = async (sessionId, frame) => {
-        if (!sessionId) {
-            const pendingView = (0, background_1.buildBackgroundPendingView)({ agentName, frame });
-            await emitView(pendingView, parsed.options);
-            return;
+    // Print directly to stdout instead of using Ink for background
+    process.stdout.write(`▸ Launching ${agentName} in background...\n`);
+    // Poll for session ID (up to 3 seconds)
+    const startTime = Date.now();
+    while (Date.now() - startTime < 3000) {
+        await sleep(250);
+        const liveStore = (0, session_store_1.loadSessions)(paths, config, DEFAULT_CONFIG);
+        const liveEntry = liveStore.agents?.[agentName];
+        if (liveEntry?.sessionId) {
+            entry.sessionId = liveEntry.sessionId;
+            process.stdout.write(`▸ Session ID: ${liveEntry.sessionId}\n`);
+            process.stdout.write(`▸ View: ./genie view ${liveEntry.sessionId}\n`);
+            process.stdout.write(`▸ Stop: ./genie stop ${liveEntry.sessionId}\n`);
+            return true;
         }
-        const actions = buildBackgroundActions(sessionId, { resume: allowResume, includeStop: true });
-        const statusView = (0, background_1.buildBackgroundStartView)({
-            agentName,
-            sessionId,
-            executor: entry.executor || executorKey,
-            mode: entry.mode || entry.preset || executionMode,
-            background: entry.background,
-            actions
-        });
-        await emitView(statusView, parsed.options);
-    };
-    await emitStarting('⠋');
-    if (entry.sessionId) {
-        await emitStatus(entry.sessionId);
-        return true;
     }
-    await emitStatus(null, '⠙');
-    const resolvedSessionId = await resolveSessionIdForBanner(agentName, config, paths, entry.sessionId, logFile, async (frame) => emitStatus(null, frame), 5000 // 5-second timeout
-    );
-    const finalSessionId = resolvedSessionId || entry.sessionId;
-    if (finalSessionId && !entry.sessionId) {
-        entry.sessionId = finalSessionId;
-        entry.lastUsed = new Date().toISOString();
-        (0, session_store_1.saveSessions)(paths, store);
-    }
-    await emitStatus(entry.sessionId ?? resolvedSessionId ?? null);
+    // Timeout - show pending
+    process.stdout.write(`▸ Session pending - run './genie list sessions' to see session ID\n`);
     return true;
 }
 async function runChat(parsed, config, paths) {
@@ -1019,6 +1001,21 @@ async function runView(parsed, config, paths) {
         catch { /* skip */ }
     }
     const transcript = buildTranscriptFromEvents(jsonl);
+    // Concise mode: plain text output for non-full views
+    if (!parsed.options.full && !parsed.options.live) {
+        const lastMessage = transcript.length > 0 ? transcript[transcript.length - 1] : null;
+        const lastMessageText = lastMessage
+            ? `${lastMessage.title ? lastMessage.title + ': ' : ''}${lastMessage.body.join(' ').substring(0, 200)}`
+            : 'No messages yet';
+        const conciseOutput = JSON.stringify({
+            session: entry.sessionId ?? 'pending',
+            status: entry.status ?? 'unknown',
+            executor: entry.executor ?? 'unknown',
+            lastMessage: lastMessageText
+        }, null, 2);
+        process.stdout.write(conciseOutput + '\n');
+        return;
+    }
     const displayTranscript = parsed.options.full
         ? transcript
         : parsed.options.live
@@ -1138,7 +1135,8 @@ async function resolveSessionIdForBanner(agentName, config, paths, current, logF
     const frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
     let frameIndex = 0;
     while (true) {
-        if (timeoutMs !== null && Date.now() - startedAt >= timeoutMs) {
+        const elapsed = Date.now() - startedAt;
+        if (timeoutMs !== null && elapsed >= timeoutMs) {
             return current ?? null;
         }
         try {
@@ -1147,31 +1145,9 @@ async function resolveSessionIdForBanner(agentName, config, paths, current, logF
             if (agentEntry?.sessionId) {
                 return agentEntry.sessionId;
             }
-            if (logFile && fs_1.default.existsSync(logFile)) {
-                const content = fs_1.default.readFileSync(logFile, 'utf8');
-                const match = /"session_id"\s*:\s*"([^"]+)"/i.exec(content) || /"sessionId"\s*:\s*"([^"]+)"/i.exec(content);
-                if (match) {
-                    const sessionId = match[1];
-                    if (agentEntry && !agentEntry.sessionId) {
-                        agentEntry.sessionId = sessionId;
-                        agentEntry.lastUsed = new Date().toISOString();
-                        (0, session_store_1.saveSessions)(paths, liveStore);
-                    }
-                    else {
-                        const refreshStore = (0, session_store_1.loadSessions)(paths, config, DEFAULT_CONFIG);
-                        const refreshEntry = refreshStore.agents?.[agentName];
-                        if (refreshEntry && !refreshEntry.sessionId) {
-                            refreshEntry.sessionId = sessionId;
-                            refreshEntry.lastUsed = new Date().toISOString();
-                            (0, session_store_1.saveSessions)(paths, refreshStore);
-                        }
-                    }
-                    return sessionId;
-                }
-            }
             if (onProgress) {
                 const frame = frames[frameIndex++ % frames.length];
-                await onProgress(frame);
+                onProgress(frame).catch(() => { }); // Fire and forget - don't block polling
             }
         }
         catch (error) {

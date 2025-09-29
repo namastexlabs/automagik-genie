@@ -143,7 +143,7 @@ function renderTableNode(node) {
     const clampWidth = (length) => Math.max(MIN_COL_WIDTH, Math.min(MAX_COL_WIDTH, length));
     const termWidth = typeof process !== 'undefined' && process.stdout && Number.isFinite(process.stdout.columns)
         ? Math.max(40, Math.min(process.stdout.columns - 6, 140))
-        : 80;
+        : 120;
     const gapSize = 2;
     const baseWidths = columns.map((col) => clampWidth(col.label.length));
     node.rows.forEach((row) => {

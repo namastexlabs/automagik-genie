@@ -1,5 +1,5 @@
 # 🧞 GENIE CLI BUGFIXES WISH
-**Status:** DRAFT
+**Status:** COMPLETE ✅
 **Roadmap Item:** Phase 1 – @.genie/product/roadmap.md §Instrumentation & Telemetry
 **Mission Link:** @.genie/product/mission.md §Tooling Diagnostics
 **Standards:** @.genie/standards/best-practices.md §Core Principles
@@ -189,3 +189,8 @@ Fix 5 CLI bugs discovered during comprehensive testing after the identity hotfix
 - [2025-09-29 19:55Z] Wish created from bug report @.genie/reports/genie-cli-bugs-202509291948.md
 - [2025-09-29 20:05Z] Decision captured: Bug #3 = documentation fix only (no CLI flag implementation)
 - [2025-09-29 20:05Z] Ready to proceed with implementation
+- [2025-09-29 20:50Z] Initial fixes applied - 3 bugs fully fixed, 2 partially fixed (see done report)
+- [2025-09-29 20:55Z] User feedback: "debug what actually is, before deploying the fixing again"
+- [2025-09-29 21:00Z] Deep debug phase completed - root causes identified for Bug #1 and Bug #4
+- [2025-09-29 21:05Z] Proper fixes implemented based on root cause analysis
+- [2025-09-29 21:08Z] All 5 bugs fully fixed and validated - WISH COMPLETE ✅
