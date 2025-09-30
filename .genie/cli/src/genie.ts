@@ -10,6 +10,15 @@ import { spawn, SpawnOptionsWithoutStdio } from 'child_process';
 import { loadExecutors, DEFAULT_EXECUTOR_KEY } from './executors';
 import type { Executor, ExecutorCommand } from './executors/types';
 import { renderEnvelope, ViewEnvelope, ViewStyle, Tone } from './view';
+import type {
+  CLIOptions,
+  ParsedCommand,
+  ConfigPaths,
+  GenieConfig,
+  AgentSpec,
+  ListedAgent,
+  ExecuteRunArgs
+} from './lib/types';
 import {
   buildHelpView,
   buildRunHelpView,
@@ -45,55 +54,6 @@ try {
   YAML = require('yaml');
 } catch (_) {
   // yaml module optional
-}
-
-interface CLIOptions {
-  rawArgs: string[];
-  background: boolean;
-  backgroundExplicit: boolean;
-  backgroundRunner: boolean;
-  requestHelp?: boolean;
-  full: boolean;
-  live: boolean;
-}
-
-interface ParsedCommand {
-  command?: string;
-  commandArgs: string[];
-  options: CLIOptions;
-}
-
-interface ConfigPaths {
-  baseDir?: string;
-  sessionsFile?: string;
-  logsDir?: string;
-  backgroundDir?: string;
-  executors?: Record<string, Record<string, any>>;
-}
-
-interface GenieConfig {
-  defaults?: {
-    executionMode?: string;
-    preset?: string;
-    background?: boolean;
-    executor?: string;
-  };
-  paths?: ConfigPaths;
-  executors?: Record<string, any>;
-  executionModes?: Record<string, any>;
-  presets?: Record<string, any>;
-  background?: {
-    enabled?: boolean;
-    detach?: boolean;
-    pollIntervalMs?: number;
-    sessionExtractionDelayMs?: number;
-  };
-  __configPath?: string;
-}
-
-interface AgentSpec {
-  meta?: Record<string, any>;
-  instructions: string;
 }
 
 const EXECUTORS: Record<string, Executor> = loadExecutors();
@@ -576,25 +536,6 @@ async function runChat(parsed: ParsedCommand, config: GenieConfig, paths: Requir
 }
 
 // Due to size, remaining functions continue...
-interface ExecuteRunArgs {
-  agentName: string;
-  command: ExecutorCommand;
-  executorKey: string;
-  executor: Executor;
-  executorConfig: any;
-  executorPaths: any;
-  prompt: string;
-  store: SessionStore;
-  entry: SessionEntry;
-  paths: Required<ConfigPaths>;
-  config: GenieConfig;
-  startTime: number;
-  logFile: string;
-  background: boolean;
-  runnerPid: number | null;
-  cliOptions: CLIOptions;
-  executionMode: string;
-}
 
 function resolveExecutorKey(config: GenieConfig, modeName: string): string {
   const modes = config.executionModes || config.presets || {};
@@ -723,7 +664,9 @@ function executeRun(args: ExecuteRunArgs): Promise<void> {
   if (proc.stdout) {
     if (executor.createOutputFilter) {
       filteredStdout = executor.createOutputFilter(logStream);
-      proc.stdout.pipe(filteredStdout);
+      if (filteredStdout) {
+        proc.stdout.pipe(filteredStdout);
+      }
     } else {
       proc.stdout.pipe(logStream);
     }
@@ -1817,12 +1760,6 @@ async function runHelp(parsed: ParsedCommand, config: GenieConfig, paths: Requir
   await emitView(envelope, parsed.options);
 }
 
-interface ListedAgent {
-  id: string;
-  label: string;
-  meta: any;
-  folder: string | null;
-}
 
 function listAgents(): ListedAgent[] {
   const baseDir = '.genie/agents';

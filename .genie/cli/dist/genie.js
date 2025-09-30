@@ -490,6 +490,7 @@ async function runChat(parsed, config, paths) {
         executionMode: modeName
     });
 }
+// Due to size, remaining functions continue...
 function resolveExecutorKey(config, modeName) {
     const modes = config.executionModes || config.presets || {};
     const mode = modes[modeName];
@@ -587,7 +588,9 @@ function executeRun(args) {
     if (proc.stdout) {
         if (executor.createOutputFilter) {
             filteredStdout = executor.createOutputFilter(logStream);
-            proc.stdout.pipe(filteredStdout);
+            if (filteredStdout) {
+                proc.stdout.pipe(filteredStdout);
+            }
         }
         else {
             proc.stdout.pipe(logStream);
