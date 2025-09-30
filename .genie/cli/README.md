@@ -10,7 +10,7 @@ tooling for inspection.
 .genie/cli/
 ├── dist/                 # Compiled JavaScript emitted by `pnpm run build:genie`
 ├── src/                  # TypeScript sources
-│   ├── genie.ts          # Thin orchestrator entry point (121 lines)
+│   ├── genie.ts          # Thin orchestrator entry point (143 lines)
 │   ├── commands/         # Command implementations
 │   │   ├── run.ts        # `genie run` - start new agent session
 │   │   ├── resume.ts     # `genie resume` - continue existing session
@@ -39,7 +39,7 @@ tooling for inspection.
 
 ### Architecture Overview
 
-The CLI follows a clean layered architecture after modularization (2,105 → 121 lines in `genie.ts`):
+The CLI follows a clean layered architecture after modularization (2,105 → 143 lines in `genie.ts`):
 
 1. **Orchestration Layer** (`genie.ts`) - Thin entry point that routes commands
 2. **Command Layer** (`commands/`) - Isolated command implementations
@@ -50,7 +50,7 @@ The CLI follows a clean layered architecture after modularization (2,105 → 121
 
 ### `genie.ts` (Orchestration Layer)
 
-The entry point has been streamlined to 121 lines (94% reduction from 2,105 lines) and now serves purely as a thin orchestrator:
+The entry point has been streamlined to 143 lines (93% reduction from 2,105 lines) and now serves purely as a thin orchestrator:
 
 * Parses CLI arguments via `parseArguments()` from `lib/cli-parser`
 * Loads configuration using `loadConfig()` and applies defaults
@@ -281,7 +281,7 @@ network_access = true
 
 ### Completed: CLI Modularization
 
-The CLI underwent a comprehensive modularization refactor, reducing the main entry point from **2,105 lines to 121 lines** (94% reduction):
+The CLI underwent a comprehensive modularization refactor, reducing the main entry point from **2,105 lines to 143 lines** (93% reduction):
 
 ✅ **Modularised CLI Concerns** - Separated into dedicated layers:
   - `commands/` - Isolated command implementations (run, resume, list, view, stop, help)
