@@ -53,8 +53,8 @@ for i in {1..10}; do
 done | awk '{sum+=$1; count++} END {print "Average: " sum/count "s"}' > "$SNAPSHOT_DIR/perf-startup.txt"
 
 # 6. File structure snapshot
-wc -l src/**/*.ts > "$SNAPSHOT_DIR/line-counts.txt"
-find src -name "*.ts" -type f | sort > "$SNAPSHOT_DIR/file-list.txt"
+wc -l .genie/cli/src/**/*.ts > "$SNAPSHOT_DIR/line-counts.txt" 2>/dev/null
+find .genie/cli/src -name "*.ts" -type f 2>/dev/null | sort > "$SNAPSHOT_DIR/file-list.txt"
 
 # 7. Build output
 npm run build > "$SNAPSHOT_DIR/build-output.txt" 2>&1

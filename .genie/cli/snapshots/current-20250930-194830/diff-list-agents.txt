@@ -1,0 +1,125 @@
+--- .genie/cli/snapshots/baseline-20250930-184841/list-agents.txt	2025-09-30 18:48:46.301849735 -0300
++++ .genie/cli/snapshots/current-20250930-194830/list-agents.txt	2025-09-30 19:48:35.243157507 -0300
+@@ -1,64 +1,66 @@
+ ╭───────────╮ ╭───────────╮
+-│ 34 agents │ │ 4 folders │
++│ 36 agents │ │ 4 folders │
+ ╰───────────╯ ╰───────────╯
+ root (5)
+-╭──────────────────────────────────────────────────────────────────────────────╮
+-│Identifier       … Summary                                                  … │
+-│──────────────────────────────────────────────────────────────────────────────│
+-│──────────────────────────────────────────                                    │
+-│forge            … Break wishes into execution groups with task files and va… │
+-│plan             … Turn raw ideas into roadmap-ready wishes with product con… │
+-│review           … Validate wish delivery by consolidating evidence and reru… │
+-│test-claude      … Test agent for Claude executor validation                … │
+-│wish             … Convert ideas into roadmap-aligned wishes with spec contr… │
+-╰──────────────────────────────────────────────────────────────────────────────╯
+-qa (2)
+-╭──────────────────────────────────────────────────────────────────────────────╮
+-│Identifier       … Summary                                                  … │
+-│──────────────────────────────────────────────────────────────────────────────│
+-│──────────────────────────────────────────                                    │
+-│qa/claude-paramet… Comprehensive Claude executor parameter validation       … │
+-│qa/codex-paramete… Comprehensive Codex executor parameter validation        … │
+-╰──────────────────────────────────────────────────────────────────────────────╯
++╭─────────────────────────────────────────────────────────────────────────────────────────────────────╮
++│Identifier  Summary                                                                                 …│
++│─────────────────────────────────────────────────────────────────────────────────────────────────────│
++│──                                                                             │
++│forge       Break wishes into execution groups with task files and validation hooks                 …│
++│plan        Turn raw ideas into roadmap-ready wishes with product context                           …│
++│review      Validate wish delivery by consolidating evidence and rerunning checks                   …│
++│test-claude Test agent for Claude executor validation                                               …│
++│wish        Convert ideas into roadmap-aligned wishes with spec contracts                           …│
++╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯
++qa (4)
++╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
++│Identifier               Summary                                                                                 …│
++│──────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
++│──                                                                             │
++│qa/claude-parameter-test Comprehensive Claude executor parameter validation                                      …│
++│qa/codex-parameter-test  Comprehensive Codex executor parameter validation                                       …│
++│qa/test-claude-params    Test Claude executor parameters                                                         …│
++│qa/test-modular-cli      Test agent for CLI modularization validation                                            …│
++╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+ specialists (11)
+-╭──────────────────────────────────────────────────────────────────────────────╮
+-│Identifier       … Summary                                                  … │
+-│──────────────────────────────────────────────────────────────────────────────│
+-│──────────────────────────────────────────                                    │
+-│specialists/bug-r… Triage incidents and create GitHub-ready bug reports     … │
+-│specialists/genie… End-to-end validation of Genie CLI commands and workflows… │
+-│specialists/git-w… Orchestrate safe Git workflows aligned with Genie convent… │
+-│specialists/imple… End-to-end feature implementation with TDD discipline    … │
+-│specialists/learn… Meta-learning agent for surgical documentation updates   … │
+-│specialists/polis… Type-checking, linting, and formatting for code quality  … │
+-│specialists/proje… Verify task completion and update roadmap status         … │
+-│specialists/qa   … End-to-end and manual validation of wishes and deliveries… │
+-│specialists/self-… Record violations and propagate behavioral lessons across… │
+-│specialists/sleep… Autonomous wish coordinator with Twin Genie validation   … │
+-│specialists/tests… Author new tests and repair failing test suites across al… │
+-╰──────────────────────────────────────────────────────────────────────────────╯
++╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
++│Identifier                  Summary                                                                                 …│
++│─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
++│──                                                                             │
++│specialists/bug-reporter    Triage incidents and create GitHub-ready bug reports                                    …│
++│specialists/genie-qa        End-to-end validation of Genie CLI commands and workflows                               …│
++│specialists/git-workflow    Orchestrate safe Git workflows aligned with Genie conventions                           …│
++│specialists/implementor     End-to-end feature implementation with TDD discipline                                   …│
++│specialists/learn           Meta-learning agent for surgical documentation updates                                  …│
++│specialists/polish          Type-checking, linting, and formatting for code quality                                 …│
++│specialists/project-manager Verify task completion and update roadmap status                                        …│
++│specialists/qa              End-to-end and manual validation of wishes and deliveries                               …│
++│specialists/self-learn      Record violations and propagate behavioral lessons across agents                        …│
++│specialists/sleepy          Autonomous wish coordinator with Twin Genie validation                                  …│
++│specialists/tests           Author new tests and repair failing test suites across all layers                       …│
++╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+ utilities (16)
+-╭──────────────────────────────────────────────────────────────────────────────╮
+-│Identifier       … Summary                                                  … │
+-│──────────────────────────────────────────────────────────────────────────────│
+-│──────────────────────────────────────────                                    │
+-│utilities/analyze… Analyze structure, dependencies, and simplification oppor… │
+-│utilities/challen… Pressure-test assumptions with counterarguments and evide… │
+-│utilities/coderev… Code review with severity-tagged findings and recommendat… │
+-│utilities/commit … Pre-commit validation with diff analysis and commit messa… │
+-│utilities/consens… Structure multiple perspectives and synthesize recommenda… │
+-│utilities/debug  … Investigation-first debugging with hypotheses and minimal… │
+-│utilities/docgen … Generate documentation outlines and drafts for target aud… │
+-│utilities/identit… Verify append_user_instructions_file wiring for testing  … │
+-│utilities/install… Install Genie template and CLI setup for new projects    … │
+-│utilities/prompt … Advanced prompting guidance and prompt refinement        … │
+-│utilities/refacto… Plan staged refactors with risk assessment and verificati… │
+-│utilities/secaudi… Security audit with risk assessment and hardening recomme… │
+-│utilities/testgen… Generate test proposals with names, locations, and assert… │
+-│utilities/thinkde… Timeboxed deep reasoning with explicit steps and scoped e… │
+-│utilities/tracer … Propose instrumentation and observability signals for sys… │
+-│utilities/twin   … Pressure-test ideas with planning, consensus, and deep an… │
+-╰──────────────────────────────────────────────────────────────────────────────╯
++╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
++│Identifier               Summary                                                                                 …│
++│──────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
++│──                                                                             │
++│utilities/analyze        Analyze structure, dependencies, and simplification opportunities                       …│
++│utilities/challenge      Pressure-test assumptions with counterarguments and evidence                            …│
++│utilities/codereview     Code review with severity-tagged findings and recommendations                           …│
++│utilities/commit         Pre-commit validation with diff analysis and commit message proposals                   …│
++│utilities/consensus      Structure multiple perspectives and synthesize recommendations                          …│
++│utilities/debug          Investigation-first debugging with hypotheses and minimal fixes                         …│
++│utilities/docgen         Generate documentation outlines and drafts for target audiences                         …│
++│utilities/identity-check Verify append_user_instructions_file wiring for testing                                 …│
++│utilities/install        Install Genie template and CLI setup for new projects                                   …│
++│utilities/prompt         Advanced prompting guidance and prompt refinement                                       …│
++│utilities/refactor       Plan staged refactors with risk assessment and verification                             …│
++│utilities/secaudit       Security audit with risk assessment and hardening recommendations                       …│
++│utilities/testgen        Generate test proposals with names, locations, and assertions                           …│
++│utilities/thinkdeep      Timeboxed deep reasoning with explicit steps and scoped exploration                     …│
++│utilities/tracer         Propose instrumentation and observability signals for systems                           …│
++│utilities/twin           Pressure-test ideas with planning, consensus, and deep analysis                         …│
++╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+ ╭──────────────────────────────────────────────────────────────────────────────╮
+ │ 💡 Commands                                                                  │
+ │ genie run <agent-id> "<prompt>"                                              │

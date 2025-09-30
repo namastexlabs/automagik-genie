@@ -1,0 +1,10 @@
+--- baseline-20250930-184841/error-run-no-args.txt	2025-09-30 18:48:47.453182945 -0300
++++ .genie/cli/snapshots/current-20250930-193831/error-run-no-args.txt	2025-09-30 19:38:31.116265068 -0300
+@@ -1,5 +1,2 @@
+-╔══════════════════════════════════════════════════════════════════════════════╗
+-║ ❌ Fatal error                                                                ║
+-║ Usage: genie run <agent> "<prompt>"                                          ║
+-╚══════════════════════════════════════════════════════════════════════════════╝
+-Exit code: 1
++./validate-against-baseline.sh: line 28: ./genie: No such file or directory
++Exit code: 127

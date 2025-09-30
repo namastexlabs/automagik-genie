@@ -1,0 +1,68 @@
+╭───────────╮ ╭───────────╮
+│ 36 agents │ │ 4 folders │
+╰───────────╯ ╰───────────╯
+root (5)
+╭─────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│Identifier  Summary                                                                                 …│
+│─────────────────────────────────────────────────────────────────────────────────────────────────────│
+│──                                                                             │
+│forge       Break wishes into execution groups with task files and validation hooks                 …│
+│plan        Turn raw ideas into roadmap-ready wishes with product context                           …│
+│review      Validate wish delivery by consolidating evidence and rerunning checks                   …│
+│test-claude Test agent for Claude executor validation                                               …│
+│wish        Convert ideas into roadmap-aligned wishes with spec contracts                           …│
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯
+qa (4)
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│Identifier               Summary                                                                                 …│
+│──────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
+│──                                                                             │
+│qa/claude-parameter-test Comprehensive Claude executor parameter validation                                      …│
+│qa/codex-parameter-test  Comprehensive Codex executor parameter validation                                       …│
+│qa/test-claude-params    Test Claude executor parameters                                                         …│
+│qa/test-modular-cli      Test agent for CLI modularization validation                                            …│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+specialists (11)
+╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│Identifier                  Summary                                                                                 …│
+│─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
+│──                                                                             │
+│specialists/bug-reporter    Triage incidents and create GitHub-ready bug reports                                    …│
+│specialists/genie-qa        End-to-end validation of Genie CLI commands and workflows                               …│
+│specialists/git-workflow    Orchestrate safe Git workflows aligned with Genie conventions                           …│
+│specialists/implementor     End-to-end feature implementation with TDD discipline                                   …│
+│specialists/learn           Meta-learning agent for surgical documentation updates                                  …│
+│specialists/polish          Type-checking, linting, and formatting for code quality                                 …│
+│specialists/project-manager Verify task completion and update roadmap status                                        …│
+│specialists/qa              End-to-end and manual validation of wishes and deliveries                               …│
+│specialists/self-learn      Record violations and propagate behavioral lessons across agents                        …│
+│specialists/sleepy          Autonomous wish coordinator with Twin Genie validation                                  …│
+│specialists/tests           Author new tests and repair failing test suites across all layers                       …│
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+utilities (16)
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│Identifier               Summary                                                                                 …│
+│──────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
+│──                                                                             │
+│utilities/analyze        Analyze structure, dependencies, and simplification opportunities                       …│
+│utilities/challenge      Pressure-test assumptions with counterarguments and evidence                            …│
+│utilities/codereview     Code review with severity-tagged findings and recommendations                           …│
+│utilities/commit         Pre-commit validation with diff analysis and commit message proposals                   …│
+│utilities/consensus      Structure multiple perspectives and synthesize recommendations                          …│
+│utilities/debug          Investigation-first debugging with hypotheses and minimal fixes                         …│
+│utilities/docgen         Generate documentation outlines and drafts for target audiences                         …│
+│utilities/identity-check Verify append_user_instructions_file wiring for testing                                 …│
+│utilities/install        Install Genie template and CLI setup for new projects                                   …│
+│utilities/prompt         Advanced prompting guidance and prompt refinement                                       …│
+│utilities/refactor       Plan staged refactors with risk assessment and verification                             …│
+│utilities/secaudit       Security audit with risk assessment and hardening recommendations                       …│
+│utilities/testgen        Generate test proposals with names, locations, and assertions                           …│
+│utilities/thinkdeep      Timeboxed deep reasoning with explicit steps and scoped exploration                     …│
+│utilities/tracer         Propose instrumentation and observability signals for systems                           …│
+│utilities/twin           Pressure-test ideas with planning, consensus, and deep analysis                         …│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ 💡 Commands                                                                  │
+│ genie run <agent-id> "<prompt>"                                              │
+│ genie list sessions                                                          │
+╰──────────────────────────────────────────────────────────────────────────────╯

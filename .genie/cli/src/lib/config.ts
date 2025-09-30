@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import type { GenieConfig, ConfigPaths, CLIOptions } from './types';
 import { loadExecutors, DEFAULT_EXECUTOR_KEY } from '../executors';
+import { deepClone, mergeDeep } from './utils';
 
 let YAML: typeof import('yaml') | null = null;
 try {
@@ -133,24 +134,6 @@ export function loadConfig(): GenieConfig {
   return config;
 }
 
-export function mergeDeep(target: any, source: any): any {
-  if (source === null || source === undefined) return target;
-  if (Array.isArray(source)) {
-    return source.slice();
-  }
-  if (typeof source !== 'object') {
-    return source;
-  }
-  const base = target && typeof target === 'object' && !Array.isArray(target) ? { ...target } : {};
-  Object.entries(source).forEach(([key, value]) => {
-    base[key] = mergeDeep(base[key], value);
-  });
-  return base;
-}
-
-function deepClone<T>(input: T): T {
-  return JSON.parse(JSON.stringify(input)) as T;
-}
 
 export function resolvePaths(paths: ConfigPaths): Required<ConfigPaths> {
   const baseDir = paths.baseDir || '.';

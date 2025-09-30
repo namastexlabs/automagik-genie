@@ -13,13 +13,24 @@ import {
   SessionStore,
   SessionEntry
 } from '../session-store';
-import { backgroundManager } from '../lib/background-manager-instance';
-import { sleep } from '../lib/async';
 import { DEFAULT_CONFIG } from '../lib/config-defaults';
 import { emitView } from '../lib/view-helpers';
 import { buildRunCompletionView } from '../views/background';
 import type { ExecutorCommand } from '../executors/types';
-import { EXECUTORS, DEFAULT_EXECUTOR_KEY } from '../lib/executor-registry';
+import { maybeHandleBackgroundLaunch } from '../lib/background-launcher';
+import {
+  resolveExecutorKey,
+  requireExecutor,
+  extractExecutorOverrides,
+  buildExecutorConfig,
+  resolveExecutorPaths
+} from '../lib/executor-config';
+import {
+  parseSessionUpdate,
+  createSessionUpdateHandler,
+  attachOutputListener,
+  createLogPollingHandler
+} from '../lib/session-updater';
 
 export async function runChat(
   parsed: ParsedCommand,
@@ -120,71 +131,6 @@ export async function runChat(
   });
 }
 
-export async function maybeHandleBackgroundLaunch(params: {
-  parsed: ParsedCommand;
-  config: GenieConfig;
-  paths: Required<ConfigPaths>;
-  store: SessionStore;
-  entry: SessionEntry;
-  agentName: string;
-  executorKey: string;
-  executionMode: string;
-  startTime: number;
-  logFile: string;
-  allowResume: boolean;
-}): Promise<boolean> {
-  const { parsed, config, paths, store, entry, agentName, executorKey, executionMode, startTime, logFile, allowResume } = params;
-
-  if (!parsed.options.background || parsed.options.backgroundRunner) {
-    return false;
-  }
-
-  const runnerPid = backgroundManager.launch({
-    rawArgs: parsed.options.rawArgs,
-    startTime,
-    logFile,
-    backgroundConfig: config.background,
-    scriptPath: path.resolve(__dirname, '..', 'genie.js')
-  });
-
-  entry.runnerPid = runnerPid;
-  entry.status = 'running';
-  entry.background = parsed.options.background;
-  saveSessions(paths as SessionPathsConfig, store);
-
-  process.stdout.write(`▸ Launching ${agentName} in background...\n`);
-  process.stdout.write(`▸ Waiting for session ID...\n`);
-
-  const pollStart = Date.now();
-  const pollTimeout = 20000;
-  const pollInterval = 500;
-
-  while (Date.now() - pollStart < pollTimeout) {
-    await sleep(pollInterval);
-    const liveStore = loadSessions(paths as SessionPathsConfig, config as SessionLoadConfig, DEFAULT_CONFIG as any);
-    const liveEntry = liveStore.agents?.[agentName];
-
-    if (liveEntry?.sessionId) {
-      const elapsed = ((Date.now() - pollStart) / 1000).toFixed(1);
-      entry.sessionId = liveEntry.sessionId;
-      process.stdout.write(`▸ Session ID: ${liveEntry.sessionId} (${elapsed}s)\n\n`);
-      process.stdout.write(`  View output:\n`);
-      process.stdout.write(`    ./genie view ${liveEntry.sessionId}\n\n`);
-      process.stdout.write(`  Continue conversation:\n`);
-      process.stdout.write(`    ./genie resume ${liveEntry.sessionId} "<your message>"\n\n`);
-      process.stdout.write(`  Stop session:\n`);
-      process.stdout.write(`    ./genie stop ${liveEntry.sessionId}\n`);
-      return true;
-    }
-  }
-
-  process.stdout.write(`▸ Session started but ID not available yet (timeout after 20s)\n\n`);
-  process.stdout.write(`  List sessions to find ID:\n`);
-  process.stdout.write(`    ./genie list sessions\n\n`);
-  process.stdout.write(`  Then view output:\n`);
-  process.stdout.write(`    ./genie view <sessionId>\n`);
-  return true;
-}
 
 export function executeRun(args: ExecuteRunArgs): Promise<void> {
   const {
@@ -228,53 +174,20 @@ export function executeRun(args: ExecuteRunArgs): Promise<void> {
 
   let filteredStdout: NodeJS.ReadWriteStream | null = null;
 
-  const updateSessionFromLine = (line: string) => {
-    const trimmed = line.trim();
-    if (!trimmed.startsWith('{')) return;
-    try {
-      const data = JSON.parse(trimmed);
-      if (data && typeof data === 'object' && data.type === 'session.created') {
-        const sessionId = data.session_id || data.sessionId;
-        if (sessionId) {
-          if (entry.sessionId !== sessionId) {
-            entry.sessionId = sessionId;
-            entry.lastUsed = new Date().toISOString();
-            saveSessions(paths as SessionPathsConfig, store);
-          }
-        }
-      }
-    } catch {
-      // ignore malformed JSON lines
-    }
-  };
+  const updateSessionHandler = createSessionUpdateHandler(entry, store, paths);
 
   let outputSource: NodeJS.ReadableStream | null = null;
-
-  const attachOutputListener = (stream: NodeJS.ReadableStream) => {
-    let buffer = '';
-    stream.on('data', (chunk: Buffer | string) => {
-      const text = chunk instanceof Buffer ? chunk.toString('utf8') : chunk;
-      buffer += text;
-      let index = buffer.indexOf('\n');
-      while (index !== -1) {
-        const line = buffer.slice(0, index);
-        buffer = buffer.slice(index + 1);
-        updateSessionFromLine(line);
-        index = buffer.indexOf('\n');
-      }
-    });
-  };
 
   if (proc.stdout) {
     if (executor.createOutputFilter) {
       filteredStdout = executor.createOutputFilter(logStream);
       outputSource = filteredStdout;
-      attachOutputListener(filteredStdout);
+      attachOutputListener(filteredStdout, updateSessionHandler);
       proc.stdout.pipe(filteredStdout);
     } else {
       proc.stdout.pipe(logStream);
       outputSource = proc.stdout;
-      attachOutputListener(proc.stdout);
+      attachOutputListener(proc.stdout, updateSessionHandler);
     }
   }
   if (proc.stderr) proc.stderr.pipe(logStream);
@@ -304,27 +217,8 @@ export function executeRun(args: ExecuteRunArgs): Promise<void> {
   });
 
   const logViewer = executor.logViewer;
-  let logPollingActive = Boolean(logViewer?.readSessionIdFromLog);
-
-  if (logPollingActive) {
-    const pollSessionIdFromLog = () => {
-      if (!logPollingActive || entry.sessionId) return;
-      try {
-        const fromLog = logViewer?.readSessionIdFromLog?.(logFile) ?? null;
-        if (fromLog && entry.sessionId !== fromLog) {
-          entry.sessionId = fromLog;
-          entry.lastUsed = new Date().toISOString();
-          saveSessions(paths as SessionPathsConfig, store);
-          logPollingActive = false;
-          return;
-        }
-      } catch {
-        // ignore log polling errors
-      }
-      if (logPollingActive && !entry.sessionId) {
-        setTimeout(pollSessionIdFromLog, 500);
-      }
-    };
+  if (logViewer?.readSessionIdFromLog) {
+    const pollSessionIdFromLog = createLogPollingHandler(entry, store, paths, logFile, logViewer);
     setTimeout(pollSessionIdFromLog, 500);
   }
 
@@ -364,7 +258,6 @@ export function executeRun(args: ExecuteRunArgs): Promise<void> {
     entry.status = code === 0 ? 'completed' : 'failed';
     saveSessions(paths as SessionPathsConfig, store);
     logStream.end();
-    logPollingActive = false;
     const sessionFromLog = logViewer?.readSessionIdFromLog?.(logFile) ?? null;
     const resolvedSessionId = sessionFromLog || entry.sessionId || null;
     if (entry.sessionId !== resolvedSessionId) {
@@ -430,103 +323,4 @@ export function executeRun(args: ExecuteRunArgs): Promise<void> {
   return promise;
 }
 
-export function resolveExecutorKey(config: GenieConfig, modeName: string): string {
-  const modes = config.executionModes || config.presets || {};
-  const mode = modes[modeName];
-  if (mode && mode.executor) return mode.executor;
-  if (config.defaults && config.defaults.executor) return config.defaults.executor;
-  return DEFAULT_EXECUTOR_KEY;
-}
 
-export function requireExecutor(key: string): Executor {
-  const executor = EXECUTORS[key];
-  if (!executor) {
-    const available = Object.keys(EXECUTORS).join(', ') || 'none';
-    throw new Error(`Executor '${key}' not found. Available executors: ${available}`);
-  }
-  return executor;
-}
-
-export function buildExecutorConfig(config: GenieConfig, modeName: string, executorKey: string, agentOverrides: any): any {
-  const base = deepClone((config.executors && config.executors[executorKey]) || {});
-  const modes = config.executionModes || config.presets || {};
-  const mode = modes[modeName];
-  if (!mode && modeName && modeName !== 'default') {
-    const available = Object.keys(modes).join(', ') || 'default';
-    throw new Error(`Execution mode '${modeName}' not found. Available modes: ${available}`);
-  }
-  const overrides = getExecutorOverrides(mode, executorKey);
-  let merged = mergeDeep(base, overrides);
-  if (agentOverrides && Object.keys(agentOverrides).length) {
-    merged = mergeDeep(merged, agentOverrides);
-  }
-  return merged;
-}
-
-export function resolveExecutorPaths(paths: Required<ConfigPaths>, executorKey: string): any {
-  if (!paths.executors) return {};
-  return paths.executors[executorKey] || {};
-}
-
-function getExecutorOverrides(mode: any, executorKey: string): any {
-  if (!mode || !mode.overrides) return {};
-  const { overrides } = mode;
-  if (overrides.executors && overrides.executors[executorKey]) {
-    return overrides.executors[executorKey];
-  }
-  if (overrides[executorKey]) {
-    return overrides[executorKey];
-  }
-  return overrides;
-}
-
-export function extractExecutorOverrides(agentGenie: any, executorKey: string): any {
-  if (!agentGenie || typeof agentGenie !== 'object') return {};
-  const {
-    executor,
-    background: _background,
-    preset: _preset,
-    mode: _mode,
-    executionMode: _executionMode,
-    json: _json,
-    ...rest
-  } = agentGenie;
-  const overrides: Record<string, any> = {};
-  const executorDef = EXECUTORS[executorKey]?.defaults;
-  const topLevelKeys = executorDef ? new Set(Object.keys(executorDef)) : null;
-
-  Object.entries(rest || {}).forEach(([key, value]) => {
-    if (key === 'json') return;
-    if (key === 'exec' || key === 'resume') {
-      overrides[key] = mergeDeep(overrides[key], deepClone(value));
-      return;
-    }
-    if (topLevelKeys && topLevelKeys.has(key)) {
-      overrides[key] = mergeDeep(overrides[key], deepClone(value));
-      return;
-    }
-    if (!overrides.exec) overrides.exec = {};
-    overrides.exec[key] = mergeDeep(overrides.exec[key], deepClone(value));
-  });
-
-  return overrides;
-}
-
-function deepClone<T>(input: T): T {
-  return JSON.parse(JSON.stringify(input)) as T;
-}
-
-function mergeDeep(target: any, source: any): any {
-  if (source === null || source === undefined) return target;
-  if (Array.isArray(source)) {
-    return source.slice();
-  }
-  if (typeof source !== 'object') {
-    return source;
-  }
-  const base = target && typeof target === 'object' && !Array.isArray(target) ? { ...target } : {};
-  Object.entries(source).forEach(([key, value]) => {
-    base[key] = mergeDeep(base[key], value);
-  });
-  return base;
-}

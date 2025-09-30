@@ -10,6 +10,8 @@ exports.sanitizeLogFilename = sanitizeLogFilename;
 exports.safeIsoString = safeIsoString;
 exports.deriveStartTime = deriveStartTime;
 exports.deriveLogFile = deriveLogFile;
+exports.deepClone = deepClone;
+exports.mergeDeep = mergeDeep;
 const path_1 = __importDefault(require("path"));
 const background_manager_1 = require("../background-manager");
 /**
@@ -157,4 +159,28 @@ function deriveLogFile(agentName, startTime, paths, isBackgroundRunner = false) 
         return envPath;
     const filename = `${sanitizeLogFilename(agentName)}-${startTime}.log`;
     return path_1.default.join(paths.logsDir || '.genie/state/agents/logs', filename);
+}
+/**
+ * Deep clone an object using JSON serialization
+ */
+function deepClone(input) {
+    return JSON.parse(JSON.stringify(input));
+}
+/**
+ * Deep merge source into target recursively
+ */
+function mergeDeep(target, source) {
+    if (source === null || source === undefined)
+        return target;
+    if (Array.isArray(source)) {
+        return source.slice();
+    }
+    if (typeof source !== 'object') {
+        return source;
+    }
+    const base = target && typeof target === 'object' && !Array.isArray(target) ? { ...target } : {};
+    Object.entries(source).forEach(([key, value]) => {
+        base[key] = mergeDeep(base[key], value);
+    });
+    return base;
 }

@@ -8,13 +8,13 @@ exports.getStartupWarnings = getStartupWarnings;
 exports.clearStartupWarnings = clearStartupWarnings;
 exports.buildDefaultConfig = buildDefaultConfig;
 exports.loadConfig = loadConfig;
-exports.mergeDeep = mergeDeep;
 exports.resolvePaths = resolvePaths;
 exports.prepareDirectories = prepareDirectories;
 exports.applyDefaults = applyDefaults;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const executors_1 = require("../executors");
+const utils_1 = require("./utils");
 let YAML = null;
 try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -95,7 +95,7 @@ function clearStartupWarnings() {
     startupWarnings.length = 0;
 }
 function buildDefaultConfig() {
-    const config = deepClone(BASE_CONFIG);
+    const config = (0, utils_1.deepClone)(BASE_CONFIG);
     config.executors = config.executors || {};
     Object.entries(EXECUTORS).forEach(([key, executor]) => {
         config.executors[key] = executor.defaults || {};
@@ -103,7 +103,7 @@ function buildDefaultConfig() {
     return config;
 }
 function loadConfig() {
-    let config = deepClone(buildDefaultConfig());
+    let config = (0, utils_1.deepClone)(buildDefaultConfig());
     const configFilePath = fs_1.default.existsSync(CONFIG_PATH) ? CONFIG_PATH : null;
     if (configFilePath) {
         try {
@@ -125,7 +125,7 @@ function loadConfig() {
                     recordStartupWarning('[genie] YAML module unavailable; ignoring config overrides. Install "yaml" to enable parsing.');
                     parsed = {};
                 }
-                config = mergeDeep(config, parsed);
+                config = (0, utils_1.mergeDeep)(config, parsed);
             }
         }
         catch (error) {
@@ -138,24 +138,6 @@ function loadConfig() {
         config.__configPath = CONFIG_PATH;
     }
     return config;
-}
-function mergeDeep(target, source) {
-    if (source === null || source === undefined)
-        return target;
-    if (Array.isArray(source)) {
-        return source.slice();
-    }
-    if (typeof source !== 'object') {
-        return source;
-    }
-    const base = target && typeof target === 'object' && !Array.isArray(target) ? { ...target } : {};
-    Object.entries(source).forEach(([key, value]) => {
-        base[key] = mergeDeep(base[key], value);
-    });
-    return base;
-}
-function deepClone(input) {
-    return JSON.parse(JSON.stringify(input));
 }
 function resolvePaths(paths) {
     const baseDir = paths.baseDir || '.';

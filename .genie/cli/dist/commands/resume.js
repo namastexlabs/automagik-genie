@@ -9,6 +9,8 @@ const path_1 = __importDefault(require("path"));
 const session_store_1 = require("../session-store");
 const session_helpers_1 = require("../lib/session-helpers");
 const run_1 = require("./run");
+const background_launcher_1 = require("../lib/background-launcher");
+const executor_config_1 = require("../lib/executor-config");
 const utils_1 = require("../lib/utils");
 const config_defaults_1 = require("../lib/config-defaults");
 const agent_resolver_1 = require("../lib/agent-resolver");
@@ -24,7 +26,7 @@ async function runContinue(parsed, config, paths) {
     const found = (0, session_helpers_1.findSessionEntry)(store, sessionIdArg, paths);
     if (!found) {
         const executorKey = config.defaults?.executor || executor_registry_1.DEFAULT_EXECUTOR_KEY;
-        const executor = (0, run_1.requireExecutor)(executorKey);
+        const executor = (0, executor_config_1.requireExecutor)(executorKey);
         if (executor.tryLocateSessionFileBySessionId && executor.resolvePaths) {
             const executorConfig = config.executors?.[executorKey] || {};
             const executorPaths = executor.resolvePaths({
@@ -69,11 +71,11 @@ async function runContinue(parsed, config, paths) {
             : defaultMode;
     session.mode = modeName;
     session.preset = modeName;
-    const executorKey = session.executor || agentGenie.executor || (0, run_1.resolveExecutorKey)(config, modeName);
-    const executor = (0, run_1.requireExecutor)(executorKey);
-    const executorOverrides = (0, run_1.extractExecutorOverrides)(agentGenie, executorKey);
-    const executorConfig = (0, run_1.buildExecutorConfig)(config, modeName, executorKey, executorOverrides);
-    const executorPaths = (0, run_1.resolveExecutorPaths)(paths, executorKey);
+    const executorKey = session.executor || agentGenie.executor || (0, executor_config_1.resolveExecutorKey)(config, modeName);
+    const executor = (0, executor_config_1.requireExecutor)(executorKey);
+    const executorOverrides = (0, executor_config_1.extractExecutorOverrides)(agentGenie, executorKey);
+    const executorConfig = (0, executor_config_1.buildExecutorConfig)(config, modeName, executorKey, executorOverrides);
+    const executorPaths = (0, executor_config_1.resolveExecutorPaths)(paths, executorKey);
     const command = executor.buildResumeCommand({
         config: executorConfig,
         sessionId: session.sessionId || undefined,
@@ -92,7 +94,7 @@ async function runContinue(parsed, config, paths) {
     session.exitCode = null;
     session.signal = null;
     (0, session_store_1.saveSessions)(paths, store);
-    const handledBackground = await (0, run_1.maybeHandleBackgroundLaunch)({
+    const handledBackground = await (0, background_launcher_1.maybeHandleBackgroundLaunch)({
         parsed,
         config,
         paths,

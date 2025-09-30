@@ -28,7 +28,7 @@
   - [ ] Minimal surface area changes, focused scope (5 pts) – Pending: Group execution
   - [ ] Clean abstractions and patterns (5 pts) – Pending: Review extracted modules
 - **Test Coverage (10 pts)**
-  - [x] Unit tests for new behavior (4 pts) – Snapshot validation = behavior test
+  - [ ] Unit tests for new behavior (4 pts) – Pending: Snapshot validation = behavior test
   - [ ] Integration tests for workflows (4 pts) – Pending: Parameter QA tests post-refactor
   - [ ] Evidence of test execution captured (2 pts) – Pending: QA logs at `.genie/cli/snapshots/`
 - **Documentation (5 pts)**
@@ -605,6 +605,7 @@ cd ../..
 
 - [2025-09-30 15:00Z] Wish created with evidence-based analysis + Twin enhancement review
 - [2025-09-30 17:30Z] Enhanced with 100-point evaluation matrix
+- [2025-09-30 18:30Z] Implementation completed - genie.ts reduced to 143 lines (93% reduction)
 
 ---
 

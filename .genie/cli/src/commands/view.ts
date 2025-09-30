@@ -17,7 +17,7 @@ import {
   sliceForRecent as sliceTranscriptForRecent
 } from '../executors/transcript-utils';
 import { DEFAULT_EXECUTOR_KEY } from '../lib/executor-registry';
-import { requireExecutor } from './run';
+import { requireExecutor } from '../lib/executor-config';
 import { DEFAULT_CONFIG } from '../lib/config-defaults';
 import { formatPathRelative } from '../lib/utils';
 import type { Tone, ViewStyle } from '../view';

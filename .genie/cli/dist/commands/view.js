@@ -13,7 +13,7 @@ const common_1 = require("../views/common");
 const chat_1 = require("../views/chat");
 const transcript_utils_1 = require("../executors/transcript-utils");
 const executor_registry_1 = require("../lib/executor-registry");
-const run_1 = require("./run");
+const executor_config_1 = require("../lib/executor-config");
 const config_defaults_1 = require("../lib/config-defaults");
 const utils_1 = require("../lib/utils");
 async function runView(parsed, config, paths) {
@@ -28,7 +28,7 @@ async function runView(parsed, config, paths) {
     let orphanedSession = false;
     if (!found) {
         const executorKey = config.defaults?.executor || executor_registry_1.DEFAULT_EXECUTOR_KEY;
-        const executor = (0, run_1.requireExecutor)(executorKey);
+        const executor = (0, executor_config_1.requireExecutor)(executorKey);
         if (executor.tryLocateSessionFileBySessionId && executor.resolvePaths) {
             const executorConfig = config.executors?.[executorKey] || {};
             const executorPaths = executor.resolvePaths({
@@ -90,7 +90,7 @@ async function runView(parsed, config, paths) {
     }
     const { entry } = found;
     const executorKey = entry.executor || config.defaults?.executor || executor_registry_1.DEFAULT_EXECUTOR_KEY;
-    const executor = (0, run_1.requireExecutor)(executorKey);
+    const executor = (0, executor_config_1.requireExecutor)(executorKey);
     const logViewer = executor.logViewer;
     const logFile = entry.logFile;
     if (!logFile || !fs_1.default.existsSync(logFile)) {

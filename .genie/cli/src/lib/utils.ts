@@ -141,3 +141,28 @@ export function deriveLogFile(
   const filename = `${sanitizeLogFilename(agentName)}-${startTime}.log`;
   return path.join(paths.logsDir || '.genie/state/agents/logs', filename);
 }
+
+/**
+ * Deep clone an object using JSON serialization
+ */
+export function deepClone<T>(input: T): T {
+  return JSON.parse(JSON.stringify(input)) as T;
+}
+
+/**
+ * Deep merge source into target recursively
+ */
+export function mergeDeep(target: any, source: any): any {
+  if (source === null || source === undefined) return target;
+  if (Array.isArray(source)) {
+    return source.slice();
+  }
+  if (typeof source !== 'object') {
+    return source;
+  }
+  const base = target && typeof target === 'object' && !Array.isArray(target) ? { ...target } : {};
+  Object.entries(source).forEach(([key, value]) => {
+    base[key] = mergeDeep(base[key], value);
+  });
+  return base;
+}

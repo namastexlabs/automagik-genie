@@ -1,0 +1,42 @@
+--- .genie/cli/snapshots/baseline-20250930-184841/file-list.txt	2025-09-30 18:48:55.882848706 -0300
++++ .genie/cli/snapshots/current-20250930-194830/file-list.txt	2025-09-30 19:48:44.446490177 -0300
+@@ -0,0 +1,39 @@
++.genie/cli/src/background-manager.ts
++.genie/cli/src/commands/help.ts
++.genie/cli/src/commands/list.ts
++.genie/cli/src/commands/resume.ts
++.genie/cli/src/commands/run.ts
++.genie/cli/src/commands/stop.ts
++.genie/cli/src/commands/view.ts
++.genie/cli/src/executors/__demo__/transcript-utils-demo.ts
++.genie/cli/src/executors/claude-log-viewer.ts
++.genie/cli/src/executors/claude.ts
++.genie/cli/src/executors/codex-log-viewer.ts
++.genie/cli/src/executors/codex.ts
++.genie/cli/src/executors/index.ts
++.genie/cli/src/executors/transcript-utils.ts
++.genie/cli/src/executors/types.ts
++.genie/cli/src/genie.ts
++.genie/cli/src/lib/agent-resolver.ts
++.genie/cli/src/lib/async.ts
++.genie/cli/src/lib/background-manager-instance.ts
++.genie/cli/src/lib/cli-parser.ts
++.genie/cli/src/lib/config-defaults.ts
++.genie/cli/src/lib/config.ts
++.genie/cli/src/lib/executor-registry.ts
++.genie/cli/src/lib/session-helpers.ts
++.genie/cli/src/lib/types.ts
++.genie/cli/src/lib/utils.ts
++.genie/cli/src/lib/view-helpers.ts
++.genie/cli/src/session-store.ts
++.genie/cli/src/types/gradient-string.d.ts
++.genie/cli/src/view/index.ts
++.genie/cli/src/view/theme.ts
++.genie/cli/src/view/view-model.ts
++.genie/cli/src/views/agent-catalog.ts
++.genie/cli/src/views/background.ts
++.genie/cli/src/views/chat.ts
++.genie/cli/src/views/common.ts
++.genie/cli/src/views/help.ts
++.genie/cli/src/views/runs.ts
++.genie/cli/src/views/stop.ts

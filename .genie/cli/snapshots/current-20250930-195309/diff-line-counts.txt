@@ -1,0 +1,17 @@
+--- .genie/cli/snapshots/baseline-20250930-195124/line-counts.txt	2025-09-30 19:51:40.547370859 -0300
++++ .genie/cli/snapshots/current-20250930-195309/line-counts.txt	2025-09-30 19:53:22.122114143 -0300
+@@ -1,7 +1,7 @@
+     42 .genie/cli/src/commands/help.ts
+    141 .genie/cli/src/commands/list.ts
+    159 .genie/cli/src/commands/resume.ts
+-   460 .genie/cli/src/commands/run.ts
++   408 .genie/cli/src/commands/run.ts
+     82 .genie/cli/src/commands/stop.ts
+    357 .genie/cli/src/commands/view.ts
+    265 .genie/cli/src/executors/claude-log-viewer.ts
+@@ -36,4 +36,4 @@
+    342 .genie/cli/src/views/help.ts
+     94 .genie/cli/src/views/runs.ts
+     76 .genie/cli/src/views/stop.ts
+-  5415 total
++  5363 total

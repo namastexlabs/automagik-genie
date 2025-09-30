@@ -1,0 +1,33 @@
+
+> build
+> pnpm run build:genie
+
+
+> automagik-genie-cli@ build:genie /home/namastex/workspace/automagik-genie
+> tsc -p .genie/cli/tsconfig.json
+
+.genie/cli/src/commands/resume.ts(13,3): error TS2459: Module '"./run"' declares 'maybeHandleBackgroundLaunch' locally, but it is not exported.
+.genie/cli/src/commands/run.ts(22,3): error TS2440: Import declaration conflicts with local declaration of 'resolveExecutorKey'.
+.genie/cli/src/commands/run.ts(23,3): error TS2440: Import declaration conflicts with local declaration of 'requireExecutor'.
+.genie/cli/src/commands/run.ts(24,3): error TS2440: Import declaration conflicts with local declaration of 'extractExecutorOverrides'.
+.genie/cli/src/commands/run.ts(25,3): error TS2440: Import declaration conflicts with local declaration of 'buildExecutorConfig'.
+.genie/cli/src/commands/run.ts(26,3): error TS2440: Import declaration conflicts with local declaration of 'resolveExecutorPaths'.
+.genie/cli/src/commands/run.ts(384,10): error TS2304: Cannot find name 'DEFAULT_EXECUTOR_KEY'.
+.genie/cli/src/commands/run.ts(388,20): error TS2552: Cannot find name 'EXECUTORS'. Did you mean 'executor'?
+.genie/cli/src/commands/run.ts(390,35): error TS2552: Cannot find name 'EXECUTORS'. Did you mean 'executor'?
+.genie/cli/src/commands/run.ts(397,16): error TS2304: Cannot find name 'deepClone'.
+.genie/cli/src/commands/run.ts(405,16): error TS2552: Cannot find name 'mergeDeep'. Did you mean 'merged'?
+.genie/cli/src/commands/run.ts(407,14): error TS2552: Cannot find name 'mergeDeep'. Did you mean 'merged'?
+.genie/cli/src/commands/run.ts(441,23): error TS2552: Cannot find name 'EXECUTORS'. Did you mean 'executor'?
+.genie/cli/src/commands/run.ts(447,24): error TS2304: Cannot find name 'mergeDeep'.
+.genie/cli/src/commands/run.ts(447,50): error TS2304: Cannot find name 'deepClone'.
+.genie/cli/src/commands/run.ts(451,24): error TS2304: Cannot find name 'mergeDeep'.
+.genie/cli/src/commands/run.ts(451,50): error TS2304: Cannot find name 'deepClone'.
+.genie/cli/src/commands/run.ts(455,27): error TS2304: Cannot find name 'mergeDeep'.
+.genie/cli/src/commands/run.ts(455,58): error TS2304: Cannot find name 'deepClone'.
+.genie/cli/src/lib/executor-config.ts(10,66): error TS2339: Property 'modes' does not exist on type 'GenieConfig'.
+.genie/cli/src/lib/executor-config.ts(69,66): error TS2339: Property 'modes' does not exist on type 'GenieConfig'.
+.genie/cli/src/lib/executor-config.ts(105,5): error TS2353: Object literal may only specify known properties, and 'executorStateDir' does not exist in type 'Required<ConfigPaths>'.
+.genie/cli/src/lib/executor-config.ts(105,29): error TS2339: Property 'executorStateDir' does not exist on type 'Required<ConfigPaths>'.
+ ELIFECYCLE  Command failed with exit code 2.
+Exit code: 2

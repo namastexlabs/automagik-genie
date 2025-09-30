@@ -1,0 +1,10 @@
+--- baseline-20250930-184841/error-list-invalid.txt	2025-09-30 18:48:50.188515983 -0300
++++ .genie/cli/snapshots/current-20250930-194653/error-list-invalid.txt	2025-09-30 19:46:53.459977423 -0300
+@@ -1,5 +1,2 @@
+-╔══════════════════════════════════════════════════════════════════════════════╗
+-║ ❌ Unknown list target                                                        ║
+-║ Unknown list target 'invalid'. Try 'agents' or 'sessions'.                   ║
+-╚══════════════════════════════════════════════════════════════════════════════╝
+-Exit code: 1
++./validate-against-baseline.sh: line 43: ./genie: No such file or directory
++Exit code: 127

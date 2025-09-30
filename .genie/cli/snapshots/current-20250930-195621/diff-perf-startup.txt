@@ -1,0 +1,5 @@
+--- .genie/cli/snapshots/baseline-20250930-195519/perf-startup.txt	2025-09-30 19:55:36.725848501 -0300
++++ .genie/cli/snapshots/current-20250930-195621/perf-startup.txt	2025-09-30 19:56:35.330106551 -0300
+@@ -1 +1 @@
+-Average: 0.943s
++Average: 0.544s

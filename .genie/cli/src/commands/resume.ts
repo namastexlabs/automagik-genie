@@ -8,15 +8,15 @@ import {
   SessionPathsConfig
 } from '../session-store';
 import { findSessionEntry } from '../lib/session-helpers';
+import { executeRun } from './run';
+import { maybeHandleBackgroundLaunch } from '../lib/background-launcher';
 import {
-  executeRun,
-  maybeHandleBackgroundLaunch,
   resolveExecutorKey,
   requireExecutor,
   buildExecutorConfig,
   resolveExecutorPaths,
   extractExecutorOverrides
-} from './run';
+} from '../lib/executor-config';
 import { deriveStartTime, deriveLogFile } from '../lib/utils';
 import { DEFAULT_CONFIG } from '../lib/config-defaults';
 import { loadAgentSpec } from '../lib/agent-resolver';
