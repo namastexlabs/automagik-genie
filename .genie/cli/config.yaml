@@ -13,6 +13,8 @@ paths:
   executors:
     codex:
       sessionsDir: .genie/state/agents/codex-sessions  # Codex session archive for rollout discovery
+    claude:
+      sessionsDir: null  # Claude manages own sessions in ~/.claude/projects/
 
 executors:
   codex:
@@ -40,6 +42,19 @@ executors:
       search: false
       last: false
       additionalArgs: []                     # extra CLI flags forwarded to `npx ... exec resume`
+  claude:
+    binary: claude                           # Claude CLI binary
+    packageSpec: null                        # Claude installed separately, not via npx
+    sessionExtractionDelayMs: 1000           # Claude session ID extraction delay
+    exec:
+      model: sonnet                          # default Claude model
+      permissionMode: default                # default, acceptEdits, bypassPermissions, plan
+      outputFormat: stream-json              # JSONL output format
+      allowedTools: []                       # tool filtering (empty = all allowed)
+      disallowedTools: []                    # tool filtering (empty = none blocked)
+      additionalArgs: []                     # extra CLI flags
+    resume:
+      additionalArgs: []                     # extra CLI flags for resume
 
 executionModes:
   default:
@@ -76,6 +91,25 @@ executionModes:
         model: gpt-5-codex
         sandbox: read-only
         includePlanTool: true
+  claude-default:
+    description: Claude Code with default permissions
+    executor: claude
+    overrides:
+      exec:
+        model: sonnet
+        permissionMode: default
+  claude-careful:
+    description: Claude Code read-only mode
+    executor: claude
+    overrides:
+      exec:
+        permissionMode: acceptEdits
+  claude-plan:
+    description: Claude Code planning mode
+    executor: claude
+    overrides:
+      exec:
+        permissionMode: plan
 
 background:
   enabled: true
