@@ -3,8 +3,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.buildJsonlView = exports.extractSessionIdFromContent = exports.readSessionIdFromLog = void 0;
+exports.readSessionIdFromLog = readSessionIdFromLog;
+exports.extractSessionIdFromContent = extractSessionIdFromContent;
+exports.buildJsonlView = buildJsonlView;
 const fs_1 = __importDefault(require("fs"));
+const chat_1 = require("../views/chat");
 function readSessionIdFromLog(logFile) {
     if (!logFile)
         return null;
@@ -16,7 +19,6 @@ function readSessionIdFromLog(logFile) {
         return null;
     }
 }
-exports.readSessionIdFromLog = readSessionIdFromLog;
 function extractSessionIdFromContent(content) {
     const lines = Array.isArray(content) ? content : String(content).split(/\r?\n/);
     for (const line of lines) {
@@ -42,192 +44,209 @@ function extractSessionIdFromContent(content) {
     }
     return null;
 }
-exports.extractSessionIdFromContent = extractSessionIdFromContent;
-function buildJsonlView(ctx) {
-    const { render, parsed, paths, store, save, formatPathRelative, style } = ctx;
-    const { entry, jsonl, raw } = render;
-    const lastN = parsed.options.lines && parsed.options.lines > 0 ? parsed.options.lines : 60;
-    const assistantMessages = [];
-    const toolCalls = [];
-    const toolResults = [];
-    let finalResult = null;
-    let sessionIdFromEvents = null;
-    let tokenInfo = null;
-    let meta = {};
+/**
+ * Parse Claude JSONL events into ChatMessage[] for conversation view.
+ * Extracts all message types: assistant, user, reasoning, tool calls/results.
+ */
+function parseConversation(jsonl) {
+    const messages = [];
     jsonl.forEach((event) => {
         if (!event || typeof event !== 'object')
             return;
-        if (event.type === 'system') {
-            if (event.session_id) {
-                sessionIdFromEvents = sessionIdFromEvents || event.session_id;
-            }
-            if (event.model) {
-                meta.model = event.model;
-            }
-            return;
-        }
         if (event.type === 'assistant' && event.message?.content) {
             const content = event.message.content;
             if (!Array.isArray(content))
                 return;
+            const textParts = [];
+            const toolCalls = [];
             content.forEach((item) => {
                 if (item.type === 'text' && item.text) {
-                    assistantMessages.push(item.text.trim());
+                    textParts.push(item.text.trim());
                 }
                 else if (item.type === 'tool_use') {
-                    toolCalls.push({
-                        name: item.name || 'unknown',
-                        input: item.input || {},
-                        id: item.id || ''
-                    });
+                    const toolName = item.name || 'unknown';
+                    const toolInput = JSON.stringify(item.input || {}, null, 2);
+                    const toolId = item.id ? ` (${item.id})` : '';
+                    toolCalls.push(`${toolName}${toolId}\n${toolInput}`);
                 }
             });
+            if (textParts.length > 0) {
+                messages.push({
+                    role: 'assistant',
+                    title: 'Assistant',
+                    body: textParts
+                });
+            }
+            if (toolCalls.length > 0) {
+                messages.push({
+                    role: 'tool',
+                    title: `Tool Call${toolCalls.length > 1 ? 's' : ''}`,
+                    body: toolCalls
+                });
+            }
             return;
         }
         if (event.type === 'user' && event.message?.content) {
             const content = event.message.content;
             if (!Array.isArray(content))
                 return;
+            const textParts = [];
+            const toolResults = [];
             content.forEach((item) => {
-                if (item.type === 'tool_result') {
-                    toolResults.push({
-                        tool_use_id: item.tool_use_id || '',
-                        content: typeof item.content === 'string' ? item.content : JSON.stringify(item.content)
-                    });
+                if (item.type === 'text' && item.text) {
+                    textParts.push(item.text.trim());
                 }
+                else if (item.type === 'tool_result') {
+                    const toolId = item.tool_use_id ? ` [${item.tool_use_id}]` : '';
+                    const resultContent = typeof item.content === 'string' ? item.content : JSON.stringify(item.content, null, 2);
+                    toolResults.push(`${toolId}\n${resultContent}`);
+                }
+            });
+            if (textParts.length > 0) {
+                messages.push({
+                    role: 'action',
+                    title: 'User',
+                    body: textParts
+                });
+            }
+            if (toolResults.length > 0) {
+                messages.push({
+                    role: 'tool',
+                    title: `Tool Result${toolResults.length > 1 ? 's' : ''}`,
+                    body: toolResults
+                });
+            }
+            return;
+        }
+        if (event.type === 'result' && event.result) {
+            const resultText = typeof event.result === 'string' ? event.result : JSON.stringify(event.result, null, 2);
+            messages.push({
+                role: 'assistant',
+                title: 'Final Result',
+                body: [resultText]
             });
             return;
         }
-        if (event.type === 'result') {
-            if (event.result) {
-                finalResult = typeof event.result === 'string' ? event.result : JSON.stringify(event.result);
-            }
-            if (event.usage) {
-                tokenInfo = {
-                    input_tokens: event.usage.input_tokens || 0,
-                    output_tokens: event.usage.output_tokens || 0,
-                    total_tokens: (event.usage.input_tokens || 0) + (event.usage.output_tokens || 0)
-                };
+    });
+    return messages;
+}
+/**
+ * Extract metrics from Claude JSONL events and format for header meta items.
+ * Follows Metrics Summarization Specification from wish.
+ */
+function extractMetrics(jsonl) {
+    const metrics = [];
+    let tokenInfo = null;
+    let model = null;
+    const toolCallCounts = new Map();
+    jsonl.forEach((event) => {
+        if (!event || typeof event !== 'object')
+            return;
+        if (event.type === 'system' && event.model) {
+            model = event.model;
+            return;
+        }
+        if (event.type === 'assistant' && event.message?.content) {
+            const content = event.message.content;
+            if (Array.isArray(content)) {
+                content.forEach((item) => {
+                    if (item.type === 'tool_use' && item.name) {
+                        const toolName = item.name;
+                        toolCallCounts.set(toolName, (toolCallCounts.get(toolName) || 0) + 1);
+                    }
+                });
             }
             return;
+        }
+        if (event.type === 'result' && event.usage) {
+            tokenInfo = {
+                input_tokens: event.usage.input_tokens || 0,
+                output_tokens: event.usage.output_tokens || 0,
+                total_tokens: (event.usage.input_tokens || 0) + (event.usage.output_tokens || 0)
+            };
+            return;
+        }
+    });
+    if (tokenInfo) {
+        const info = tokenInfo;
+        const inp = info.input_tokens ?? 0;
+        const out = info.output_tokens ?? 0;
+        const total = info.total_tokens ?? (inp + out);
+        metrics.push({ label: 'Tokens', value: `in:${inp} out:${out} total:${total}` });
+    }
+    if (toolCallCounts.size > 0) {
+        const totalCalls = Array.from(toolCallCounts.values()).reduce((sum, count) => sum + count, 0);
+        const topTools = Array.from(toolCallCounts.entries())
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 2);
+        const topToolsStr = topTools.map(([tool, count]) => `${tool}:${count}`).join(' ');
+        const moreCount = toolCallCounts.size > 2 ? ` +${toolCallCounts.size - 2} more` : '';
+        metrics.push({ label: 'Tool Calls', value: `${totalCalls} calls (${topToolsStr}${moreCount})` });
+    }
+    if (model) {
+        metrics.push({ label: 'Model', value: model });
+    }
+    return metrics;
+}
+/**
+ * Slice messages to show only the latest assistant message (and optional preceding reasoning).
+ * Used for --live mode.
+ */
+function sliceForLatest(messages) {
+    if (messages.length === 0)
+        return [];
+    let lastAssistantIdx = -1;
+    for (let i = messages.length - 1; i >= 0; i--) {
+        if (messages[i].role === 'assistant') {
+            lastAssistantIdx = i;
+            break;
+        }
+    }
+    if (lastAssistantIdx === -1)
+        return [];
+    let startIdx = lastAssistantIdx;
+    if (lastAssistantIdx > 0 && messages[lastAssistantIdx - 1].role === 'reasoning') {
+        startIdx = lastAssistantIdx - 1;
+    }
+    return messages.slice(startIdx);
+}
+function buildJsonlView(ctx) {
+    const { render, parsed, paths, store, save } = ctx;
+    const { entry, jsonl } = render;
+    let sessionIdFromEvents = null;
+    jsonl.forEach((event) => {
+        if (!event || typeof event !== 'object')
+            return;
+        if (event.type === 'system' && event.session_id) {
+            sessionIdFromEvents = sessionIdFromEvents || event.session_id;
         }
     });
     if (sessionIdFromEvents && !entry.sessionId) {
         entry.sessionId = sessionIdFromEvents;
         save(paths, store);
     }
-    const tailLines = raw.split(/\r?\n/).slice(-lastN);
-    const logLines = tailLines.map((line) => ({
-        text: `  ${line}`,
-        tone: classifyTone(line)
-    }));
-    const tokensItem = tokenInfo
-        ? (() => {
-            const info = tokenInfo;
-            return { label: 'Tokens', value: `in:${info.input_tokens ?? 0} out:${info.output_tokens ?? 0} total:${info.total_tokens ?? 0}` };
-        })()
-        : null;
-    return {
-        style,
-        title: `${entry.agent} session overview`,
-        body: {
-            type: 'layout',
-            direction: 'column',
-            gap: 1,
-            children: compact([
-                { type: 'heading', level: 1, text: entry.agent, accent: 'primary' },
-                {
-                    type: 'keyValue',
-                    columns: 1,
-                    items: [
-                        { label: 'Session', value: entry.sessionId || 'n/a', tone: entry.sessionId ? 'success' : 'muted' },
-                        { label: 'Log', value: formatPathRelative(entry.logFile, paths.baseDir) }
-                    ]
-                },
-                metaSection(meta),
-                assistantMessages.length
-                    ? listSection('Assistant', assistantMessages.slice(-3))
-                    : null,
-                toolCalls.length
-                    ? listSection('Tool Calls', toolCalls.slice(-5).map((call) => `${call.name}(${truncate(JSON.stringify(call.input), 120)})`))
-                    : null,
-                toolResults.length
-                    ? listSection('Tool Results', toolResults.slice(-5).map((result) => `[${result.tool_use_id}] ${truncate(result.content, 160)}`))
-                    : null,
-                finalResult
-                    ? {
-                        type: 'layout',
-                        direction: 'column',
-                        children: [
-                            { type: 'heading', level: 2, text: 'Final Result', accent: 'secondary' },
-                            { type: 'text', text: truncate(finalResult, 500), wrap: true, tone: 'muted' }
-                        ]
-                    }
-                    : null,
-                {
-                    type: 'keyValue',
-                    columns: 1,
-                    items: compact([
-                        { label: 'Assistant Messages', value: String(assistantMessages.length) },
-                        { label: 'Tool Calls', value: String(toolCalls.length) },
-                        { label: 'Tool Results', value: String(toolResults.length) },
-                        tokensItem
-                    ])
-                },
-                { type: 'heading', level: 2, text: `Raw Tail (${lastN} lines)`, accent: 'muted' },
-                { type: 'log', lines: logLines }
-            ])
-        },
-        meta: {
-            sessionId: entry.sessionId,
-            logFile: formatPathRelative(entry.logFile, paths.baseDir),
-            assistantMessages,
-            toolCalls,
-            toolResults,
-            finalResult,
-            tokenInfo,
-            tailLines
-        }
-    };
-}
-exports.buildJsonlView = buildJsonlView;
-function metaSection(meta) {
-    const rows = compact([
-        meta.model ? { label: 'Model', value: meta.model } : null
-    ]);
-    if (!rows.length)
-        return null;
-    return {
-        type: 'keyValue',
-        columns: 1,
-        items: rows
-    };
-}
-function listSection(title, items) {
-    return {
-        type: 'layout',
-        direction: 'column',
-        children: [
-            { type: 'heading', level: 2, text: title, accent: 'secondary' },
-            { type: 'list', items }
-        ]
-    };
-}
-function classifyTone(line) {
-    const upper = line.toUpperCase();
-    if (upper.includes('ERROR'))
-        return 'danger';
-    if (upper.includes('WARN'))
-        return 'warning';
-    return 'default';
-}
-function truncate(text, maxLength) {
-    if (text.length <= maxLength)
-        return text;
-    return text.slice(0, maxLength - 1) + '…';
-}
-function compact(items) {
-    return items.filter((item) => Boolean(item));
+    let allMessages = parseConversation(jsonl);
+    let messages;
+    let showFull = false;
+    if (parsed.options.full) {
+        messages = allMessages;
+        showFull = true;
+    }
+    else if (parsed.options.live) {
+        messages = sliceForLatest(allMessages);
+    }
+    else {
+        messages = allMessages.slice(-5);
+    }
+    const metrics = extractMetrics(jsonl);
+    return (0, chat_1.buildChatView)({
+        agent: entry.agent,
+        sessionId: entry.sessionId || null,
+        status: null,
+        messages,
+        meta: metrics,
+        showFull
+    });
 }
 exports.default = {
     readSessionIdFromLog,

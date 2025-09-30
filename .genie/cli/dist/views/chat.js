@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.buildChatView = void 0;
+exports.buildChatView = buildChatView;
 const GENIE_STYLE = 'genie';
 function buildChatView(params) {
     const { agent, sessionId, status, messages, meta = [], showFull, hint } = params;
@@ -69,7 +69,6 @@ function buildChatView(params) {
         }
     };
 }
-exports.buildChatView = buildChatView;
 function chatMessageNode(message) {
     const mapping = roleTheme(message.role);
     return {

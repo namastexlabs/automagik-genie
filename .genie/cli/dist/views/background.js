@@ -1,6 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.buildRunCompletionView = exports.buildBackgroundStartView = exports.buildBackgroundPendingView = exports.buildBackgroundStartingView = void 0;
+exports.buildBackgroundStartingView = buildBackgroundStartingView;
+exports.buildBackgroundPendingView = buildBackgroundPendingView;
+exports.buildBackgroundStartView = buildBackgroundStartView;
+exports.buildRunCompletionView = buildRunCompletionView;
 const GENIE_STYLE = 'genie';
 function buildBackgroundStartingView(params) {
     const frame = params.frame ?? '⠋';
@@ -34,7 +37,6 @@ function buildBackgroundStartingView(params) {
         }
     };
 }
-exports.buildBackgroundStartingView = buildBackgroundStartingView;
 function buildBackgroundPendingView(params) {
     const frame = params.frame ?? '⠙';
     return {
@@ -59,7 +61,6 @@ function buildBackgroundPendingView(params) {
         }
     };
 }
-exports.buildBackgroundPendingView = buildBackgroundPendingView;
 function buildBackgroundStartView(params) {
     const metaBadges = compact([
         params.sessionId
@@ -119,7 +120,6 @@ function buildBackgroundStartView(params) {
         }
     };
 }
-exports.buildBackgroundStartView = buildBackgroundStartView;
 function buildRunCompletionView(params) {
     const tone = params.outcome === 'success' ? 'success' : params.outcome === 'warning' ? 'warning' : 'danger';
     const title = params.outcome === 'success'
@@ -184,7 +184,6 @@ function buildRunCompletionView(params) {
         }
     };
 }
-exports.buildRunCompletionView = buildRunCompletionView;
 function compact(items) {
     return items.filter((item) => Boolean(item));
 }

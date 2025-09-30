@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.buildRunsOverviewView = void 0;
+exports.buildRunsOverviewView = buildRunsOverviewView;
 const GENIE_STYLE = 'genie';
 function buildRunsOverviewView(params) {
     const { active, recent, warnings } = params;
@@ -56,7 +56,6 @@ function buildRunsOverviewView(params) {
         }
     };
 }
-exports.buildRunsOverviewView = buildRunsOverviewView;
 function sectionWithTable(title, rows, emptyText) {
     const badge = {
         type: 'badge',

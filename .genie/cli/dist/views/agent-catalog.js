@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.buildAgentCatalogView = void 0;
+exports.buildAgentCatalogView = buildAgentCatalogView;
 const GENIE_STYLE = 'genie';
 function buildAgentCatalogView(params) {
     const { total, groups } = params;
@@ -54,7 +54,6 @@ function buildAgentCatalogView(params) {
         }
     };
 }
-exports.buildAgentCatalogView = buildAgentCatalogView;
 function buildGroupSection(group) {
     const badges = {
         type: 'layout',
