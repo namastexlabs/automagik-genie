@@ -1541,7 +1541,9 @@ function buildTranscriptFromEvents(events) {
             if (payload && payload.type === 'message') {
                 // Map payload roles to ChatRole types
                 const payloadRole = payload.role;
-                const role = payloadRole === 'assistant' ? 'assistant' : 'reasoning';
+                const role = payloadRole === 'assistant' ? 'assistant' :
+                    payloadRole === 'user' ? 'action' :
+                        'reasoning';
                 const title = payloadRole === 'assistant' ? 'Assistant' :
                     payloadRole === 'user' ? 'User' : 'System';
                 const content = payload.content;
@@ -1671,8 +1673,8 @@ function sliceTranscriptForLatest(messages) {
 function sliceTranscriptForRecent(messages) {
     if (!messages.length)
         return [];
-    // Show the last 20 messages or from the last 2 assistant messages, whichever is more
-    const maxMessages = 20;
+    // Show the last 5 messages or from the last 2 assistant messages, whichever is more
+    const maxMessages = 5;
     let assistantCount = 0;
     let cutoff = messages.length;
     for (let i = messages.length - 1; i >= 0; i--) {
