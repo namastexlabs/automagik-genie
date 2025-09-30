@@ -1,6 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.accentToColor = exports.toneToColor = exports.palette = void 0;
+exports.palette = void 0;
+exports.toneToColor = toneToColor;
+exports.accentToColor = accentToColor;
 exports.palette = {
     accent: {
         primary: '#8B5CF6',
@@ -36,7 +38,6 @@ function toneToColor(tone) {
             return undefined;
     }
 }
-exports.toneToColor = toneToColor;
 function accentToColor(accent) {
     if (!accent)
         return exports.palette.foreground.default;
@@ -48,4 +49,3 @@ function accentToColor(accent) {
         return exports.palette.accent.muted;
     return exports.palette.foreground.default;
 }
-exports.accentToColor = accentToColor;
