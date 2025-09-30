@@ -73,9 +73,9 @@ function simpleTable(title: string, rows: RunRow[]): ViewNode {
       {
         type: 'table' as const,
         columns: [
-          { key: 'agent', label: 'Agent' },
+          { key: 'agent', label: 'Agent', noTruncate: true },
           { key: 'status', label: 'Status', width: 10 },
-          { key: 'sessionId', label: 'Session', width: 36 },
+          { key: 'sessionId', label: 'Session', width: 36, noTruncate: true },
           { key: 'updated', label: 'Updated', width: 8 }
         ],
         rows: rows.map((row) => ({

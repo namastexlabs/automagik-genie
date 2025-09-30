@@ -28,6 +28,11 @@ async function main() {
             parsed.options.backgroundRunner = true;
             parsed.options.backgroundExplicit = true;
         }
+        else {
+            delete process.env[background_manager_1.INTERNAL_BACKGROUND_ENV];
+            delete process.env[background_manager_1.INTERNAL_START_TIME_ENV];
+            delete process.env[background_manager_1.INTERNAL_LOG_PATH_ENV];
+        }
         // Fast path for help commands - skip config loading
         const isHelpOnly = (parsed.command === 'help' || parsed.command === undefined) ||
             parsed.options.requestHelp;

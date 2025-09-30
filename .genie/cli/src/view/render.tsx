@@ -226,11 +226,16 @@ function renderTableNode(node: TableNode): React.ReactElement {
     ? Math.max(40, process.stdout.columns - 8) // Remove upper limit of 140 to allow wider tables
     : 120;
   const gapSize = 1;
-  const fixedWidthColumns = columns.map((col) => col.width !== undefined);
+  // Mark columns as unsqueezable if they have explicit width OR noTruncate flag
+  const unsqueezableColumns = columns.map((col) => col.width !== undefined || col.noTruncate === true);
   const baseWidths = columns.map((col) => {
     // Use explicit width if provided, otherwise calculate from label
     if (col.width !== undefined) {
       return col.width; // Don't clamp explicit widths
+    }
+    // For noTruncate columns, don't clamp the width
+    if (col.noTruncate) {
+      return col.label.length;
     }
     return clampWidth(col.label.length);
   });
@@ -241,52 +246,93 @@ function renderTableNode(node: TableNode): React.ReactElement {
 
       const raw = row[col.key];
       const value = raw == null ? '' : String(raw);
-      baseWidths[idx] = Math.max(baseWidths[idx], clampWidth(sanitized(value).length));
+      const contentLength = sanitized(value).length;
+
+      // For noTruncate columns, use actual content length without clamping
+      if (col.noTruncate) {
+        baseWidths[idx] = Math.max(baseWidths[idx], contentLength);
+      } else {
+        baseWidths[idx] = Math.max(baseWidths[idx], clampWidth(contentLength));
+      }
     });
   });
-  // Calculate minimum required width to preserve all fixed-width columns
-  const fixedWidthTotal = baseWidths.reduce((sum, width, idx) =>
-    fixedWidthColumns[idx] ? sum + width : sum, 0
+  // Calculate minimum required width to preserve all unsqueezable columns
+  const unsqueezableTotal = baseWidths.reduce((sum, width, idx) =>
+    unsqueezableColumns[idx] ? sum + width : sum, 0
   );
-  const flexibleCount = fixedWidthColumns.filter(fixed => !fixed).length;
+  const flexibleCount = unsqueezableColumns.filter(fixed => !fixed).length;
   const minFlexibleWidth = flexibleCount * MIN_COL_WIDTH;
   const gapTotal = gapSize * (baseWidths.length - 1);
-  const minRequiredWidth = fixedWidthTotal + minFlexibleWidth + gapTotal;
+  const minRequiredWidth = unsqueezableTotal + minFlexibleWidth + gapTotal;
 
-  // Create an array of minimum widths per column (use fixed width or MIN_COL_WIDTH)
+  // Create an array of minimum widths per column (use natural width for unsqueezable, MIN_COL_WIDTH for flexible)
   const minWidthPerColumn = baseWidths.map((width, idx) =>
-    fixedWidthColumns[idx] ? width : MIN_COL_WIDTH
+    unsqueezableColumns[idx] ? width : MIN_COL_WIDTH
   );
 
   // Allow wide tables to preserve content (may overflow narrow terminals)
   const allowedWidth = Math.max(termWidth, sumWithGaps(baseWidths, gapSize));
-  const widths = squeezeWidthsWithMinimums(baseWidths.slice(), gapSize, allowedWidth, minWidthPerColumn, fixedWidthColumns);
+  const widths = squeezeWidthsWithMinimums(baseWidths.slice(), gapSize, allowedWidth, minWidthPerColumn, unsqueezableColumns);
 
   // Expand flexible columns to fill available terminal width
   const finalTotal = sumWithGaps(widths, gapSize);
   const remaining = termWidth - finalTotal;
   if (remaining > 0) {
-    // Find the last flexible (non-fixed) column and expand it
+    // Find the last flexible (non-unsqueezable) column and expand it
     for (let i = widths.length - 1; i >= 0; i--) {
-      if (!fixedWidthColumns[i]) {
+      if (!unsqueezableColumns[i]) {
         widths[i] = Math.min(widths[i] + remaining, MAX_COL_WIDTH);
         break;
       }
     }
   }
 
-  const tableWidth = sumWithGaps(widths, gapSize);
+  // Calculate actual table width: for noTruncate columns, use their actual content width
+  const actualWidths = widths.map((w, idx) => {
+    if (!columns[idx].noTruncate) return w;
+    // For noTruncate columns, use the maximum content width across all rows
+    const maxContentWidth = Math.max(
+      columns[idx].label.length,
+      ...node.rows.map(row => {
+        const val = row[columns[idx].key];
+        return val ? sanitized(String(val)).length : 0;
+      })
+    );
+    return maxContentWidth;
+  });
+  const tableWidth = sumWithGaps(actualWidths, gapSize);
 
   const renderRow = (row: Record<string, string>, isHeader = false) => (
     <InkBox flexDirection="row">
       {columns.map((col, idx) => {
         const raw = isHeader ? col.label : row[col.key] ?? '';
-        const prepared = truncate(sanitized(String(raw)), widths[idx]);
-        const aligned = alignCell(prepared, widths[idx], col.align ?? 'left');
+        const prepared = col.noTruncate
+          ? sanitized(String(raw))
+          : truncate(sanitized(String(raw)), widths[idx]);
+        const aligned = col.noTruncate
+          ? prepared
+          : alignCell(prepared, widths[idx], col.align ?? 'left');
         const color = isHeader ? accentToColor('secondary') : palette.foreground.default;
+
+        // Add gap after all columns except the last one
+        const needsGap = idx < columns.length - 1;
+
+        // Always wrap in Box for consistent layout
+        const boxProps: any = {
+          marginRight: needsGap ? gapSize : 0
+        };
+
+        // For noTruncate columns, set minWidth to prevent squeezing and use truncate-end to prevent wrapping
+        // For normal columns, set fixed width and use truncate wrap
+        if (col.noTruncate) {
+          boxProps.minWidth = actualWidths[idx];
+        } else {
+          boxProps.width = widths[idx];
+        }
+
         return (
-          <InkBox key={`${col.key}-${idx}`} width={widths[idx]} marginRight={idx < columns.length - 1 ? gapSize : 0}>
-            <InkText color={color} bold={isHeader} wrap="truncate">
+          <InkBox key={`${col.key}-${idx}`} {...boxProps}>
+            <InkText color={color} bold={isHeader} wrap={col.noTruncate ? 'truncate-end' as any : 'truncate'}>
               {aligned}
             </InkText>
           </InkBox>

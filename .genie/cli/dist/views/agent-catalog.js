@@ -52,7 +52,7 @@ function buildGroupSection(group, idWidth) {
             {
                 type: 'table',
                 columns: [
-                    { key: 'id', label: 'Identifier', width: idWidth },
+                    { key: 'id', label: 'Identifier', width: idWidth, noTruncate: true },
                     { key: 'summary', label: 'Summary' }
                 ],
                 rows: group.rows.map((row) => ({

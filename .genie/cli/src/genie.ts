@@ -29,7 +29,12 @@ import { runList } from './commands/list';
 import { runView } from './commands/view';
 import { runStop } from './commands/stop';
 import { runHelp } from './commands/help';
-import { INTERNAL_BACKGROUND_MARKER_ENV } from './background-manager';
+import {
+  INTERNAL_BACKGROUND_MARKER_ENV,
+  INTERNAL_BACKGROUND_ENV,
+  INTERNAL_START_TIME_ENV,
+  INTERNAL_LOG_PATH_ENV
+} from './background-manager';
 
 void main();
 
@@ -41,6 +46,10 @@ async function main(): Promise<void> {
       parsed.options.background = true;
       parsed.options.backgroundRunner = true;
       parsed.options.backgroundExplicit = true;
+    } else {
+      delete process.env[INTERNAL_BACKGROUND_ENV];
+      delete process.env[INTERNAL_START_TIME_ENV];
+      delete process.env[INTERNAL_LOG_PATH_ENV];
     }
 
     // Fast path for help commands - skip config loading
