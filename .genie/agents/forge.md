@@ -291,23 +291,35 @@ done
 
 ## Forge MCP Task Description Patterns (Claude Executor Only)
 
-When creating Forge MCP tasks via `mcp__forge__create_task` with Claude as executor, use minimal descriptions with `@agent-` pattern to avoid duplicating task file contents:
+When creating Forge MCP tasks via `mcp__forge__create_task` with Claude as executor, explicitly instruct Claude to use the subagent and load context from files only:
 
 ### Pattern
 ```
-@agent-<persona> @.genie/wishes/<slug>/task-<group>.md @.genie/wishes/<slug>-wish.md
+Use the <persona> subagent to [action verb] this task.
 
-Brief summary. All context in referenced files.
+@agent-<persona>
+@.genie/wishes/<slug>/task-<group>.md
+@.genie/wishes/<slug>-wish.md
+
+Load all context from the referenced files above. Do not duplicate content here.
 ```
 
 ### Example
 ```
-@agent-implementor @.genie/wishes/claude-executor/task-a.md @.genie/wishes/claude-executor-wish.md
+Use the implementor subagent to implement this task.
 
-Implement core Claude executor. All context and requirements in referenced files.
+@agent-implementor
+@.genie/wishes/claude-executor/task-a.md
+@.genie/wishes/claude-executor-wish.md
+
+Load all context from the referenced files above. Do not duplicate content here.
 ```
 
-**Why:** Task files already contain full context. When Claude executes, it loads the files directly, avoiding duplication and token waste.
+**Why:**
+- Explicit instruction tells Claude to spawn the subagent
+- `@agent-` prefix triggers subagent loading
+- File references provide context paths
+- Avoids token waste from duplicating task file contents
 
 **Note:** This pattern is ONLY for Forge MCP task descriptions when using Claude executor. Task file creation (task-*.md) remains unchanged with full context.
 

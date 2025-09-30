@@ -91,5 +91,6 @@ export interface Executor {
   extractSessionId?(args: ExecutorExtractSessionArgs): string | null;
   getSessionExtractionDelay?(args: ExecutorSessionDelayArgs): number;
   locateSessionFile?(args: ExecutorLocateSessionFileArgs): string | null;
+  tryLocateSessionFileBySessionId?(sessionId: string, sessionsDir: string): string | null;
   logViewer?: ExecutorLogViewer;
 }

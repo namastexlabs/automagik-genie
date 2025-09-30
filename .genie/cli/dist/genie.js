@@ -846,8 +846,34 @@ async function runContinue(parsed, config, paths) {
     const sessionIdArg = cmdArgs[0];
     const prompt = cmdArgs.slice(1).join(' ').trim();
     const found = findSessionEntry(store, sessionIdArg, paths);
-    if (!found)
+    if (!found) {
+        // Check if session file exists but is orphaned
+        const executorKey = config.defaults?.executor || executors_1.DEFAULT_EXECUTOR_KEY;
+        const executor = requireExecutor(executorKey);
+        if (executor.tryLocateSessionFileBySessionId && executor.resolvePaths) {
+            const executorConfig = config.executors?.[executorKey] || {};
+            const executorPaths = executor.resolvePaths({
+                config: executorConfig,
+                baseDir: paths.baseDir,
+                resolvePath: (target, base) => path_1.default.isAbsolute(target) ? target : path_1.default.resolve(base || paths.baseDir || '.', target)
+            });
+            const sessionsDir = executorPaths.sessionsDir;
+            if (sessionsDir) {
+                const sessionFilePath = executor.tryLocateSessionFileBySessionId(sessionIdArg, sessionsDir);
+                if (sessionFilePath && fs_1.default.existsSync(sessionFilePath)) {
+                    throw new Error(`❌ Session '${sessionIdArg}' is not tracked in CLI state.\n\n` +
+                        `Session file exists at:\n  ${sessionFilePath}\n\n` +
+                        `This session cannot be resumed because CLI tracking information is missing.\n` +
+                        `This may happen if sessions.json was corrupted or deleted.\n\n` +
+                        `Options:\n` +
+                        `  1. View the session: ./genie view ${sessionIdArg}\n` +
+                        `  2. Start a new session: ./genie run <agent> "<prompt>"\n` +
+                        `  3. (Advanced) Manually restore sessions.json entry`);
+                }
+            }
+        }
         throw new Error(`❌ No run found with session id '${sessionIdArg}'`);
+    }
     const { agentName, entry: session } = found;
     if (!session || !session.sessionId) {
         throw new Error(`❌ No active session for agent '${agentName}'`);
@@ -982,8 +1008,72 @@ async function runView(parsed, config, paths) {
     }
     const warnings = [];
     const store = (0, session_store_1.loadSessions)(paths, config, DEFAULT_CONFIG, { onWarning: (message) => warnings.push(message) });
-    const found = findSessionEntry(store, sessionId, paths);
+    // Try sessions.json first
+    let found = findSessionEntry(store, sessionId, paths);
+    let orphanedSession = false;
+    // If not found in sessions.json, try direct session file lookup
     if (!found) {
+        const executorKey = config.defaults?.executor || executors_1.DEFAULT_EXECUTOR_KEY;
+        const executor = requireExecutor(executorKey);
+        if (executor.tryLocateSessionFileBySessionId && executor.resolvePaths) {
+            const executorConfig = config.executors?.[executorKey] || {};
+            const executorPaths = executor.resolvePaths({
+                config: executorConfig,
+                baseDir: paths.baseDir,
+                resolvePath: (target, base) => path_1.default.isAbsolute(target) ? target : path_1.default.resolve(base || paths.baseDir || '.', target)
+            });
+            const sessionsDir = executorPaths.sessionsDir;
+            if (sessionsDir) {
+                const sessionFilePath = executor.tryLocateSessionFileBySessionId(sessionId, sessionsDir);
+                if (sessionFilePath && fs_1.default.existsSync(sessionFilePath)) {
+                    orphanedSession = true;
+                    warnings.push('⚠️  Session not tracked in CLI state. Displaying from session file.');
+                    // Read session file directly
+                    const sessionFileContent = fs_1.default.readFileSync(sessionFilePath, 'utf8');
+                    const jsonl = [];
+                    const sourceLines = sessionFileContent.split(/\r?\n/);
+                    for (const line of sourceLines) {
+                        const trimmed = line.trim();
+                        if (!trimmed || !trimmed.startsWith('{'))
+                            continue;
+                        try {
+                            jsonl.push(JSON.parse(trimmed));
+                        }
+                        catch { /* skip */ }
+                    }
+                    const transcript = buildTranscriptFromEvents(jsonl);
+                    // Display transcript for orphaned session
+                    const displayTranscript = parsed.options.full
+                        ? transcript
+                        : parsed.options.live
+                            ? sliceTranscriptForLatest(transcript)
+                            : sliceTranscriptForRecent(transcript);
+                    const metaItems = [
+                        { label: 'Source', value: 'Orphaned session file', tone: 'warning' },
+                        { label: 'Session file', value: sessionFilePath }
+                    ];
+                    const envelope = (0, chat_1.buildChatView)({
+                        agent: 'unknown',
+                        sessionId: sessionId,
+                        status: null,
+                        messages: displayTranscript,
+                        meta: metaItems,
+                        showFull: Boolean(parsed.options.full),
+                        hint: !parsed.options.full && transcript.length > displayTranscript.length
+                            ? parsed.options.live
+                                ? 'Add --full to replay the entire session or remove --live to see more messages.'
+                                : 'Add --full to replay the entire session.'
+                            : undefined
+                    });
+                    await emitView(envelope, parsed.options);
+                    if (warnings.length) {
+                        await emitView((0, common_1.buildWarningView)('Session warnings', warnings), parsed.options);
+                    }
+                    return;
+                }
+            }
+        }
+        // Truly not found
         await emitView((0, common_1.buildErrorView)('Run not found', `No run found with session id '${sessionId}'`), parsed.options, { stream: process.stderr });
         return;
     }

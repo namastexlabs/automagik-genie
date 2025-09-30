@@ -5,19 +5,27 @@
 
 ## Forge MCP Task Pattern
 
-When creating Forge MCP tasks via `mcp__forge__create_task`, use minimal descriptions with `@agent-` pattern:
+When creating Forge MCP tasks via `mcp__forge__create_task`, explicitly instruct to use the subagent and load context from files:
 
 ```
-@agent-<persona> @.genie/wishes/<slug>/task-<group>.md @.genie/wishes/<slug>-wish.md
+Use the <persona> subagent to [action verb] this task.
 
-Brief summary. All context in referenced files.
+@agent-<persona>
+@.genie/wishes/<slug>/task-<group>.md
+@.genie/wishes/<slug>-wish.md
+
+Load all context from the referenced files above. Do not duplicate content here.
 ```
 
 **Example:**
 ```
-@agent-implementor @.genie/wishes/claude-executor/task-a.md @.genie/wishes/claude-executor-wish.md
+Use the implementor subagent to implement this task.
 
-Implement core Claude executor. All context and requirements in referenced files.
+@agent-implementor
+@.genie/wishes/claude-executor/task-a.md
+@.genie/wishes/claude-executor-wish.md
+
+Load all context from the referenced files above. Do not duplicate content here.
 ```
 
 **Why:**

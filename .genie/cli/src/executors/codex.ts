@@ -260,6 +260,48 @@ function collectExecOptions(execConfig: Record<string, any>) {
   return options;
 }
 
+/**
+ * Attempt to locate session file by session ID alone
+ * Searches ~/.codex/sessions/ directory tree for matching files
+ * Used for orphaned session recovery when sessions.json is missing entries
+ */
+function tryLocateSessionFileBySessionId(
+  sessionId: string,
+  sessionsDir: string
+): string | null {
+  if (!sessionId || !sessionsDir || !fs.existsSync(sessionsDir)) {
+    return null;
+  }
+
+  // Search pattern: look in recent date directories (today, yesterday, day before)
+  const now = new Date();
+  const searchDates = [0, -1, -2].map(offset => {
+    const d = new Date(now);
+    d.setDate(d.getDate() + offset);
+    return d;
+  });
+
+  for (const date of searchDates) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dayDir = path.join(sessionsDir, String(year), month, day);
+
+    if (!fs.existsSync(dayDir)) continue;
+
+    const files = fs.readdirSync(dayDir);
+    const pattern = new RegExp(`-${sessionId}\\.jsonl$`, 'i');
+
+    for (const file of files) {
+      if (pattern.test(file)) {
+        return path.join(dayDir, file);
+      }
+    }
+  }
+
+  return null;
+}
+
 const codexExecutor: Executor = {
   defaults,
   buildRunCommand,
@@ -268,6 +310,7 @@ const codexExecutor: Executor = {
   extractSessionId,
   getSessionExtractionDelay,
   locateSessionFile,
+  tryLocateSessionFileBySessionId,
   logViewer
 };
 
