@@ -58,9 +58,9 @@ function simpleTable(title, rows) {
                 type: 'table',
                 columns: [
                     { key: 'agent', label: 'Agent' },
-                    { key: 'status', label: 'Status', width: 13 },
-                    { key: 'sessionId', label: 'Session' },
-                    { key: 'updated', label: 'Updated' }
+                    { key: 'status', label: 'Status', width: 10 },
+                    { key: 'sessionId', label: 'Session', width: 36 },
+                    { key: 'updated', label: 'Updated', width: 8 }
                 ],
                 rows: rows.map((row) => ({
                     agent: row.agent,
@@ -73,20 +73,5 @@ function simpleTable(title, rows) {
     };
 }
 function decorateStatus(status) {
-    const normalized = status.toLowerCase();
-    const prefix = statusEmoji(normalized);
-    return prefix ? `${prefix} ${status}` : status;
-}
-function statusEmoji(status) {
-    if (status.startsWith('running'))
-        return '🟢';
-    if (status.startsWith('pending'))
-        return '🟠';
-    if (status.startsWith('completed'))
-        return '✅';
-    if (status.startsWith('failed'))
-        return '❌';
-    if (status.startsWith('stopped'))
-        return '🔚';
-    return '⌛️';
+    return status;
 }

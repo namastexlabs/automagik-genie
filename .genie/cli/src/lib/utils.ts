@@ -2,7 +2,8 @@ import path from 'path';
 import type { ConfigPaths } from './types';
 import {
   INTERNAL_START_TIME_ENV,
-  INTERNAL_LOG_PATH_ENV
+  INTERNAL_LOG_PATH_ENV,
+  INTERNAL_BACKGROUND_ENV
 } from '../background-manager';
 
 /**
@@ -111,8 +112,9 @@ export function safeIsoString(value: string): string | null {
  * @returns {number} - Unix timestamp in milliseconds
  */
 export function deriveStartTime(): number {
+  const isBackgroundRunner = process.env[INTERNAL_BACKGROUND_ENV] === '1';
   const fromEnv = process.env[INTERNAL_START_TIME_ENV];
-  if (!fromEnv) return Date.now();
+  if (!isBackgroundRunner || !fromEnv) return Date.now();
   const parsed = Number(fromEnv);
   if (Number.isFinite(parsed)) return parsed;
   return Date.now();

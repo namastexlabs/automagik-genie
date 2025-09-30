@@ -127,8 +127,9 @@ function safeIsoString(value) {
  * @returns {number} - Unix timestamp in milliseconds
  */
 function deriveStartTime() {
+    const isBackgroundRunner = process.env[background_manager_1.INTERNAL_BACKGROUND_ENV] === '1';
     const fromEnv = process.env[background_manager_1.INTERNAL_START_TIME_ENV];
-    if (!fromEnv)
+    if (!isBackgroundRunner || !fromEnv)
         return Date.now();
     const parsed = Number(fromEnv);
     if (Number.isFinite(parsed))

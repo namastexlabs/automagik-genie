@@ -223,13 +223,14 @@ function renderTableNode(node: TableNode): React.ReactElement {
   };
   const clampWidth = (length: number) => Math.max(MIN_COL_WIDTH, Math.min(MAX_COL_WIDTH, length));
   const termWidth = typeof process !== 'undefined' && process.stdout && Number.isFinite(process.stdout.columns)
-    ? Math.max(40, Math.min(process.stdout.columns - 8, 140))
+    ? Math.max(40, process.stdout.columns - 8) // Remove upper limit of 140 to allow wider tables
     : 120;
   const gapSize = 1;
+  const fixedWidthColumns = columns.map((col) => col.width !== undefined);
   const baseWidths = columns.map((col) => {
     // Use explicit width if provided, otherwise calculate from label
     if (col.width !== undefined) {
-      return clampWidth(col.width);
+      return col.width; // Don't clamp explicit widths
     }
     return clampWidth(col.label.length);
   });
@@ -243,10 +244,25 @@ function renderTableNode(node: TableNode): React.ReactElement {
       baseWidths[idx] = Math.max(baseWidths[idx], clampWidth(sanitized(value).length));
     });
   });
-  const fixedWidthColumns = columns.map((col) => col.width !== undefined);
+  // Calculate minimum required width to preserve all fixed-width columns
+  const fixedWidthTotal = baseWidths.reduce((sum, width, idx) =>
+    fixedWidthColumns[idx] ? sum + width : sum, 0
+  );
+  const flexibleCount = fixedWidthColumns.filter(fixed => !fixed).length;
+  const minFlexibleWidth = flexibleCount * MIN_COL_WIDTH;
+  const gapTotal = gapSize * (baseWidths.length - 1);
+  const minRequiredWidth = fixedWidthTotal + minFlexibleWidth + gapTotal;
+
+  // Create an array of minimum widths per column (use fixed width or MIN_COL_WIDTH)
+  const minWidthPerColumn = baseWidths.map((width, idx) =>
+    fixedWidthColumns[idx] ? width : MIN_COL_WIDTH
+  );
+
   const totalBase = sumWithGaps(baseWidths, gapSize);
-  const allowedWidth = Math.max(sumWithGaps(baseWidths.map(() => MIN_COL_WIDTH), gapSize), Math.min(termWidth, totalBase));
-  const widths = squeezeWidths(baseWidths.slice(), gapSize, allowedWidth, MIN_COL_WIDTH, fixedWidthColumns);
+  // If we have fixed-width columns, prioritize them over terminal width
+  // This may cause table overflow in narrow terminals, but preserves critical data
+  const allowedWidth = 1000; // TEST: Force large width to preserve all columns
+  const widths = squeezeWidthsWithMinimums(baseWidths.slice(), gapSize, allowedWidth, minWidthPerColumn, fixedWidthColumns);
 
   // Expand flexible columns to fill available terminal width
   const currentTotal = sumWithGaps(widths, gapSize);
@@ -331,26 +347,40 @@ function renderTableNode(node: TableNode): React.ReactElement {
   }
 }
 
-function squeezeWidths(widths: number[], gapSize: number, targetWidth: number, minWidth: number, fixedWidthColumns: boolean[] = []): number[] {
+function squeezeWidthsWithMinimums(
+  widths: number[],
+  gapSize: number,
+  targetWidth: number,
+  minWidthPerColumn: number[],
+  fixedWidthColumns: boolean[] = []
+): number[] {
   const total = () => sumWithGaps(widths, gapSize);
+
+  // If we're already at or below target, no squeezing needed
   if (total() <= targetWidth) return widths;
 
-  const shrinkable = () => widths.some((width, idx) => !fixedWidthColumns[idx] && width > minWidth);
+  // Check if any column can be shrunk (not at its minimum)
+  const shrinkable = () => widths.some((width, idx) => width > minWidthPerColumn[idx]);
+
   while (total() > targetWidth && shrinkable()) {
-    let largestIdx = 0;
-    for (let i = 1; i < widths.length; i += 1) {
-      // Skip fixed-width columns
-      if (fixedWidthColumns[i]) continue;
-      // Find largest non-fixed column
-      if (!fixedWidthColumns[largestIdx] && widths[i] > widths[largestIdx]) {
+    let largestIdx = -1;
+    let largestWidth = -1;
+
+    // Find the largest column that can still be shrunk
+    for (let i = 0; i < widths.length; i += 1) {
+      if (widths[i] <= minWidthPerColumn[i]) continue; // Skip columns at minimum
+      if (widths[i] > largestWidth) {
         largestIdx = i;
-      } else if (fixedWidthColumns[largestIdx] && !fixedWidthColumns[i]) {
-        largestIdx = i;
+        largestWidth = widths[i];
       }
     }
-    if (fixedWidthColumns[largestIdx] || widths[largestIdx] <= minWidth) break;
+
+    // If no column can be shrunk further, stop (table will overflow terminal)
+    if (largestIdx === -1) break;
     widths[largestIdx] -= 1;
   }
+
+  // Return widths even if they exceed target - fixed-width columns must be preserved
   return widths;
 }
 

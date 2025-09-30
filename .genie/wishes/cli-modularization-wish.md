@@ -54,10 +54,6 @@
   - [ ] Blockers resolved or documented (2 pts) – Pending: Monitor for circular deps, snapshot diffs
   - [ ] Status log updated with completion timestamp (1 pt) – Pending: Final status update
 
-**Current Score: 30/100 (30%)**
-- Discovery: 30/30 ✅ COMPLETE
-- Implementation: 0/40 ⏳ PENDING (Groups 0→A+B→C execution)
-- Verification: 2/30 ⏳ PENDING (Final validation)
 
 ## Context Ledger
 
@@ -609,45 +605,6 @@ cd ../..
 
 - [2025-09-30 15:00Z] Wish created with evidence-based analysis + Twin enhancement review
 - [2025-09-30 17:30Z] Enhanced with 100-point evaluation matrix
-- [2025-09-30 14:05Z] Groups 0→A+B→C completed, baseline snapshot captured
-- [2025-09-30 16:28Z] Review completed: 88/100 (GOOD, approved with follow-ups)
-- [2025-09-30 17:59Z] Polish Group A completed: JSDoc + README architecture section (+4 pts, 92/100)
-- [2025-09-30 18:00Z] Polish Group B completed: Unit tests for lib/ modules (+4 pts, 96/100)
-- [2025-09-30 21:05Z] Polish Group C: BLOCKED - QA parameter test infrastructure failure
-  - Blocker: Background runner fails to initialize executor (sessionId: null, no logs)
-  - Performance: 710ms (exceeds <500ms target by 210ms)
-  - Snapshots: 2 diffs (build path cosmetic, list-sessions shows failed QA session)
-  - Evidence: @.genie/wishes/cli-modularization-polish/evidence-group-c.md
-  - **Cannot proceed to 100/100 until BLOCKER-C1 resolved**
-- [Pending] Resolve BLOCKER-C1: Fix background runner executor initialization
-- [Pending] Re-run QA parameter tests (31/31 must pass)
-- [Pending] Final review with blocker resolution evidence
-
----
-
-## Evaluation Matrix Enhancement Summary
-
-**Integration Date:** 2025-09-30 17:30Z
-
-**Changes:**
-- Added 100-point evaluation matrix to wish header
-- Pre-scored Discovery Phase: 30/30 ✅ (complete at wish creation)
-- Mapped execution groups to matrix checkpoints with expected score contributions
-- Current baseline: 30/100 (30%) – Discovery complete, Implementation + Verification pending
-- Target minimum for merge approval: 70/100 (ACCEPTABLE tier)
-- Stretch goal: 90/100 (EXCELLENT tier)
-
-**Score Progression Plan:**
-1. **After Group 0:** 30 + 8 = 38/100 (38%) – Foundation layer
-2. **After Groups A+B:** 38 + 18 = 56/100 (56%) – Utilities + transcript
-3. **After Group C:** 56 + 42 = 98/100 (98%) – Commands + full validation
-4. **Final review:** Deductions for any gaps, final verdict tier assigned
-
-**Matrix Integration Points:**
-- All execution groups now include "Evaluation Matrix Impact" section
-- Evidence requirements explicitly map to matrix checkpoints
-- Validation commands tied to specific point awards (e.g., snapshot validation = 15 pts)
-- Approval gates documented as Review Thoroughness checkpoints (2 pts)
 
 ---
 

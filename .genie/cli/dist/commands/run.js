@@ -176,20 +176,6 @@ function executeRun(args) {
         entry.runnerPid = runnerPid;
     (0, session_store_1.saveSessions)(paths, store);
     let filteredStdout = null;
-    let outputSource = null;
-    if (proc.stdout) {
-        if (executor.createOutputFilter) {
-            filteredStdout = executor.createOutputFilter(logStream);
-            proc.stdout.pipe(filteredStdout);
-            outputSource = filteredStdout;
-        }
-        else {
-            proc.stdout.pipe(logStream);
-            outputSource = proc.stdout;
-        }
-    }
-    if (proc.stderr)
-        proc.stderr.pipe(logStream);
     const updateSessionFromLine = (line) => {
         const trimmed = line.trim();
         if (!trimmed.startsWith('{'))
@@ -211,9 +197,10 @@ function executeRun(args) {
             // ignore malformed JSON lines
         }
     };
-    if (outputSource) {
+    let outputSource = null;
+    const attachOutputListener = (stream) => {
         let buffer = '';
-        outputSource.on('data', (chunk) => {
+        stream.on('data', (chunk) => {
             const text = chunk instanceof Buffer ? chunk.toString('utf8') : chunk;
             buffer += text;
             let index = buffer.indexOf('\n');
@@ -224,7 +211,22 @@ function executeRun(args) {
                 index = buffer.indexOf('\n');
             }
         });
+    };
+    if (proc.stdout) {
+        if (executor.createOutputFilter) {
+            filteredStdout = executor.createOutputFilter(logStream);
+            outputSource = filteredStdout;
+            attachOutputListener(filteredStdout);
+            proc.stdout.pipe(filteredStdout);
+        }
+        else {
+            proc.stdout.pipe(logStream);
+            outputSource = proc.stdout;
+            attachOutputListener(proc.stdout);
+        }
     }
+    if (proc.stderr)
+        proc.stderr.pipe(logStream);
     if (!background) {
         if (filteredStdout) {
             filteredStdout.pipe(process.stdout);
@@ -247,6 +249,31 @@ function executeRun(args) {
     const promise = new Promise((resolve) => {
         resolvePromise = resolve;
     });
+    const logViewer = executor.logViewer;
+    let logPollingActive = Boolean(logViewer?.readSessionIdFromLog);
+    if (logPollingActive) {
+        const pollSessionIdFromLog = () => {
+            if (!logPollingActive || entry.sessionId)
+                return;
+            try {
+                const fromLog = logViewer?.readSessionIdFromLog?.(logFile) ?? null;
+                if (fromLog && entry.sessionId !== fromLog) {
+                    entry.sessionId = fromLog;
+                    entry.lastUsed = new Date().toISOString();
+                    (0, session_store_1.saveSessions)(paths, store);
+                    logPollingActive = false;
+                    return;
+                }
+            }
+            catch {
+                // ignore log polling errors
+            }
+            if (logPollingActive && !entry.sessionId) {
+                setTimeout(pollSessionIdFromLog, 500);
+            }
+        };
+        setTimeout(pollSessionIdFromLog, 500);
+    }
     proc.on('error', (error) => {
         entry.status = 'failed';
         entry.error = error instanceof Error ? error.message : String(error);
@@ -284,7 +311,7 @@ function executeRun(args) {
         entry.status = code === 0 ? 'completed' : 'failed';
         (0, session_store_1.saveSessions)(paths, store);
         logStream.end();
-        const logViewer = executor.logViewer;
+        logPollingActive = false;
         const sessionFromLog = logViewer?.readSessionIdFromLog?.(logFile) ?? null;
         const resolvedSessionId = sessionFromLog || entry.sessionId || null;
         if (entry.sessionId !== resolvedSessionId) {
