@@ -1153,16 +1153,162 @@ async function runView(parsed, config, paths) {
     // Parse JSONL events from session file or CLI log
     const jsonl = [];
     const sourceLines = sessionFileContent ? sessionFileContent.split(/\r?\n/) : allLines;
+    // Detect format: filtered or JSONL
+    let hasFilteredFormat = false;
     for (const line of sourceLines) {
         const trimmed = line.trim();
-        if (!trimmed)
-            continue;
-        if (!trimmed.startsWith('{'))
-            continue;
-        try {
-            jsonl.push(JSON.parse(trimmed));
+        if (trimmed.startsWith('[assistant]') || trimmed.startsWith('[tool]') ||
+            trimmed.startsWith('[reasoning]') || trimmed.startsWith('[command]') ||
+            trimmed.startsWith('[tool_result]')) {
+            hasFilteredFormat = true;
+            break;
         }
-        catch { /* skip */ }
+    }
+    if (hasFilteredFormat) {
+        // Parse filtered format blocks
+        let currentBlock = null;
+        for (const line of sourceLines) {
+            const trimmed = line.trim();
+            // Check for JSON events (system, result)
+            if (trimmed.startsWith('{')) {
+                try {
+                    const event = JSON.parse(trimmed);
+                    if (event.type === 'system' || event.type === 'result') {
+                        jsonl.push(event);
+                    }
+                }
+                catch { /* skip */ }
+                continue;
+            }
+            // Check for block markers
+            if (trimmed.startsWith('[assistant]')) {
+                if (currentBlock) {
+                    jsonl.push(createFilteredEvent(currentBlock.type, currentBlock.content));
+                }
+                currentBlock = { type: 'assistant', content: [] };
+                const contentAfterMarker = trimmed.substring('[assistant]'.length).trim();
+                if (contentAfterMarker) {
+                    currentBlock.content.push(contentAfterMarker);
+                }
+            }
+            else if (trimmed.startsWith('[tool]')) {
+                if (currentBlock) {
+                    jsonl.push(createFilteredEvent(currentBlock.type, currentBlock.content));
+                }
+                currentBlock = { type: 'tool', content: [] };
+                const contentAfterMarker = trimmed.substring('[tool]'.length).trim();
+                if (contentAfterMarker) {
+                    currentBlock.content.push(contentAfterMarker);
+                }
+            }
+            else if (trimmed.startsWith('[reasoning]')) {
+                if (currentBlock) {
+                    jsonl.push(createFilteredEvent(currentBlock.type, currentBlock.content));
+                }
+                currentBlock = { type: 'reasoning', content: [] };
+                const contentAfterMarker = trimmed.substring('[reasoning]'.length).trim();
+                if (contentAfterMarker) {
+                    currentBlock.content.push(contentAfterMarker);
+                }
+            }
+            else if (trimmed.startsWith('[command]')) {
+                if (currentBlock) {
+                    jsonl.push(createFilteredEvent(currentBlock.type, currentBlock.content));
+                }
+                currentBlock = { type: 'command', content: [] };
+                const contentAfterMarker = trimmed.substring('[command]'.length).trim();
+                if (contentAfterMarker) {
+                    currentBlock.content.push(contentAfterMarker);
+                }
+            }
+            else if (trimmed.startsWith('[tool_result]')) {
+                if (currentBlock) {
+                    jsonl.push(createFilteredEvent(currentBlock.type, currentBlock.content));
+                }
+                currentBlock = { type: 'tool_result', content: [] };
+                const contentAfterMarker = trimmed.substring('[tool_result]'.length).trim();
+                if (contentAfterMarker) {
+                    currentBlock.content.push(contentAfterMarker);
+                }
+            }
+            else if (trimmed && currentBlock) {
+                // Continuation of current block
+                currentBlock.content.push(line);
+            }
+            else if (!trimmed && currentBlock) {
+                // Empty line within block
+                currentBlock.content.push('');
+            }
+        }
+        // Push final block
+        if (currentBlock) {
+            jsonl.push(createFilteredEvent(currentBlock.type, currentBlock.content));
+        }
+    }
+    else {
+        // Parse standard JSONL format
+        for (const line of sourceLines) {
+            const trimmed = line.trim();
+            if (!trimmed)
+                continue;
+            if (!trimmed.startsWith('{'))
+                continue;
+            try {
+                jsonl.push(JSON.parse(trimmed));
+            }
+            catch { /* skip */ }
+        }
+    }
+    // Helper function to convert filtered blocks to Claude JSONL format
+    function createFilteredEvent(type, content) {
+        const text = content.join('\n').trim();
+        if (type === 'assistant') {
+            return {
+                type: 'assistant',
+                message: {
+                    content: [{ type: 'text', text }]
+                }
+            };
+        }
+        else if (type === 'reasoning') {
+            return {
+                type: 'reasoning',
+                message: {
+                    content: [{ type: 'text', text }]
+                }
+            };
+        }
+        else if (type === 'tool') {
+            // Tool calls are shown as assistant messages with tool info
+            return {
+                type: 'assistant',
+                message: {
+                    content: [{ type: 'text', text: `[Tool Call]\n${text}` }]
+                }
+            };
+        }
+        else if (type === 'tool_result') {
+            return {
+                type: 'user',
+                message: {
+                    content: [{ type: 'text', text: `[Tool Result]\n${text}` }]
+                }
+            };
+        }
+        else if (type === 'command') {
+            return {
+                type: 'user',
+                message: {
+                    content: [{ type: 'text', text: `[Command]\n${text}` }]
+                }
+            };
+        }
+        return {
+            type: 'assistant',
+            message: {
+                content: [{ type: 'text', text }]
+            }
+        };
     }
     // Use executor-specific log viewer if available
     if (logViewer?.buildJsonlView) {
