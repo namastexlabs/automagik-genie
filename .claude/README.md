@@ -12,6 +12,8 @@ Access via: `/command`
 - `/review` — QA validation dialogue
 - `/install` — Framework installation
 - `/prompt` — Prompt refinement helper
+- `/sleepy` — Autonomous wish coordinator with Twin Genie
+- `/learn` — Meta-learning for framework improvements
 
 ### Both Command & Agent (Dual-Purpose)
 Can be invoked interactively OR delegated to background/subagents.
@@ -69,10 +71,12 @@ Access via: `./genie run <agent>` OR Task tool
 │   ├── genie-qa.md
 │   ├── git-workflow.md
 │   ├── implementor.md
+│   ├── learn.md
 │   ├── polish.md
 │   ├── project-manager.md
 │   ├── qa.md
 │   ├── self-learn.md
+│   ├── sleepy.md
 │   └── tests.md
 └── utilities/               # Reusable helpers
     ├── analyze.md
@@ -100,7 +104,9 @@ Access via: `./genie run <agent>` OR Task tool
 ├── commit.md → @.genie/agents/utilities/commit.md
 ├── genie-qa.md → @.genie/agents/specialists/genie-qa.md
 ├── install.md → @.genie/agents/utilities/install.md
-└── prompt.md → @.genie/agents/utilities/prompt.md
+├── prompt.md → @.genie/agents/utilities/prompt.md
+├── sleepy.md → @.genie/agents/specialists/sleepy.md
+└── learn.md → @.genie/agents/specialists/learn.md
 
 .claude/agents/              # Task tool aliases (delegatable)
 ├── planner.md → @.genie/agents/plan.md
@@ -126,7 +132,9 @@ Access via: `./genie run <agent>` OR Task tool
 ├── bug-reporter.md → @.genie/agents/specialists/bug-reporter.md
 ├── git-workflow.md → @.genie/agents/specialists/git-workflow.md
 ├── project-manager.md → @.genie/agents/specialists/project-manager.md
-└── self-learn.md → @.genie/agents/specialists/self-learn.md
+├── self-learn.md → @.genie/agents/specialists/self-learn.md
+├── sleepy.md → @.genie/agents/specialists/sleepy.md
+└── learn.md → @.genie/agents/specialists/learn.md
 ```
 
 ---
@@ -146,6 +154,8 @@ Access via: `./genie run <agent>` OR Task tool
 /prompt         # Refine prompt/instructions
 /commit         # Interactive commit flow
 /genie-qa       # Self-validate Genie framework
+/sleepy         # Autonomous wish coordinator (requires dedicated branch)
+/learn          # Teach Genie new patterns/behaviors
 ```
 
 ### Background Agents (Delegatable)
@@ -264,6 +274,7 @@ Access via: `./genie run <agent>` OR Task tool
 | **Tactical** | codereview, refactor, testgen, docgen, secaudit, tracer | Specific utilities | Human or specialists |
 | **Delivery** | implementor, tests, polish, qa, bug-reporter | Execute work | Forge or human |
 | **Infrastructure** | git-workflow, project-manager, self-learn | System operations | Agents or workflows |
+| **Autonomous** | sleepy, learn | Long-running coordination & meta-learning | Human via commands (sleepy requires dedicated branch) |
 
 ---
 

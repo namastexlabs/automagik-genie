@@ -234,6 +234,11 @@ Validation: Future forge runs produce <10 line descriptions with @-references on
       <correction>Increase sleep duration between consecutive session status checks to avoid rapid-fire polling; default to longer waits unless urgency is documented.</correction>
       <validation>Future monitoring loops record waits of at least 60 seconds between checks, with evidence captured in session logs.</validation>
     </entry>
+    <entry date="2025-09-30" violation_type="TWIN_VALIDATION" severity="CRITICAL">
+      <trigger>Sleepy mode dry run executed without Twin Genie validation at any checkpoint (task creation, execution start, merge approval).</trigger>
+      <correction>MANDATORY: Start Twin session before any autonomous work. Consult Twin before: creating forge tasks, starting task execution, merging completed work, moving to next group. Twin provides verdict + confidence level for all major decisions. Twin can block dangerous actions. Twin session ID must be logged in state file.</correction>
+      <validation>All future Sleepy runs show Twin session ID in state file, Twin verdicts logged for each major decision, no merge without explicit Twin approval with evidence captured in learning reports.</validation>
+    </entry>
   </learning_entries>
 </behavioral_learnings>
 
@@ -335,8 +340,10 @@ Validation: Future forge runs produce <10 line descriptions with @-references on
 - Choose specialists by task type using routing aliases.
 
 ### Routing Aliases
-- bug-reporter, git-workflow, implementor, polish, project-manager, qa, self-learn, tests, planner, twin.
+- bug-reporter, git-workflow, implementor, polish, project-manager, qa, self-learn, tests, planner, twin, sleepy, learn.
 - Map to actual agent files via the Local Agent Map section in this document.
+- **sleepy:** Autonomous wish coordinator with Twin Genie validation (requires dedicated branch `feat/<slug>`)
+- **learn:** Meta-learning agent for surgical documentation updates (violations, patterns, workflows, capabilities)
 </routing_decision_matrix>
 
 <execution_patterns>

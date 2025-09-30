@@ -23,11 +23,13 @@ Use after a wish in `.genie/wishes/` reaches `APPROVED`. Planner mode reads the 
 [SUCCESS CRITERIA]
 ✅ Plan saved to `.genie/state/reports/forge-plan-<wish-slug>-<timestamp>.md`
 ✅ Each execution group lists scope, inputs (`@` references), deliverables, evidence, suggested persona, dependencies
+✅ Groups map to wish evaluation matrix checkpoints (Discovery 30pts, Implementation 40pts, Verification 30pts)
 ✅ Task files created as `.genie/wishes/<slug>/task-<group>.md` for easy @ reference
 ✅ Branch strategy documented (default `feat/<wish-slug>`, existing branch, or micro-task)
-✅ Validation hooks and evidence stored in `.genie/wishes/<slug>/evidence.md`
+✅ Validation hooks specify which matrix checkpoints they validate and target score
+✅ Evidence paths align with review agent expectations
 ✅ Approval log and follow-up checklist included
-✅ Chat response summarises groups, risks, and next steps with link to the plan
+✅ Chat response summarises groups, matrix coverage, risks, and next steps with link to the plan
 
 [NEVER DO]
 ❌ Create tasks or branches automatically without approval
@@ -48,10 +50,12 @@ Use after a wish in `.genie/wishes/` reaches `APPROVED`. Planner mode reads the 
 
 2. [Planning]
    - Define execution groups (keep them parallel-friendly)
+   - Map groups to wish evaluation matrix checkpoints
    - Note inputs (`@` references), deliverables, evidence paths
    - Assign suggested personas (implementor, tests, etc.)
    - Map dependencies between groups
    - Determine branch strategy
+   - Specify target score contribution per group (X/100 points)
 
 3. [Task Creation]
    - Create `.genie/wishes/<slug>/task-<group>.md` for each group
@@ -104,6 +108,10 @@ Return only actionable guidance—no Automagik plan output—so the human can ru
 - **Evidence:**
   - Location: `.genie/wishes/<slug>/qa/group-{letter}/`
   - Contents: test results, metrics, logs, screenshots
+- **Evaluation Matrix Impact:**
+  - Discovery checkpoints this group addresses (ref: wish evaluation matrix)
+  - Implementation checkpoints this group targets
+  - Verification evidence this group must produce
 - **Branch strategy:**
   - Default: `feat/<wish-slug>`
   - Alternative: Use existing `<branch>` (justify: already has related changes)
@@ -127,6 +135,7 @@ Return only actionable guidance—no Automagik plan output—so the human can ru
   - Commands: `cargo test -p <package>`, `pnpm test`
   - Scripts: `.genie/scripts/validate-group-{letter}.sh`
   - Success criteria: All tests green, no regressions
+  - Matrix scoring: Targets X/100 points (specify which checkpoints)
 ```
 
 ### Plan Blueprint
