@@ -10,6 +10,40 @@ import { spawn, SpawnOptionsWithoutStdio } from 'child_process';
 import { loadExecutors, DEFAULT_EXECUTOR_KEY } from './executors';
 import type { Executor, ExecutorCommand } from './executors/types';
 import type { CLIOptions, ParsedCommand, ConfigPaths, GenieConfig, AgentSpec, ExecuteRunArgs } from './lib/types';
+import { parseArguments } from './lib/cli-parser';
+import {
+  loadConfig,
+  buildDefaultConfig,
+  applyDefaults,
+  resolvePaths,
+  prepareDirectories,
+  recordStartupWarning,
+  getStartupWarnings,
+  clearStartupWarnings
+} from './lib/config';
+import {
+  formatRelativeTime,
+  formatPathRelative,
+  truncateText,
+  sanitizeLogFilename,
+  safeIsoString,
+  deriveStartTime,
+  deriveLogFile
+} from './lib/utils';
+import {
+  listAgents,
+  resolveAgentIdentifier,
+  agentExists,
+  loadAgentSpec,
+  extractFrontMatter
+} from './lib/agent-resolver';
+import {
+  findSessionEntry,
+  resolveDisplayStatus,
+  recordRuntimeWarning,
+  getRuntimeWarnings,
+  clearRuntimeWarnings
+} from './lib/session-helpers';
 import { renderEnvelope, ViewEnvelope, ViewStyle, Tone } from './view';
 import {
   buildHelpView,
@@ -40,96 +74,13 @@ import {
   SessionEntry
 } from './session-store';
 
-let YAML: typeof import('yaml') | null = null;
-try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  YAML = require('yaml');
-} catch (_) {
-  // yaml module optional
-}
-
-
 const EXECUTORS: Record<string, Executor> = loadExecutors();
 if (!EXECUTORS[DEFAULT_EXECUTOR_KEY]) {
   const available = Object.keys(EXECUTORS).join(', ') || 'none';
   throw new Error(`Default executor '${DEFAULT_EXECUTOR_KEY}' not found. Available executors: ${available}`);
 }
 
-const SCRIPT_DIR = path.dirname(__filename);
-const CONFIG_PATH = path.join(SCRIPT_DIR, 'config.yaml');
 const backgroundManager = new BackgroundManager();
-
-const startupWarnings: string[] = [];
-const runtimeWarnings: string[] = [];
-
-function recordStartupWarning(message: string): void {
-  startupWarnings.push(message);
-}
-
-function recordRuntimeWarning(message: string): void {
-  runtimeWarnings.push(message);
-}
-
-const BASE_CONFIG: GenieConfig = {
-  defaults: {
-    background: true,
-    executor: DEFAULT_EXECUTOR_KEY
-  },
-  paths: {
-    baseDir: '.',
-    sessionsFile: '.genie/state/agents/sessions.json',
-    logsDir: '.genie/state/agents/logs',
-    backgroundDir: '.genie/state/agents/background'
-  },
-  executors: {},
-  executionModes: {
-    default: {
-      description: 'Workspace-write automation with GPT-5 Codex.',
-      executor: DEFAULT_EXECUTOR_KEY,
-      overrides: {
-        exec: {
-          model: 'gpt-5-codex',
-          sandbox: 'workspace-write',
-          fullAuto: true
-        }
-      }
-    },
-    careful: {
-      description: 'Read-only approval-aware agent run.',
-      overrides: {
-        exec: {
-          sandbox: 'read-only'
-        }
-      }
-    },
-    danger: {
-      description: 'Full access execution for externally sandboxed environments only.',
-      overrides: {
-        exec: {
-          sandbox: 'danger-full-access',
-          fullAuto: false,
-          additionalArgs: ['--dangerously-bypass-approvals-and-sandbox']
-        }
-      }
-    },
-    debug: {
-      description: 'Enable plan tool and web search for architecture/deep analysis sessions.',
-      overrides: {
-        exec: {
-          includePlanTool: true,
-          search: true
-        }
-      }
-    }
-  },
-  background: {
-    enabled: true,
-    detach: true,
-    pollIntervalMs: 1500,
-    sessionExtractionDelayMs: 5000
-  }
-};
-
 const DEFAULT_CONFIG: GenieConfig = buildDefaultConfig();
 
 void main();
@@ -149,7 +100,12 @@ async function main(): Promise<void> {
     const paths = resolvePaths(config.paths || {});
     prepareDirectories(paths);
 
-    await flushStartupWarnings(parsed.options);
+    const startupWarnings = getStartupWarnings();
+    if (startupWarnings.length) {
+      const envelope = buildWarningView('Configuration warnings', startupWarnings);
+      await emitView(envelope, parsed.options);
+      clearStartupWarnings();
+    }
 
     switch (parsed.command) {
       case 'run':
@@ -198,50 +154,17 @@ async function main(): Promise<void> {
         break;
       }
     }
-    await flushRuntimeWarnings(parsed.options);
+    const runtimeWarnings = getRuntimeWarnings();
+    if (runtimeWarnings.length) {
+      const envelope = buildWarningView('Runtime warnings', runtimeWarnings);
+      await emitView(envelope, parsed.options);
+      clearRuntimeWarnings();
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     await emitEmergencyError(message);
     process.exitCode = 1;
   }
-}
-
-function parseArguments(argv: string[]): ParsedCommand {
-  const raw = argv.slice();
-  const command = raw.shift()?.toLowerCase();
-  const options: CLIOptions = {
-    rawArgs: argv.slice(),
-    background: false,
-    backgroundExplicit: false,
-    backgroundRunner: false,
-    requestHelp: undefined,
-    full: false,
-    live: false
-  };
-
-  const filtered: string[] = [];
-  for (let i = 0; i < raw.length; i++) {
-    const token = raw[i];
-    if (token === '--help' || token === '-h') {
-      options.requestHelp = true;
-      continue;
-    }
-    if (token === '--full') {
-      options.full = true;
-      continue;
-    }
-    if (token === '--live') {
-      options.live = true;
-      continue;
-    }
-    if (token === '--') {
-      filtered.push(...raw.slice(i + 1));
-      break;
-    }
-    filtered.push(token);
-  }
-
-  return { command, commandArgs: filtered, options };
 }
 
 async function emitView(
@@ -261,108 +184,6 @@ async function emitView(
 async function emitEmergencyError(message: string): Promise<void> {
   const envelope = buildErrorView('Fatal error', message);
   await renderEnvelope(envelope, { json: false, stream: process.stderr });
-}
-
-async function flushStartupWarnings(options: CLIOptions): Promise<void> {
-  if (!startupWarnings.length) return;
-  const envelope = buildWarningView('Configuration warnings', [...startupWarnings]);
-  await emitView(envelope, options);
-  startupWarnings.length = 0;
-}
-
-async function flushRuntimeWarnings(options: CLIOptions): Promise<void> {
-  if (!runtimeWarnings.length) return;
-  const envelope = buildWarningView('Runtime warnings', [...runtimeWarnings]);
-  await emitView(envelope, options);
-  runtimeWarnings.length = 0;
-}
-
-function applyDefaults(options: CLIOptions, defaults?: GenieConfig['defaults']): void {
-  if (!options.backgroundExplicit) {
-    options.background = Boolean(defaults?.background);
-  }
-}
-
-function loadConfig(): GenieConfig {
-  let config = deepClone(DEFAULT_CONFIG);
-  const configFilePath = fs.existsSync(CONFIG_PATH) ? CONFIG_PATH : null;
-
-  if (configFilePath) {
-    try {
-      const raw = fs.readFileSync(configFilePath, 'utf8');
-      if (raw.trim().length) {
-        let parsed: any = {};
-        if (YAML) {
-          parsed = YAML.parse(raw) || {};
-        } else if (raw.trim().startsWith('{')) {
-          try {
-            parsed = JSON.parse(raw);
-          } catch {
-            parsed = {};
-          }
-        } else {
-          recordStartupWarning('[genie] YAML module unavailable; ignoring config overrides. Install "yaml" to enable parsing.');
-          parsed = {};
-        }
-        config = mergeDeep(config, parsed);
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      throw new Error(`Failed to parse ${configFilePath}: ${message}`);
-    }
-    config.__configPath = configFilePath;
-  } else {
-    config.__configPath = CONFIG_PATH;
-  }
-
-  return config;
-}
-
-function deepClone<T>(input: T): T {
-  return JSON.parse(JSON.stringify(input)) as T;
-}
-
-function buildDefaultConfig(): GenieConfig {
-  const config = deepClone(BASE_CONFIG);
-  config.executors = config.executors || {};
-  Object.entries(EXECUTORS).forEach(([key, executor]) => {
-    config.executors![key] = executor.defaults || {};
-  });
-  return config;
-}
-
-function mergeDeep(target: any, source: any): any {
-  if (source === null || source === undefined) return target;
-  if (Array.isArray(source)) {
-    return source.slice();
-  }
-  if (typeof source !== 'object') {
-    return source;
-  }
-  const base = target && typeof target === 'object' && !Array.isArray(target) ? { ...target } : {};
-  Object.entries(source).forEach(([key, value]) => {
-    base[key] = mergeDeep(base[key], value);
-  });
-  return base;
-}
-
-function resolvePaths(paths: ConfigPaths): Required<ConfigPaths> {
-  const baseDir = paths.baseDir || '.';
-  return {
-    baseDir,
-    sessionsFile: paths.sessionsFile || path.join(baseDir, '.genie/state/agents/sessions.json'),
-    logsDir: paths.logsDir || path.join(baseDir, '.genie/state/agents/logs'),
-    backgroundDir: paths.backgroundDir || path.join(baseDir, '.genie/state/agents/background'),
-    executors: paths.executors || {}
-  };
-}
-
-function prepareDirectories(paths: Required<ConfigPaths>): void {
-  [paths.logsDir, paths.backgroundDir, path.dirname(paths.sessionsFile)].forEach((dir) => {
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-  });
 }
 
 async function maybeHandleBackgroundLaunch(params: {
@@ -612,6 +433,25 @@ function extractExecutorOverrides(agentGenie: any, executorKey: string): any {
   return overrides;
 }
 
+function deepClone<T>(input: T): T {
+  return JSON.parse(JSON.stringify(input)) as T;
+}
+
+function mergeDeep(target: any, source: any): any {
+  if (source === null || source === undefined) return target;
+  if (Array.isArray(source)) {
+    return source.slice();
+  }
+  if (typeof source !== 'object') {
+    return source;
+  }
+  const base = target && typeof target === 'object' && !Array.isArray(target) ? { ...target } : {};
+  Object.entries(source).forEach(([key, value]) => {
+    base[key] = mergeDeep(base[key], value);
+  });
+  return base;
+}
+
 function executeRun(args: ExecuteRunArgs): Promise<void> {
   const {
     agentName,
@@ -826,105 +666,6 @@ function executeRun(args: ExecuteRunArgs): Promise<void> {
   }
 
   return promise;
-}
-
-function loadAgentSpec(name: string): AgentSpec {
-  const base = name.endsWith('.md') ? name.slice(0, -3) : name;
-  const agentPath = path.join('.genie', 'agents', `${base}.md`);
-  if (!fs.existsSync(agentPath)) {
-    throw new Error(`❌ Agent '${name}' not found in .genie/agents`);
-  }
-  const content = fs.readFileSync(agentPath, 'utf8');
-  const { meta, body } = extractFrontMatter(content);
-  return {
-    meta,
-    instructions: body.replace(/^(\r?\n)+/, '')
-  };
-}
-
-function extractFrontMatter(source: string): { meta?: Record<string, any>; body: string } {
-  if (!source.startsWith('---')) {
-    return { meta: {}, body: source };
-  }
-  const end = source.indexOf('\n---', 3);
-  if (end === -1) {
-    return { meta: {}, body: source };
-  }
-  const raw = source.slice(3, end).trim();
-  const body = source.slice(end + 4);
-  if (!YAML) {
-    recordStartupWarning('[genie] YAML module unavailable; front matter metadata ignored.');
-    return { meta: {}, body };
-  }
-  try {
-    const parsed = YAML.parse(raw) || {};
-    return { meta: parsed, body };
-  } catch {
-    return { meta: {}, body };
-  }
-}
-
-function deriveStartTime(): number {
-  const fromEnv = process.env[INTERNAL_START_TIME_ENV];
-  if (!fromEnv) return Date.now();
-  const parsed = Number(fromEnv);
-  if (Number.isFinite(parsed)) return parsed;
-  return Date.now();
-}
-
-function sanitizeLogFilename(agentName: string): string {
-  const fallback = 'agent';
-  if (!agentName || typeof agentName !== 'string') return fallback;
-  const normalized = agentName
-    .trim()
-    .replace(/[\\/]+/g, '-')
-    .replace(/[^a-z0-9._-]+/gi, '-')
-    .replace(/-+/g, '-')
-    .replace(/\.+/g, '.')
-    .replace(/^-+|-+$/g, '')
-    .replace(/^\.+|\.+$/g, '');
-  return normalized.length ? normalized : fallback;
-}
-
-function deriveLogFile(agentName: string, startTime: number, paths: Required<ConfigPaths>): string {
-  const envPath = process.env[INTERNAL_LOG_PATH_ENV];
-  if (envPath) return envPath;
-  const filename = `${sanitizeLogFilename(agentName)}-${startTime}.log`;
-  return path.join(paths.logsDir || '.genie/state/agents/logs', filename);
-}
-
-function formatPathRelative(targetPath: string, baseDir: string): string {
-  if (!targetPath) return 'n/a';
-  try {
-    return path.relative(baseDir, targetPath) || targetPath;
-  } catch {
-    return targetPath;
-  }
-}
-
-function safeIsoString(value: string): string | null {
-  const timestamp = new Date(value).getTime();
-  if (!Number.isFinite(timestamp)) return null;
-  return new Date(timestamp).toISOString();
-}
-
-function formatRelativeTime(value: string): string {
-  const timestamp = new Date(value).getTime();
-  if (!Number.isFinite(timestamp)) return 'n/a';
-  const diffMs = Date.now() - timestamp;
-  if (diffMs < 0) return 'just now';
-  const seconds = Math.floor(diffMs / 1000);
-  if (seconds < 5) return 'just now';
-  if (seconds < 60) return `${seconds}s ago`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
-  const weeks = Math.floor(days / 7);
-  if (weeks < 5) return `${weeks}w ago`;
-  return new Date(value).toLocaleDateString();
 }
 
 async function runContinue(parsed: ParsedCommand, config: GenieConfig, paths: Required<ConfigPaths>): Promise<void> {
@@ -1655,66 +1396,6 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function findSessionEntry(
-  store: SessionStore,
-  sessionId: string,
-  paths: Required<ConfigPaths>
-) {
-  if (!sessionId || typeof sessionId !== 'string') return null;
-  const trimmed = sessionId.trim();
-  if (!trimmed) return null;
-
-  for (const [agentName, entry] of Object.entries(store.agents || {})) {
-    if (entry && entry.sessionId === trimmed) {
-      return { agentName, entry };
-    }
-  }
-
-  for (const [agentName, entry] of Object.entries(store.agents || {})) {
-    const logFile = entry.logFile;
-    if (!logFile || !fs.existsSync(logFile)) continue;
-    try {
-      const content = fs.readFileSync(logFile, 'utf8');
-      const marker = new RegExp(`"session_id":"${trimmed}"`);
-      if (marker.test(content)) {
-        entry.sessionId = trimmed;
-        entry.lastUsed = new Date().toISOString();
-        saveSessions(paths as SessionPathsConfig, store);
-        return { agentName, entry };
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      recordRuntimeWarning(`[genie] Failed to scan log ${logFile}: ${message}`);
-    }
-  }
-  return null;
-}
-
-function resolveDisplayStatus(entry: SessionEntry): string {
-  const baseStatus = entry.status || 'unknown';
-  const executorRunning = backgroundManager.isAlive(entry.executorPid);
-  const runnerRunning = backgroundManager.isAlive(entry.runnerPid);
-
-  if (baseStatus === 'running') {
-    if (executorRunning) return 'running';
-    if (!executorRunning && runnerRunning) return 'pending-completion';
-    if (entry.exitCode === 0) return 'completed';
-    if (typeof entry.exitCode === 'number' && entry.exitCode !== 0) {
-      return `failed (${entry.exitCode})`;
-    }
-    return 'stopped';
-  }
-
-  if (baseStatus === 'completed' || baseStatus === 'failed') {
-    return baseStatus;
-  }
-
-  if (runnerRunning || executorRunning) {
-    return 'running';
-  }
-  return baseStatus;
-}
-
 async function runHelp(parsed: ParsedCommand, config: GenieConfig, paths: Required<ConfigPaths>): Promise<void> {
   // Always show main help - no subcommand help through 'genie help <command>'
   const backgroundDefault = Boolean(config.defaults && config.defaults.background);
@@ -1751,44 +1432,14 @@ async function runHelp(parsed: ParsedCommand, config: GenieConfig, paths: Requir
   await emitView(envelope, parsed.options);
 }
 
-interface ListedAgent {
-  id: string;
-  label: string;
-  meta: any;
-  folder: string | null;
-}
-
-function listAgents(): ListedAgent[] {
-  const baseDir = '.genie/agents';
-  const records: ListedAgent[] = [];
-  if (!fs.existsSync(baseDir)) return records;
-  const visit = (dirPath: string, relativePath: string | null) => {
-    const entries = fs.readdirSync(dirPath, { withFileTypes: true });
-    entries.forEach((entry) => {
-      const entryPath = path.join(dirPath, entry.name);
-      if (entry.isDirectory()) {
-        visit(entryPath, relativePath ? path.join(relativePath, entry.name) : entry.name);
-        return;
-      }
-      if (!entry.isFile() || !entry.name.endsWith('.md') || entry.name === 'README.md') return;
-      const rawId = relativePath ? path.join(relativePath, entry.name) : entry.name;
-      const normalizedId = rawId.replace(/\.md$/i, '').split(path.sep).join('/');
-      const content = fs.readFileSync(entryPath, 'utf8');
-      const { meta } = extractFrontMatter(content);
-      const metaObj = meta || {};
-      if (metaObj.hidden === true || metaObj.disabled === true) return;
-      const label = (metaObj.name || normalizedId.split('/').pop() || normalizedId).trim();
-      const folder = normalizedId.includes('/') ? normalizedId.split('/').slice(0, -1).join('/') : null;
-      records.push({ id: normalizedId, label, meta: metaObj, folder });
-    });
-  };
-
-  visit(baseDir, null);
-  return records;
-}
-
 async function emitAgentCatalog(parsed: ParsedCommand, _config: GenieConfig, _paths: Required<ConfigPaths>): Promise<void> {
   const agents = listAgents();
+  interface ListedAgent {
+    id: string;
+    label: string;
+    meta: any;
+    folder: string | null;
+  }
   const summarize = (entry: ListedAgent) => {
     const description = ((entry.meta?.description || entry.meta?.summary || '') as string).replace(/\s+/g, ' ').trim();
     return truncateText(description || '—', 96);
@@ -1820,51 +1471,6 @@ async function emitAgentCatalog(parsed: ParsedCommand, _config: GenieConfig, _pa
   });
 
   await emitView(envelope, parsed.options);
-}
-
-function resolveAgentIdentifier(input: string): string {
-  const trimmed = (input || '').trim();
-  if (!trimmed) {
-    throw new Error('Agent id is required');
-  }
-  const normalized = trimmed.replace(/\.md$/i, '');
-  const normalizedLower = normalized.toLowerCase();
-
-  const directCandidates = [normalized, normalizedLower];
-  for (const candidate of directCandidates) {
-    if (agentExists(candidate)) return candidate.replace(/\\/g, '/');
-  }
-
-  const agents = listAgents();
-  const byExactId = agents.find((agent) => agent.id.toLowerCase() === normalizedLower);
-  if (byExactId) return byExactId.id;
-
-  const byLabel = agents.find((agent) => agent.label.toLowerCase() === normalizedLower);
-  if (byLabel) return byLabel.id;
-
-  const legacy = normalizedLower.replace(/^genie-/, '').replace(/^template-/, '');
-  const legacyCandidates = [legacy, `core/${legacy}`, `specialized/${legacy}`];
-  for (const candidate of legacyCandidates) {
-    if (agentExists(candidate)) return candidate;
-  }
-
-  if (normalizedLower === 'forge-master' && agentExists('forge')) return 'forge';
-
-  throw new Error(`❌ Agent '${input}' not found. Try 'genie list agents' to see available ids.`);
-}
-
-function agentExists(id: string): boolean {
-  if (!id) return false;
-  const normalized = id.replace(/\\/g, '/');
-  const file = path.join('.genie', 'agents', `${normalized}.md`);
-  return fs.existsSync(file);
-}
-
-function truncateText(text: string, maxLength = 64): string {
-  if (!text) return '';
-  if (text.length <= maxLength) return text;
-  const sliceLength = Math.max(0, maxLength - 3);
-  return text.slice(0, sliceLength).trimEnd() + '...';
 }
 
 function buildTranscriptFromEvents(events: Array<Record<string, any>>): ChatMessage[] {
