@@ -1321,6 +1321,30 @@ async function runView(parsed: ParsedCommand, config: GenieConfig, paths: Requir
     try { jsonl.push(JSON.parse(trimmed)); } catch { /* skip */ }
   }
 
+  // Use executor-specific log viewer if available
+  if (logViewer?.buildJsonlView) {
+    const style: ViewStyle = 'genie';
+    const envelope = logViewer.buildJsonlView({
+      render: {
+        entry,
+        jsonl,
+        raw
+      },
+      parsed,
+      paths,
+      store,
+      save: saveSessions,
+      formatPathRelative,
+      style
+    });
+    await emitView(envelope, parsed.options);
+    if (warnings.length) {
+      await emitView(buildWarningView('Session warnings', warnings), parsed.options);
+    }
+    return;
+  }
+
+  // Fallback to generic transcript view
   const transcript = buildTranscriptFromEvents(jsonl);
 
   // Concise mode: plain text output for non-full views

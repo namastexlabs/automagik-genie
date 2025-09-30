@@ -1136,6 +1136,29 @@ async function runView(parsed, config, paths) {
         }
         catch { /* skip */ }
     }
+    // Use executor-specific log viewer if available
+    if (logViewer?.buildJsonlView) {
+        const style = 'genie';
+        const envelope = logViewer.buildJsonlView({
+            render: {
+                entry,
+                jsonl,
+                raw
+            },
+            parsed,
+            paths,
+            store,
+            save: session_store_1.saveSessions,
+            formatPathRelative,
+            style
+        });
+        await emitView(envelope, parsed.options);
+        if (warnings.length) {
+            await emitView((0, common_1.buildWarningView)('Session warnings', warnings), parsed.options);
+        }
+        return;
+    }
+    // Fallback to generic transcript view
     const transcript = buildTranscriptFromEvents(jsonl);
     // Concise mode: plain text output for non-full views
     if (!parsed.options.full && !parsed.options.live) {
