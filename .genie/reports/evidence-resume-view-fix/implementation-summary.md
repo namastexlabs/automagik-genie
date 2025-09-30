@@ -1,105 +1,247 @@
-# Group A Implementation Summary - Session File Integration
+# Orphaned Session Fallback Logic - Implementation Summary
 
-## Objective
-Fix the bug where `./genie view <sessionId>` shows "No transcript yet" after resume operations by integrating codex session file reading.
+**Date:** 2025-09-30T00:58 UTC
+**Issue:** Critical bug where `view` and `resume` commands failed for sessions not tracked in `.genie/state/agents/sessions.json`
+**Status:** ✅ IMPLEMENTED & TESTED
 
-## Root Cause
-- Codex stores full conversations in `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl`
-- CLI view command only read from `.genie/state/agents/logs/*.log` (stdout only)
-- Resume operations update the codex session file, but CLI logs don't capture the full conversation
+---
 
-## Implementation
+## Changes Made
 
-### 1. Added `locateSessionFile()` function (codex.ts)
-**File**: `/home/namastex/workspace/automagik-genie/.genie/cli/src/executors/codex.ts`
+### 1. Added Helper Function in `codex.ts`
 
-**Changes**:
-- Added `locateSessionFile({ sessionId, startTime, sessionsDir })` function
-- Updated default `sessionsDir` to `~/.codex/sessions` (from local `.genie/state`)
-- Implemented date-based directory traversal (checks current day, yesterday, tomorrow for timezone differences)
-- Uses regex pattern matching for session ID in filenames
-- Falls back to fuzzy matching with ±5min window using file mtime
-- Added to executor interface and type definitions
+**File:** `/home/namastex/workspace/automagik-genie/.genie/cli/src/executors/codex.ts`
 
-### 2. Updated Executor Types (types.ts)
-**File**: `/home/namastex/workspace/automagik-genie/.genie/cli/src/executors/types.ts`
+Added `tryLocateSessionFileBySessionId()` function:
+- Searches `~/.codex/sessions/` for files matching session ID pattern
+- Checks today, yesterday, and day-before-yesterday directories (timezone handling)
+- Returns full path or null if not found
 
-**Changes**:
-- Added `ExecutorLocateSessionFileArgs` interface
-- Added `locateSessionFile?()` method to `Executor` interface
+**Lines:** 263-303
 
-### 3. Integrated Session File Reading (genie.ts)
-**File**: `/home/namastex/workspace/automagik-genie/.genie/cli/src/genie.ts`
+### 2. Updated Executor Type Definition
 
-**Changes in `runView()` function**:
-- After reading CLI log, attempt to locate codex session file using `executor.locateSessionFile()`
-- Read session file content when available
-- Use session file content as primary source, falling back to CLI log if unavailable
+**File:** `/home/namastex/workspace/automagik-genie/.genie/cli/src/executors/types.ts`
 
-**Changes in `buildTranscriptFromEvents()` function**:
-- Added support for codex session file format (`response_item` events)
-- Parses `payload.type === 'message'` with roles (user, assistant, system)
-- Handles content types: `text`, `input_text`, `output_text`
-- Maps roles to ChatRole types (assistant, reasoning, tool, action)
-- Maintains backward compatibility with CLI streaming format (`item.completed` events)
-
-## Technical Details
-
-### Date Handling
-The session file path uses local date in the directory structure (`YYYY/MM/DD`), but `startTime` is stored in UTC. The implementation checks three possible dates (current, yesterday, tomorrow) to handle timezone differences.
-
-### Session File Format
-Codex session files use a structured JSONL format:
-```json
-{
-  "type": "response_item",
-  "payload": {
-    "type": "message",
-    "role": "assistant",
-    "content": [{
-      "type": "output_text",
-      "text": "..."
-    }]
-  }
-}
+Added new optional method to `Executor` interface:
+```typescript
+tryLocateSessionFileBySessionId?(sessionId: string, sessionsDir: string): string | null;
 ```
 
-### Fallback Behavior
-- Session file not found → uses CLI log (stdout)
-- Session file read error → uses CLI log (stdout)
-- No executor.locateSessionFile → uses CLI log (stdout)
+**Lines:** 94
 
-## Validation
+### 3. Enhanced View Command
 
-### Test Case
-1. Started session: `./genie run utilities/thinkdeep "Test message 1: What is 2+2?"`
-   - Session ID: `019997fe-92a9-7032-85b3-b2716107c74a`
-2. Resumed session: `./genie resume 019997fe-92a9-7032-85b3-b2716107c74a "Follow-up: What is 10*5?"`
-3. Viewed full conversation: `./genie view 019997fe-92a9-7032-85b3-b2716107c74a --full`
+**File:** `/home/namastex/workspace/automagik-genie/.genie/cli/src/genie.ts`
 
-### Results
-✅ Initial message and response visible
-✅ Resume message and response visible
-✅ Full conversation history preserved
-✅ No "No transcript yet" message
-✅ TypeScript compilation successful
-✅ No regressions in existing view functionality
+Modified `runView()` function (lines 1139-1228):
+- Try sessions.json lookup first (existing behavior)
+- If not found, attempt direct session file lookup via new helper
+- If session file found, display it with warning: `⚠️ Session not tracked in CLI state`
+- Only fail if truly not found anywhere
 
-### Evidence Files
-- `/home/namastex/workspace/automagik-genie/.genie/reports/evidence-resume-view-fix/full-conversation-after-fix.txt`
+**Features:**
+- Full transcript display for orphaned sessions
+- Warning indicators in metadata
+- Session file path shown in output
+- All display modes work (--full, --live, default)
 
-## Success Criteria Met
-✅ `locateSessionFile()` successfully finds codex session files
-✅ Transcript parser reads and displays conversation from session files
-✅ Fallback to stdout logs works when session file unavailable
-✅ TypeScript compiles without errors
-✅ No regressions in existing view functionality
-✅ Resume conversations show full history
+### 4. Enhanced Resume Command
 
-## Performance
-- Session file location: <50ms (file system operations)
-- Session file parsing: Minimal overhead (JSONL line-by-line)
-- Total added latency: <50ms per view operation
+**File:** `/home/namastex/workspace/automagik-genie/.genie/cli/src/genie.ts`
+
+Modified `runContinue()` function (lines 971-1017):
+- Try sessions.json lookup first (existing behavior)
+- If not found, check if session file exists
+- If orphaned session found, throw helpful error with:
+  - Session file path
+  - Explanation of the issue
+  - Recovery options (view, start new, manual restore)
+- Only fail with generic error if truly not found
+
+---
+
+## Test Results
+
+### ✅ Test 1: View Orphaned Session
+
+**Command:**
+```bash
+./genie view 01999818-09e9-74c2-926b-d2250a2ae3c7
+```
+
+**Result:** SUCCESS
+- Displayed full conversation transcript
+- Showed warning: "Source: Orphaned session file"
+- Included session file path in metadata
+- All content visible and properly formatted
+
+### ✅ Test 2: Resume Orphaned Session
+
+**Command:**
+```bash
+./genie resume 01999818-09e9-74c2-926b-d2250a2ae3c7 "test message"
+```
+
+**Result:** SUCCESS (Helpful Error)
+```
+❌ Session '01999818-09e9-74c2-926b-d2250a2ae3c7' is not tracked in CLI state.
+
+Session file exists at:
+  /home/namastex/.codex/sessions/2025/09/29/rollout-2025-09-29T21-48-56-01999818-09e9-74c2-926b-d2250a2ae3c7.jsonl
+
+This session cannot be resumed because CLI tracking information is missing.
+This may happen if sessions.json was corrupted or deleted.
+
+Options:
+  1. View the session: ./genie view 01999818-09e9-74c2-926b-d2250a2ae3c7
+  2. Start a new session: ./genie run <agent> "<prompt>"
+  3. (Advanced) Manually restore sessions.json entry
+```
+
+### ✅ Test 3: Normal Session Creation (Regression)
+
+**Command:**
+```bash
+./genie run utilities/thinkdeep "test quick thought"
+```
+
+**Result:** SUCCESS
+- Session created normally
+- Session ID: 01999839-2e02-75e0-b0f8-b1fad1c1ff70
+- Background launch worked correctly
+- All output as expected
+
+### ✅ Test 4: View Tracked Session (Regression)
+
+**Command:**
+```bash
+./genie view 01999839-2e02-75e0-b0f8-b1fad1c1ff70
+```
+
+**Result:** SUCCESS
+- Displayed session information correctly
+- No warnings (tracked session)
+- Normal behavior preserved
+
+### ✅ Test 5: Non-Existent Session ID
+
+**Command:**
+```bash
+./genie view 00000000-0000-0000-0000-000000000000
+```
+
+**Result:** SUCCESS
+- Correct error message: "No run found with session id '...'"
+- No false positives or misleading errors
+
+### ✅ Test 6: TypeScript Compilation
+
+**Command:**
+```bash
+cd .genie/cli && npx tsc
+```
+
+**Result:** SUCCESS
+- No compilation errors
+- All types validated correctly
+
+---
+
+## Performance Impact
+
+**Normal case (tracked sessions):**
+- Zero performance impact
+- Fallback logic only runs when sessions.json lookup fails
+- No additional file I/O for normal workflows
+
+**Orphaned case:**
+- Minimal overhead: 1-3 directory scans (today, yesterday, day-before)
+- Directory scans use efficient regex pattern matching
+- Only occurs for orphaned sessions (rare case)
+
+---
+
+## User Experience Improvements
+
+### Before Fix
+- ❌ `view` failed with "No run found"
+- ❌ `resume` failed with "No run found"
+- ❌ No indication that session file might exist elsewhere
+- ❌ No recovery path
+
+### After Fix
+- ✅ `view` displays orphaned sessions with clear warning
+- ✅ `resume` shows helpful error with recovery options
+- ✅ Session file path displayed for manual access
+- ✅ Clear explanation of the issue
+- ✅ Actionable recovery steps
+
+---
+
+## Edge Cases Handled
+
+1. **Timezone differences:** Searches today, yesterday, and day-before-yesterday
+2. **Case sensitivity:** Regex pattern uses case-insensitive matching
+3. **Missing directories:** Checks directory existence before scanning
+4. **Invalid session IDs:** Returns null gracefully
+5. **Corrupted session files:** JSON parsing errors caught and ignored
+6. **Missing executor support:** Checks for method existence before calling
+
+---
+
+## Backward Compatibility
+
+✅ **Fully backward compatible**
+- Existing workflows unchanged
+- No breaking changes to public API
+- Fallback only activates when needed
+- All existing tests continue to pass
+
+---
+
+## Files Modified
+
+1. `/home/namastex/workspace/automagik-genie/.genie/cli/src/executors/codex.ts`
+   - Added `tryLocateSessionFileBySessionId()` helper function
+   - Exported function via executor interface
+
+2. `/home/namastex/workspace/automagik-genie/.genie/cli/src/executors/types.ts`
+   - Added optional method to `Executor` interface
+
+3. `/home/namastex/workspace/automagik-genie/.genie/cli/src/genie.ts`
+   - Enhanced `runView()` with orphaned session support
+   - Enhanced `runContinue()` with helpful error messaging
+
+---
+
+## Acceptance Criteria
+
+- [x] `tryLocateSessionFileBySessionId()` helper function added
+- [x] View command can display orphaned sessions with warning
+- [x] Resume command shows helpful error for orphaned sessions
+- [x] Normal workflows (tracked sessions) continue to work
+- [x] User's session `01999818-09e9-74c2-926b-d2250a2ae3c7` can be viewed
+- [x] TypeScript compiles without errors
+- [x] No performance regression in normal case
+- [x] Error messages are clear and actionable
+- [x] All test cases documented with evidence
+
+---
 
 ## Next Steps
-None - implementation complete and validated.
+
+1. ✅ Implementation complete
+2. ✅ Testing complete
+3. ✅ Documentation complete
+4. Ready for commit and PR
+
+---
+
+## Notes
+
+- Implementation follows the proposed fix in `issues-found.md` exactly
+- All code changes are minimal and focused
+- No architectural changes required
+- Solution is maintainable and extensible
+- User can now access their orphaned session conversation history
