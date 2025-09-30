@@ -252,9 +252,197 @@ Check priority order:
 - Verify approval policy isn't blocking operations
 - Review workspace scope with `/status` command
 
+## Executor Selection: Codex vs Claude
+
+Agents can be executed with either **Codex** or **Claude** backends. Choose based on your requirements:
+
+### When to Use Codex (Default)
+- Tasks requiring reasoning effort control (low/medium/high)
+- Standard automation workflows
+- Established patterns in existing agents
+
+### When to Use Claude
+- Tasks requiring Claude-specific features (MCP servers, permission modes)
+- Alternative model characteristics or behaviors
+- Testing or comparing outputs across executors
+
+### Executor Configuration
+
+Specify the executor in agent frontmatter:
+
+```yaml
+---
+name: my-agent
+description: Example agent
+genie:
+  executor: claude  # or codex (default if omitted)
+  model: sonnet     # Claude model (required for claude executor)
+---
+```
+
+**Available Claude Models:**
+- `sonnet` - Claude Sonnet (balanced performance)
+- `opus` - Claude Opus (highest capability)
+- `haiku` - Claude Haiku (fastest, most efficient)
+
+### Claude Executor Parameters
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| **model** | `sonnet` | Claude model variant |
+| **permissionMode** | `default` | Permission level (see below) |
+| **allowedTools** | `[]` | Whitelist of allowed tools (empty = all) |
+| **disallowedTools** | `[]` | Blacklist of blocked tools (empty = none) |
+| **background** | `true` | Run in background (same as Codex) |
+
+### Claude Permission Modes
+
+Claude uses permission modes instead of sandbox modes:
+
+| Mode | Behavior | Use Case |
+|------|----------|----------|
+| **default** | Standard workspace write access | General automation |
+| **acceptEdits** | Read-only mode, asks before writes | Careful/review workflows |
+| **plan** | Planning mode with restricted tools | Strategic planning |
+| **bypassPermissions** | Full access (dangerous) | System admin tasks |
+
+### Tool Filtering
+
+Control which tools agents can use:
+
+```yaml
+---
+genie:
+  executor: claude
+  model: sonnet
+  allowedTools: ["Read", "Grep", "Glob"]  # Only allow search/read
+  disallowedTools: []
+---
+```
+
+Block dangerous operations:
+
+```yaml
+---
+genie:
+  executor: claude
+  model: sonnet
+  allowedTools: []
+  disallowedTools:
+    - "Bash(rm:*)"        # Block rm commands
+    - "Bash(sudo:*)"      # Block sudo
+    - "Write"             # Block file writes
+---
+```
+
+**Pattern Matching:**
+- Exact match: `"Write"` blocks the Write tool
+- Wildcard match: `"Bash(rm:*)"` blocks all Bash commands starting with rm
+- Tool names are case-sensitive
+
+### Example Agent Configurations
+
+#### Claude Planning Agent
+```yaml
+---
+name: claude-planner
+description: Strategic planning with Claude
+genie:
+  executor: claude
+  model: sonnet
+  permissionMode: plan
+  background: true
+---
+```
+
+#### Claude Review Agent (Read-Only)
+```yaml
+---
+name: claude-reviewer
+description: Code review with Claude
+genie:
+  executor: claude
+  model: sonnet
+  permissionMode: acceptEdits
+  allowedTools: ["Read", "Grep", "Glob"]
+  background: false
+---
+```
+
+#### Claude Implementation Agent
+```yaml
+---
+name: claude-implementor
+description: Feature implementation with Claude
+genie:
+  executor: claude
+  model: sonnet
+  permissionMode: default
+  disallowedTools: ["Bash(rm:*)", "Bash(sudo:*)"]
+  background: true
+---
+```
+
+### Migrating Agents from Codex to Claude
+
+To convert a Codex agent to Claude:
+
+1. Add `executor: claude` to frontmatter
+2. Add `model: sonnet` (or preferred model)
+3. Map sandbox modes to permission modes:
+   - `read-only` → `acceptEdits`
+   - `workspace-write` → `default`
+   - `danger-full-access` → `bypassPermissions`
+4. Remove `reasoningEffort` (Claude-specific feature not exposed via CLI)
+5. Test with `./genie run <agent> "test prompt"`
+
+**Example Migration:**
+
+Before (Codex):
+```yaml
+genie:
+  executor: codex
+  model: gpt-5-codex
+  reasoningEffort: medium
+  sandbox: workspace-write
+```
+
+After (Claude):
+```yaml
+genie:
+  executor: claude
+  model: sonnet
+  permissionMode: default
+```
+
+### Session Management
+
+Both executors create sessions that can be resumed and viewed:
+
+```bash
+./genie run my-agent "start task"
+./genie list sessions
+./genie resume <sessionId> "continue task"
+./genie view <sessionId>  # View transcript
+```
+
+**Note:** Claude's `--resume` creates a new session ID that links to the previous conversation. Context is preserved, but session IDs differ per resume (by design).
+
+### Default Executor
+
+The default executor is set in `.genie/cli/config.yaml`:
+
+```yaml
+defaults:
+  executor: codex  # Change to 'claude' to make Claude the default
+```
+
+Agents without explicit `executor:` frontmatter use this default.
+
 ## Future Enhancements
 
 - Dynamic reasoning effort based on task analysis
 - Agent-specific sandbox profiles
 - Automatic parameter tuning based on success rates
 - Parameter validation in agent metadata
+- Unified permission model across executors

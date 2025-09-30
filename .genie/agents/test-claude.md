@@ -3,6 +3,7 @@ name: test-claude
 description: Test agent for Claude executor validation
 genie:
   executor: claude
+  model: sonnet
   background: false
 ---
 
