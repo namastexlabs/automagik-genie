@@ -1782,7 +1782,9 @@ function buildTranscriptFromEvents(events: Array<Record<string, any>>): ChatMess
         // Map payload roles to ChatRole types
         const payloadRole = payload.role;
         const role: 'assistant' | 'reasoning' | 'tool' | 'action' =
-          payloadRole === 'assistant' ? 'assistant' : 'reasoning';
+          payloadRole === 'assistant' ? 'assistant' :
+          payloadRole === 'user' ? 'action' :
+          'reasoning';
         const title = payloadRole === 'assistant' ? 'Assistant' :
                      payloadRole === 'user' ? 'User' : 'System';
 
@@ -1904,8 +1906,8 @@ function sliceTranscriptForLatest(messages: ChatMessage[]): ChatMessage[] {
 function sliceTranscriptForRecent(messages: ChatMessage[]): ChatMessage[] {
   if (!messages.length) return [];
 
-  // Show the last 20 messages or from the last 2 assistant messages, whichever is more
-  const maxMessages = 20;
+  // Show the last 5 messages or from the last 2 assistant messages, whichever is more
+  const maxMessages = 5;
   let assistantCount = 0;
   let cutoff = messages.length;
 
