@@ -1,0 +1,18 @@
+--- .genie/cli/snapshots/baseline-20250930-134336/build-output.txt	2025-09-30 13:43:52.949260205 -0300
++++ .genie/cli/snapshots/current-20250930-140319/build-output.txt	2025-09-30 14:03:27.653802734 -0300
+@@ -1,7 +1,8 @@
+-npm error Missing script: "build"
+-npm error
+-npm error To see a list of scripts, run:
+-npm error   npm run
+-npm error Log files were not written due to an error writing to the directory: /home/namastex/.npm/_logs
+-npm error You can rerun the command with `--loglevel=verbose` to see the logs in your terminal
+-Exit code: 1
++
++> build
++> pnpm run build:genie
++
++
++> automagik-genie-cli@ build:genie /home/namastex/workspace/automagik-genie
++> tsc -p .genie/cli/tsconfig.json
++

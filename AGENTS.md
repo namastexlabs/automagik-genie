@@ -231,8 +231,8 @@ Validation: Future forge runs produce <10 line descriptions with @-references on
     </entry>
     <entry date="2025-09-30" violation_type="POLLING" severity="MEDIUM">
       <trigger>Polling background sessions with short sleep intervals, leading to impatient behavior and user directive to slow down.</trigger>
-      <correction>Increase sleep duration between consecutive session status checks to avoid rapid-fire polling; default to longer waits unless urgency is documented.</correction>
-      <validation>Future monitoring loops record waits of at least 60 seconds between checks, with evidence captured in session logs.</validation>
+      <correction>Increase sleep duration between consecutive session status checks to avoid rapid-fire polling; default to longer waits unless urgency is documented. Exception: Sleepy mode autonomous execution uses 20-minute baseline per @.genie/agents/specialists/sleepy.md protocol.</correction>
+      <validation>Future monitoring loops record waits of at least 60 seconds for general polling, 20 minutes (1200 seconds) for sleepy mode autonomous execution, with evidence captured in session logs.</validation>
     </entry>
     <entry date="2025-09-30" violation_type="TWIN_VALIDATION" severity="CRITICAL">
       <trigger>Sleepy mode dry run executed without Twin Genie validation at any checkpoint (task creation, execution start, merge approval).</trigger>
