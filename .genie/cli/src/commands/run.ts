@@ -227,12 +227,16 @@ export function executeRun(args: ExecuteRunArgs): Promise<void> {
 
   let filteredStdout: NodeJS.ReadWriteStream | null = null;
 
+  let outputSource: NodeJS.ReadableStream | null = null;
+
   if (proc.stdout) {
     if (executor.createOutputFilter) {
       filteredStdout = executor.createOutputFilter(logStream);
       proc.stdout.pipe(filteredStdout);
+      outputSource = filteredStdout;
     } else {
       proc.stdout.pipe(logStream);
+      outputSource = proc.stdout;
     }
   }
   if (proc.stderr) proc.stderr.pipe(logStream);
@@ -245,23 +249,10 @@ export function executeRun(args: ExecuteRunArgs): Promise<void> {
       if (data && typeof data === 'object' && data.type === 'session.created') {
         const sessionId = data.session_id || data.sessionId;
         if (sessionId) {
-          try {
-            fs.appendFileSync('.genie/state/debug-session.log', `${new Date().toISOString()} session.created line: ${trimmed}\n`);
-          } catch {
-            // ignore debug logging errors
-          }
           if (entry.sessionId !== sessionId) {
             entry.sessionId = sessionId;
             entry.lastUsed = new Date().toISOString();
             saveSessions(paths as SessionPathsConfig, store);
-            try {
-              fs.appendFileSync(
-                '.genie/state/debug-session.log',
-                `${new Date().toISOString()} sessionId persisted: ${sessionId}\n`
-              );
-            } catch {
-              // ignore debug logging errors
-            }
           }
         }
       }
@@ -270,9 +261,9 @@ export function executeRun(args: ExecuteRunArgs): Promise<void> {
     }
   };
 
-  if (proc.stdout) {
+  if (outputSource) {
     let buffer = '';
-    proc.stdout.on('data', (chunk: Buffer | string) => {
+    outputSource.on('data', (chunk: Buffer | string) => {
       const text = chunk instanceof Buffer ? chunk.toString('utf8') : chunk;
       buffer += text;
       let index = buffer.indexOf('\n');

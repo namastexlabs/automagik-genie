@@ -272,7 +272,7 @@ function renderTableNode(node: TableNode): React.ReactElement {
         const color = isHeader ? accentToColor('secondary') : palette.foreground.default;
         return (
           <InkBox key={`${col.key}-${idx}`} width={widths[idx]} marginRight={idx < columns.length - 1 ? gapSize : 0}>
-            <InkText color={color} bold={isHeader}>
+            <InkText color={color} bold={isHeader} wrap="truncate">
               {aligned}
             </InkText>
           </InkBox>

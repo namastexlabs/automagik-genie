@@ -1,0 +1,2 @@
+snapshots/capture-baseline.sh: line 38: ./genie: No such file or directory
+Exit code: 127

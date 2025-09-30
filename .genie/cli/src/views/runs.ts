@@ -74,7 +74,7 @@ function simpleTable(title: string, rows: RunRow[]): ViewNode {
         type: 'table' as const,
         columns: [
           { key: 'agent', label: 'Agent' },
-          { key: 'status', label: 'Status' },
+          { key: 'status', label: 'Status', width: 13 },
           { key: 'sessionId', label: 'Session' },
           { key: 'updated', label: 'Updated' }
         ],

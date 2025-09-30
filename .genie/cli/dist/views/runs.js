@@ -58,7 +58,7 @@ function simpleTable(title, rows) {
                 type: 'table',
                 columns: [
                     { key: 'agent', label: 'Agent' },
-                    { key: 'status', label: 'Status' },
+                    { key: 'status', label: 'Status', width: 13 },
                     { key: 'sessionId', label: 'Session' },
                     { key: 'updated', label: 'Updated' }
                 ],

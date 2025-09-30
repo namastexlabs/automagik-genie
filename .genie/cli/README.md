@@ -208,22 +208,19 @@ The CLI supports all standard Codex execution parameters. These are configured v
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | **prompt** | string | - | The initial user prompt to start the conversation (required) |
-| **base-instructions** | string | - | Custom instructions loaded from agent files, overrides defaults |
 | **model** | string | `gpt-5-codex` | Model to use (e.g., `o3`, `o4-mini`) |
 | **sandbox** | string | `workspace-write` | Sandbox mode: `read-only`, `workspace-write`, `danger-full-access` |
-| **approval-policy** | string | `on-failure` | Shell command approval: `untrusted`, `on-failure`, `on-request`, `never` |
 | **profile** | string | null | Configuration profile from config.toml |
-| **cwd** | string | - | Working directory (passed as `cd` option) |
+| **cd** | string | null | Working directory for the agent to use as root (via `-C, --cd`) |
 
 ### Feature Flags
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | **include-plan-tool** | boolean | false | Whether to include the plan tool |
-| **search** | boolean | false | Enable search capabilities |
 | **skip-git-repo-check** | boolean | false | Skip git repository verification |
 | **json** | boolean | false | Output in JSON format |
 | **experimental-json** | boolean | true | Use experimental JSON streaming |
-| **full-auto** | boolean | true | Run without user interaction (sets workspace-write + on-failure) |
+| **full-auto** | boolean | true | Run without user interaction (sets workspace-write + bypass approvals) |
 
 ### Advanced Options
 | Parameter | Type | Default | Description |
@@ -242,13 +239,15 @@ The CLI supports all standard Codex execution parameters. These are configured v
 
 ## Approval Modes & Sandbox Settings
 
-### Approval Policy Options
+### Approval Control
+Codex does not expose granular approval policy flags in the CLI. Instead, it provides two modes:
+
 | Mode | Flag | Description |
 |------|------|-------------|
-| **never** | `--ask-for-approval never` | No approval prompts (works with all sandbox modes) |
-| **on-failure** | `--ask-for-approval on-failure` | Ask for approval when sandboxed commands fail |
-| **on-request** | `--ask-for-approval on-request` | Ask for approval for risky operations |
-| **untrusted** | `--ask-for-approval untrusted` | Ask for approval for all operations |
+| **Sandboxed auto** | `--full-auto` | Automatic execution with workspace-write sandbox (recommended) |
+| **Bypass all** | `--dangerously-bypass-approvals-and-sandbox` | Skip all prompts and sandbox (DANGEROUS, for externally sandboxed environments only) |
+
+Approval behavior is controlled by the `--full-auto` flag combined with sandbox mode. Fine-grained approval policies can be configured via `~/.codex/config.toml` (see Codex documentation).
 
 ### Sandbox Modes
 | Mode | Flag | Description |
@@ -260,16 +259,15 @@ The CLI supports all standard Codex execution parameters. These are configured v
 ### Common Combinations
 | Intent | Flags | Effect |
 |--------|-------|--------|
-| **Safe browsing** | `--sandbox read-only --ask-for-approval on-request` | Read files only, ask before edits/commands |
-| **Read-only CI** | `--sandbox read-only --ask-for-approval never` | Read only, never escalates |
-| **Auto mode** | `--full-auto` | Equivalent to `--sandbox workspace-write --ask-for-approval on-failure` |
-| **Edit repo, ask if risky** | `--sandbox workspace-write --ask-for-approval on-request` | Edit workspace, ask for risky operations |
-| **YOLO (not recommended)** | `--dangerously-bypass-approvals-and-sandbox` | No sandbox, no prompts (alias: `--yolo`) |
+| **Safe browsing** | `--sandbox read-only` | Read files only, no edits/commands |
+| **Auto mode (recommended)** | `--full-auto` | Sandboxed workspace-write with automatic execution |
+| **Edit repo manually** | `--sandbox workspace-write` | Edit workspace with interactive approvals |
+| **YOLO (DANGEROUS)** | `--dangerously-bypass-approvals-and-sandbox` | No sandbox, no prompts - for externally sandboxed environments only |
 
 ### Default Behavior
-- **Version-controlled folders**: Auto mode (workspace-write + on-failure approvals)
-- **Non-version-controlled folders**: Read-only mode recommended
-- **Network access**: Disabled by default in workspace-write unless enabled in config
+- **Version-controlled folders**: Auto mode (`--full-auto` = workspace-write sandbox with automatic execution)
+- **Non-version-controlled folders**: Read-only mode recommended (`--sandbox read-only`)
+- **Network access**: Controlled by Codex sandbox policy (see Codex config.toml documentation)
 - **Workspace scope**: Current directory + temporary directories (/tmp)
 
 ### Fine-tuning in config.toml

@@ -176,13 +176,16 @@ function executeRun(args) {
         entry.runnerPid = runnerPid;
     (0, session_store_1.saveSessions)(paths, store);
     let filteredStdout = null;
+    let outputSource = null;
     if (proc.stdout) {
         if (executor.createOutputFilter) {
             filteredStdout = executor.createOutputFilter(logStream);
             proc.stdout.pipe(filteredStdout);
+            outputSource = filteredStdout;
         }
         else {
             proc.stdout.pipe(logStream);
+            outputSource = proc.stdout;
         }
     }
     if (proc.stderr)
@@ -208,9 +211,9 @@ function executeRun(args) {
             // ignore malformed JSON lines
         }
     };
-    if (proc.stdout) {
+    if (outputSource) {
         let buffer = '';
-        proc.stdout.on('data', (chunk) => {
+        outputSource.on('data', (chunk) => {
             const text = chunk instanceof Buffer ? chunk.toString('utf8') : chunk;
             buffer += text;
             let index = buffer.indexOf('\n');

@@ -184,7 +184,7 @@ function renderTableNode(node) {
             const prepared = truncate(sanitized(String(raw)), widths[idx]);
             const aligned = alignCell(prepared, widths[idx], col.align ?? 'left');
             const color = isHeader ? (0, theme_1.accentToColor)('secondary') : theme_1.palette.foreground.default;
-            return ((0, jsx_runtime_1.jsx)(InkBox, { width: widths[idx], marginRight: idx < columns.length - 1 ? gapSize : 0, children: (0, jsx_runtime_1.jsx)(InkText, { color: color, bold: isHeader, children: aligned }) }, `${col.key}-${idx}`));
+            return ((0, jsx_runtime_1.jsx)(InkBox, { width: widths[idx], marginRight: idx < columns.length - 1 ? gapSize : 0, children: (0, jsx_runtime_1.jsx)(InkText, { color: color, bold: isHeader, wrap: "truncate", children: aligned }) }, `${col.key}-${idx}`));
         }) }));
     const containerProps = node.border === 'none'
         ? { flexDirection: 'column' }
