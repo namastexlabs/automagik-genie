@@ -409,6 +409,13 @@ fi
 - No duplicate functions: `grep -rh "function sliceForLatest" .genie/cli/src --include="*.ts" | wc -l` returns 1
 - CLI works: `./genie view <sessionId>` displays transcript for both codex and claude sessions
 
+**Evaluation Matrix Impact:**
+- Targets Implementation Phase checkpoints:
+  - Code Quality: Clean abstractions + minimal surface area (10 pts)
+  - Test Coverage: Snapshot validation ensures no behavior changes (partial 4 pts)
+  - Execution Alignment: Stayed in scope (4 pts contribution)
+- Expected score contribution: +18/100 points
+
 **Suggested personas:** `implementor` (run 2 parallel tasks: one for A, one for B)
 **External tracker:** TBD
 
@@ -452,6 +459,15 @@ fi
   - `./genie help` displays usage
 - Background execution works: `./genie run plan "test" &` then `./genie list sessions | grep plan`
 - No circular dependencies: `npm run build 2>&1 | grep -i circular` returns empty
+
+**Evaluation Matrix Impact:**
+- Targets all remaining Implementation + Verification checkpoints:
+  - Code Quality: Final abstractions review (5 pts)
+  - Test Coverage: Parameter QA tests (4 pts integration tests)
+  - Documentation: Module-level JSDoc + README (3 pts)
+  - Validation Completeness: Snapshot validation + QA tests (15 pts)
+  - Evidence Quality: Snapshot diffs + performance metrics (10 pts)
+- Expected score contribution: +42/100 points (completes 70/100 minimum for merge approval)
 
 **Suggested personas:** `implementor`, `qa`
 **External tracker:** TBD
@@ -592,6 +608,7 @@ cd ../..
 ## Status Log
 
 - [2025-09-30 15:00Z] Wish created with evidence-based analysis + Twin enhancement review
+- [2025-09-30 17:30Z] Enhanced with 100-point evaluation matrix
 - [Pending] Human approval of snapshot-based validation approach
 - [Pending] Create snapshot directory: `mkdir -p .genie/cli/snapshots`
 - [Pending] Create snapshot scripts at `@.genie/cli/snapshots/` (capture-baseline.sh, validate-against-baseline.sh)
@@ -602,6 +619,32 @@ cd ../..
 - [Pending] Execute Groups 0 → A+B (parallel) → C sequentially with validation between each
 - [Pending] Final snapshot validation (MUST be 0 diffs)
 - [Pending] Update roadmap after completion
+
+---
+
+## Evaluation Matrix Enhancement Summary
+
+**Integration Date:** 2025-09-30 17:30Z
+
+**Changes:**
+- Added 100-point evaluation matrix to wish header
+- Pre-scored Discovery Phase: 30/30 ✅ (complete at wish creation)
+- Mapped execution groups to matrix checkpoints with expected score contributions
+- Current baseline: 30/100 (30%) – Discovery complete, Implementation + Verification pending
+- Target minimum for merge approval: 70/100 (ACCEPTABLE tier)
+- Stretch goal: 90/100 (EXCELLENT tier)
+
+**Score Progression Plan:**
+1. **After Group 0:** 30 + 8 = 38/100 (38%) – Foundation layer
+2. **After Groups A+B:** 38 + 18 = 56/100 (56%) – Utilities + transcript
+3. **After Group C:** 56 + 42 = 98/100 (98%) – Commands + full validation
+4. **Final review:** Deductions for any gaps, final verdict tier assigned
+
+**Matrix Integration Points:**
+- All execution groups now include "Evaluation Matrix Impact" section
+- Evidence requirements explicitly map to matrix checkpoints
+- Validation commands tied to specific point awards (e.g., snapshot validation = 15 pts)
+- Approval gates documented as Review Thoroughness checkpoints (2 pts)
 
 ---
 
