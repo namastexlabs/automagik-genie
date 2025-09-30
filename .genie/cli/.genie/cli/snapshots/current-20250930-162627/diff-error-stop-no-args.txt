@@ -1,0 +1,10 @@
+--- snapshots/baseline-20250930-140453/error-stop-no-args.txt	2025-09-30 14:05:00.278710641 -0300
++++ .genie/cli/snapshots/current-20250930-162627/error-stop-no-args.txt	2025-09-30 16:26:27.904371805 -0300
+@@ -1,5 +1,2 @@
+-╔══════════════════════════════════════════════════════════════════════════════╗
+-║ ❌ Fatal error                                                                ║
+-║ Usage: genie stop <sessionId>                                                ║
+-╚══════════════════════════════════════════════════════════════════════════════╝
+-Exit code: 1
++snapshots/validate-against-baseline.sh: line 37: ./genie: No such file or directory
++Exit code: 127

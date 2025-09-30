@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.runStop = void 0;
+exports.runStop = runStop;
 const session_store_1 = require("../session-store");
 const session_helpers_1 = require("../lib/session-helpers");
 const config_defaults_1 = require("../lib/config-defaults");
@@ -66,4 +66,3 @@ async function runStop(parsed, config, paths) {
     await (0, view_helpers_1.emitView)(envelope, parsed.options);
     await appendWarningView();
 }
-exports.runStop = runStop;

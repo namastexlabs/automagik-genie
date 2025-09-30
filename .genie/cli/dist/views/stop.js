@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.buildStopView = void 0;
+exports.buildStopView = buildStopView;
 const GENIE_STYLE = 'genie';
 function buildStopView(params) {
     const counts = countStatuses(params.events);
@@ -48,7 +48,6 @@ function buildStopView(params) {
         }
     };
 }
-exports.buildStopView = buildStopView;
 function countStatuses(events) {
     return events.reduce((acc, event) => {
         if (event.status === 'done')

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.emitView = void 0;
+exports.emitView = emitView;
 const view_1 = require("../view");
 async function emitView(envelope, options, opts = {}) {
     const style = 'genie';
@@ -11,4 +11,3 @@ async function emitView(envelope, options, opts = {}) {
         style
     });
 }
-exports.emitView = emitView;

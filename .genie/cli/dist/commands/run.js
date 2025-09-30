@@ -3,7 +3,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.extractExecutorOverrides = exports.resolveExecutorPaths = exports.buildExecutorConfig = exports.requireExecutor = exports.resolveExecutorKey = exports.executeRun = exports.maybeHandleBackgroundLaunch = exports.runChat = void 0;
+exports.runChat = runChat;
+exports.maybeHandleBackgroundLaunch = maybeHandleBackgroundLaunch;
+exports.executeRun = executeRun;
+exports.resolveExecutorKey = resolveExecutorKey;
+exports.requireExecutor = requireExecutor;
+exports.buildExecutorConfig = buildExecutorConfig;
+exports.resolveExecutorPaths = resolveExecutorPaths;
+exports.extractExecutorOverrides = extractExecutorOverrides;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const child_process_1 = require("child_process");
@@ -103,7 +110,6 @@ async function runChat(parsed, config, paths) {
         executionMode: modeName
     });
 }
-exports.runChat = runChat;
 async function maybeHandleBackgroundLaunch(params) {
     const { parsed, config, paths, store, entry, agentName, executorKey, executionMode, startTime, logFile, allowResume } = params;
     if (!parsed.options.background || parsed.options.backgroundRunner) {
@@ -149,7 +155,6 @@ async function maybeHandleBackgroundLaunch(params) {
     process.stdout.write(`    ./genie view <sessionId>\n`);
     return true;
 }
-exports.maybeHandleBackgroundLaunch = maybeHandleBackgroundLaunch;
 function executeRun(args) {
     const { agentName, command, executorKey, executor, executorConfig, executorPaths, store, entry, paths, config, startTime, logFile, background, runnerPid, cliOptions, executionMode } = args;
     if (!command || typeof command.command !== 'string' || !Array.isArray(command.args)) {
@@ -336,7 +341,6 @@ function executeRun(args) {
     }
     return promise;
 }
-exports.executeRun = executeRun;
 function resolveExecutorKey(config, modeName) {
     const modes = config.executionModes || config.presets || {};
     const mode = modes[modeName];
@@ -346,7 +350,6 @@ function resolveExecutorKey(config, modeName) {
         return config.defaults.executor;
     return executor_registry_1.DEFAULT_EXECUTOR_KEY;
 }
-exports.resolveExecutorKey = resolveExecutorKey;
 function requireExecutor(key) {
     const executor = executor_registry_1.EXECUTORS[key];
     if (!executor) {
@@ -355,7 +358,6 @@ function requireExecutor(key) {
     }
     return executor;
 }
-exports.requireExecutor = requireExecutor;
 function buildExecutorConfig(config, modeName, executorKey, agentOverrides) {
     const base = deepClone((config.executors && config.executors[executorKey]) || {});
     const modes = config.executionModes || config.presets || {};
@@ -371,13 +373,11 @@ function buildExecutorConfig(config, modeName, executorKey, agentOverrides) {
     }
     return merged;
 }
-exports.buildExecutorConfig = buildExecutorConfig;
 function resolveExecutorPaths(paths, executorKey) {
     if (!paths.executors)
         return {};
     return paths.executors[executorKey] || {};
 }
-exports.resolveExecutorPaths = resolveExecutorPaths;
 function getExecutorOverrides(mode, executorKey) {
     if (!mode || !mode.overrides)
         return {};
@@ -414,7 +414,6 @@ function extractExecutorOverrides(agentGenie, executorKey) {
     });
     return overrides;
 }
-exports.extractExecutorOverrides = extractExecutorOverrides;
 function deepClone(input) {
     return JSON.parse(JSON.stringify(input));
 }

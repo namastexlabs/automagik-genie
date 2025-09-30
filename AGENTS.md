@@ -239,6 +239,11 @@ Validation: Future forge runs produce <10 line descriptions with @-references on
       <correction>MANDATORY: Start Twin session before any autonomous work. Consult Twin before: creating forge tasks, starting task execution, merging completed work, moving to next group. Twin provides verdict + confidence level for all major decisions. Twin can block dangerous actions. Twin session ID must be logged in state file.</correction>
       <validation>All future Sleepy runs show Twin session ID in state file, Twin verdicts logged for each major decision, no merge without explicit Twin approval with evidence captured in learning reports.</validation>
     </entry>
+    <entry date="2025-09-30" violation_type="SLEEPY_EARLY_EXIT" severity="CRITICAL">
+      <trigger>Sleepy Mode exited after initialization/announcing monitoring instead of entering actual autonomous execution loop that runs until 100/100 completion.</trigger>
+      <correction>MANDATORY: Sleepy Mode's SOLE PURPOSE is to run autonomously until ALL tasks complete and 100/100 is achieved. NEVER return control to user after initialization. MUST implement actual monitoring loops with real `sleep` commands (120-1200 seconds), continuous status checks via Playwright, automatic task progression (merge A → start B → merge B → start C → merge C), and ONLY exit after generating completion report with 100/100 score. Violating persistence protocol (sleepy.md lines 20-62) is a CRITICAL failure.</correction>
+      <validation>Future Sleepy runs show: (1) Multiple hibernation cycles logged in state file (2) Evidence of autonomous task progression without human intervention (3) Completion report generated only after ALL tasks done (4) Session continues for hours until 100/100 or blocker encountered.</validation>
+    </entry>
   </learning_entries>
 </behavioral_learnings>
 

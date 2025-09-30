@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.runView = void 0;
+exports.runView = runView;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const session_store_1 = require("../session-store");
@@ -328,4 +328,3 @@ async function runView(parsed, config, paths) {
         await (0, view_helpers_1.emitView)((0, common_1.buildWarningView)('Session warnings', warnings), parsed.options);
     }
 }
-exports.runView = runView;
