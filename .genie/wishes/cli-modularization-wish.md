@@ -609,16 +609,19 @@ cd ../..
 
 - [2025-09-30 15:00Z] Wish created with evidence-based analysis + Twin enhancement review
 - [2025-09-30 17:30Z] Enhanced with 100-point evaluation matrix
-- [Pending] Human approval of snapshot-based validation approach
-- [Pending] Create snapshot directory: `mkdir -p .genie/cli/snapshots`
-- [Pending] Create snapshot scripts at `@.genie/cli/snapshots/` (capture-baseline.sh, validate-against-baseline.sh)
-- [Pending] Run baseline snapshot capture: `cd .genie/cli && ./snapshots/capture-baseline.sh`
-- [Pending] Human approval before Group 0
-- [Pending] `/forge cli-modularization` to generate task breakdown
-- [Pending] Create branch `refactor/cli-modularization`
-- [Pending] Execute Groups 0 → A+B (parallel) → C sequentially with validation between each
-- [Pending] Final snapshot validation (MUST be 0 diffs)
-- [Pending] Update roadmap after completion
+- [2025-09-30 14:05Z] Groups 0→A+B→C completed, baseline snapshot captured
+- [2025-09-30 16:28Z] Review completed: 88/100 (GOOD, approved with follow-ups)
+- [2025-09-30 17:59Z] Polish Group A completed: JSDoc + README architecture section (+4 pts, 92/100)
+- [2025-09-30 18:00Z] Polish Group B completed: Unit tests for lib/ modules (+4 pts, 96/100)
+- [2025-09-30 21:05Z] Polish Group C: BLOCKED - QA parameter test infrastructure failure
+  - Blocker: Background runner fails to initialize executor (sessionId: null, no logs)
+  - Performance: 710ms (exceeds <500ms target by 210ms)
+  - Snapshots: 2 diffs (build path cosmetic, list-sessions shows failed QA session)
+  - Evidence: @.genie/wishes/cli-modularization-polish/evidence-group-c.md
+  - **Cannot proceed to 100/100 until BLOCKER-C1 resolved**
+- [Pending] Resolve BLOCKER-C1: Fix background runner executor initialization
+- [Pending] Re-run QA parameter tests (31/31 must pass)
+- [Pending] Final review with blocker resolution evidence
 
 ---
 

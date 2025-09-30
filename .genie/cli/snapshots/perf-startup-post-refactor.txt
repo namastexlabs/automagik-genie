@@ -1,0 +1,1 @@
+Average startup time: 0.710s (710ms)

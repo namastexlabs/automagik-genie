@@ -1,0 +1,8 @@
+
+> build
+> pnpm run build:genie
+
+
+> automagik-genie-cli@ build:genie /var/tmp/vibe-kanban/worktrees/eec1-cli-polish-group
+> tsc -p .genie/cli/tsconfig.json
+
