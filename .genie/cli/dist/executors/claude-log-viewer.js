@@ -3,9 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.readSessionIdFromLog = readSessionIdFromLog;
-exports.extractSessionIdFromContent = extractSessionIdFromContent;
-exports.buildJsonlView = buildJsonlView;
+exports.buildJsonlView = exports.extractSessionIdFromContent = exports.readSessionIdFromLog = void 0;
 const fs_1 = __importDefault(require("fs"));
 function readSessionIdFromLog(logFile) {
     if (!logFile)
@@ -18,6 +16,7 @@ function readSessionIdFromLog(logFile) {
         return null;
     }
 }
+exports.readSessionIdFromLog = readSessionIdFromLog;
 function extractSessionIdFromContent(content) {
     const lines = Array.isArray(content) ? content : String(content).split(/\r?\n/);
     for (const line of lines) {
@@ -43,6 +42,7 @@ function extractSessionIdFromContent(content) {
     }
     return null;
 }
+exports.extractSessionIdFromContent = extractSessionIdFromContent;
 function buildJsonlView(ctx) {
     const { render, parsed, paths, store, save, formatPathRelative, style } = ctx;
     const { entry, jsonl, raw } = render;
@@ -190,6 +190,7 @@ function buildJsonlView(ctx) {
         }
     };
 }
+exports.buildJsonlView = buildJsonlView;
 function metaSection(meta) {
     const rows = compact([
         meta.model ? { label: 'Model', value: meta.model } : null
