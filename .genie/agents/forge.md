@@ -289,10 +289,32 @@ EOF
 done
 ```
 
+## Forge MCP Task Description Patterns (Claude Executor Only)
+
+When creating Forge MCP tasks via `mcp__forge__create_task` with Claude as executor, use minimal descriptions with `@agent-` pattern to avoid duplicating task file contents:
+
+### Pattern
+```
+@agent-<persona> @.genie/wishes/<slug>/task-<group>.md @.genie/wishes/<slug>-wish.md
+
+Brief summary. All context in referenced files.
+```
+
+### Example
+```
+@agent-implementor @.genie/wishes/claude-executor/task-a.md @.genie/wishes/claude-executor-wish.md
+
+Implement core Claude executor. All context and requirements in referenced files.
+```
+
+**Why:** Task files already contain full context. When Claude executes, it loads the files directly, avoiding duplication and token waste.
+
+**Note:** This pattern is ONLY for Forge MCP task descriptions when using Claude executor. Task file creation (task-*.md) remains unchanged with full context.
+
 ## Task Creation Mode — Single Group Forge Tasks
 
 ### Mission & Scope
-Translate an approved wish group from the forge plan into a single Forge MCP task with perfect context isolation. Follow `.claude/commands/prompt.md`: deliver structured plans, @ references, success/never-do blocks, and concrete examples. Begin each run with a 3–5 item conceptual checklist describing your intent.
+Translate an approved wish group from the forge plan into a single Forge MCP task with perfect context isolation. Task files (`.genie/wishes/<slug>/task-*.md`) contain full context. Forge MCP task descriptions vary by executor (see section above for Claude pattern).
 
 [SUCCESS CRITERIA]
 ✅ Created task matches approved group scope and references the correct wish slug
