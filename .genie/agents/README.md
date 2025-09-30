@@ -30,9 +30,9 @@ When agents are invoked through the GENIE CLI, they inherit a set of default par
    - Defined in agent markdown frontmatter
    - Example: `reasoning_effort: medium`
 
-2. **Preset Configuration** (`config.yaml`)
-   - Named presets for common scenarios
-   - Applied via `--preset <name>`
+2. **Execution Mode Configuration** (`config.yaml`)
+   - Named execution modes for common scenarios (default, careful, danger, debug)
+   - Applied automatically based on agent frontmatter settings
 
 3. **Global Defaults** (`codex.ts`)
    - Fallback values for all parameters
@@ -140,16 +140,19 @@ include_plan_tool: true       # uses planning notes for context staging
 ## Running Agents with Custom Parameters
 
 ### Via CLI Flags
-```bash
-# Run with high reasoning effort
-./genie run implementor "Fix the bug" --config "exec.reasoningEffort=high"
-
-# Run in read-only mode
-./genie run qa "Review code" --config "exec.sandbox=read-only"
-
-# Enable plan tool
-./genie run forge "Plan feature" --config "exec.includePlanTool=true"
+Configure these settings in the agent's frontmatter instead:
+```yaml
+---
+genie:
+  executor: codex
+  exec:
+    reasoningEffort: high
+    sandbox: read-only
+    includePlanTool: true
+---
 ```
+
+Then run: `./genie run <agent> "<prompt>"`
 
 ### Via Config Presets
 Define in `config.yaml`:
@@ -165,10 +168,12 @@ presets:
       approvalPolicy: on-request
 ```
 
-Then use:
+Then run:
 ```bash
-./genie run implementor "Complex task" --preset high-effort
+./genie run implementor "Complex task"
 ```
+
+The agent will automatically use the `high-effort` mode configuration.
 
 ### Via Agent Metadata
 Add to agent markdown frontmatter:

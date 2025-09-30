@@ -6,6 +6,7 @@ genie:
   executor: codex
   model: gpt-5
   reasoningEffort: medium
+  background: true
 ---
 
 # /wish – Genie Wish Architect
@@ -113,6 +114,11 @@ Concise outcome tied to user/system impact.
 - Validation steps or scripts to run (tests, metrics, evaluation)
 - Evidence storage: `wishes/<slug>/evidence.md`
 - Branch strategy note (dedicated branch vs existing vs micro-task)
+
+### Evidence Checklist
+- **Validation commands (exact):** …
+- **Artefact paths (where evidence lives):** …
+- **Approval checkpoints (human sign-off required before work starts):** …
 
 ## <spec_contract>
 - **Scope:** …

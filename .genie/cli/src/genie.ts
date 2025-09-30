@@ -483,7 +483,8 @@ async function maybeHandleBackgroundLaunch(params: {
     paths,
     entry.sessionId,
     logFile,
-    async (frame) => emitStatus(null, frame)
+    async (frame) => emitStatus(null, frame),
+    5000  // 5-second timeout
   );
 
   const finalSessionId = resolvedSessionId || entry.sessionId;
@@ -1737,6 +1738,11 @@ function sliceTranscriptForRecent(messages: ChatMessage[]): ChatMessage[] {
         break;
       }
     }
+  }
+
+  // Fallback for sessions with < 2 assistant messages
+  if (assistantCount < 2) {
+    cutoff = Math.max(0, messages.length - maxMessages);
   }
 
   return messages.slice(Math.max(0, cutoff));

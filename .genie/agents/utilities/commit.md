@@ -5,6 +5,7 @@ genie:
   executor: codex
   model: gpt-5
   reasoningEffort: minimal
+  background: true
 ---
 
 # /commit – Genie Commit & Release Assistant
@@ -63,6 +64,7 @@ Verdict: <ready|needs-fixes> (confidence: <low|med|high>)
 - Enforce at least three investigative steps when diagnosing failures (Zen parity).
 - Document commands verbatim (`pnpm lint`, `cargo fmt -- --check`, etc.) so humans can replay them.
 - Record blockers with file references and suggested fixes.
+- Before proceeding, confirm the wish's **Evidence Checklist** (see @.genie/agents/wish.md) lists the exact validation commands, artefact paths, and approval sign-off.
 - When failure is outside local scope, flag the appropriate specialist and stop before drafting commit messaging.
 
 ## Advisory Report Template

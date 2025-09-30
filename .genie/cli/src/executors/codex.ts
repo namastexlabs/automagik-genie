@@ -3,7 +3,7 @@ import path from 'path';
 import { Executor, ExecutorCommand, ExecutorDefaults } from './types';
 import * as logViewer from './codex-log-viewer';
 
-const CODEX_PACKAGE_SPEC = '@namastexlabs/codex@0.43.0-alpha.4';
+const CODEX_PACKAGE_SPEC = '@namastexlabs/codex@0.43.0-alpha.5';
 
 const defaults: ExecutorDefaults = {
   binary: 'npx',

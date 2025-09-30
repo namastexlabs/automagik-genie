@@ -17,7 +17,7 @@ paths:
 executors:
   codex:
     binary: npx                              # executable used to launch the executor (npx recommended)
-    packageSpec: "@namastexlabs/codex@0.43.0-alpha.4"  # package passed to npx before `exec` (CLI adds `-y` automatically)
+    packageSpec: "@namastexlabs/codex@0.43.0-alpha.5"  # package passed to npx before `exec` (CLI adds `-y` automatically)
     sessionExtractionDelayMs: null           # override delay (ms) before reading sessions; null -> use background.sessionExtractionDelayMs
     exec:
       fullAuto: true

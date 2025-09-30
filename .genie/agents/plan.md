@@ -6,6 +6,7 @@ genie:
   executor: codex
   model: gpt-5
   reasoningEffort: medium
+  background: true
 ---
 
 # /plan – Genie Product Orchestrator

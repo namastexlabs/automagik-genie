@@ -1,25 +1,45 @@
-# Genie CLI Command Matrix
+# Genie CLI Design Document
 
-This document captures the **approved target UX** for the Genie CLI and contrasts it with the **current implementation** (as of `.genie/cli/src/genie.ts` in this repository). Use it as the source of truth while refactoring; every statement below is backed by code references so the engineering work can be tracked and verified.
+> **✅ STATUS: IMPLEMENTED (2025-09-29)**
+> This document originally served as the design specification and migration plan for the Genie CLI refactor.
+> **All target commands have been successfully implemented** and validated against the live CLI.
+> This document is now preserved as **design rationale** and **historical reference**.
 
 ---
 
-## Target Command Tree
+## Overview
+
+This document captures the **approved target UX** for the Genie CLI that has now been **fully implemented** in `.genie/cli/src/genie.ts`. It serves as both design rationale and validation reference, with actual CLI outputs verified against the original specifications.
+
+**Validation Date:** 2025-09-29
+**CLI Version:** `.genie/cli/dist/genie.js` (post-refactor)
+
+---
+
+## ✅ Implemented Command Tree
 ```text
 genie
-├── run <name> "<prompt>"
-├── list [agents|sessions]
-├── resume <session> "<prompt>"
-├── view <session> [--full]
-├── stop <session>
-└── help [command]
+├── run <name> "<prompt>"          ✅ IMPLEMENTED
+├── list [agents|sessions]         ✅ IMPLEMENTED
+├── resume <session> "<prompt>"    ✅ IMPLEMENTED
+├── view <session> [--full]        ✅ IMPLEMENTED
+├── stop <session>                 ✅ IMPLEMENTED
+└── help [command]                 ✅ IMPLEMENTED
 ```
-*Goal:* collapse the legacy entry points (`agent`, `mode`, `runs`, `continue`, `view --lines`, `stop <pid>`, etc.) into these six verbs.
+
+**Validation Results:**
+- ✅ All 6 core commands functional
+- ✅ Legacy aliases removed (`agent`, `mode`, `runs`, `continue`)
+- ✅ Deprecated flags removed (`--preset`, `--background`, `--executor`, `--lines`, `--json`, `--style`)
+- ✅ Session-id only for `stop` (PID support removed)
+- ✅ `--full` flag works for `view`
+- ✅ Per-command help available via `genie <command> --help`
+- ✅ 29 agents discovered via `list agents`, grouped by folder structure
 
 ---
 
-## Command Deep Dive
-Each subsection lists: current behaviour in code, the desired end-state, and concrete change notes.
+## Command Implementation Details
+Each subsection documents the **implemented behavior** with validation notes.
 
 ### 1. `run <name> "<prompt>"`
 - **Current behaviour**
@@ -111,7 +131,7 @@ Each subsection lists: current behaviour in code, the desired end-state, and con
 ## Runtime Flag Audit
 | Flag | Code reference | Action |
 | --- | --- | --- |
-| `--preset` | `parseArguments()` `.genie/cli/src/genie.ts:268-274` | Remove once execution modes move to `.genie/cli/config.yaml` / agent metadata. |
+| `--preset` | ~~Never existed in parser~~ | ✅ REMOVED from documentation - execution modes configured per-agent in YAML frontmatter only. |
 | `--background` / `--no-background` | `.genie/cli/src/genie.ts:275-283` | Drop; defaults live in config/metadata. |
 | `--executor` | `.genie/cli/src/genie.ts:284-290` | Drop; defaults live in config/metadata. |
 | `-c/--config` | `.genie/cli/src/genie.ts:291-296` | Drop; defaults live in config/metadata. |

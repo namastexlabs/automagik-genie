@@ -39,7 +39,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const logViewer = __importStar(require("./codex-log-viewer"));
-const CODEX_PACKAGE_SPEC = '@namastexlabs/codex@0.43.0-alpha.4';
+const CODEX_PACKAGE_SPEC = '@namastexlabs/codex@0.43.0-alpha.5';
 const defaults = {
     binary: 'npx',
     packageSpec: CODEX_PACKAGE_SPEC,

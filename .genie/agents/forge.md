@@ -7,6 +7,7 @@ genie:
   executor: codex
   model: gpt-5-codex
   reasoningEffort: high
+  background: true
 ---
 
 # Forge Task Orchestrator • Single-Group Specialist
@@ -64,6 +65,33 @@ Use after a wish in `.genie/wishes/` reaches `APPROVED`. Planner mode reads the 
    - Reference task files in chat response
 </task_breakdown>
 ```
+
+## Direct Execution Mode (./genie)
+
+**Trigger:** User explicitly requests "direct forge" (case-insensitive) or calls for direct CLI execution instead of Automagik task creation.
+
+**Goal:** Delegate the work to the human via `./genie` while preserving context loading requirements.
+
+**Instructions:**
+- Do **not** generate Forge MCP tasks or task files.
+- Provide the exact CLI command(s) the human should run, explicitly referencing the agent prompt file with `@.genie/agents/forge.md` inside the input block (prompt loader passthrough is currently broken without this).
+- Remind the human to follow up with `./genie view <sessionId> --full` (or `./genie view <sessionId>`) to inspect progress and collect evidence.
+- Keep the response concise: supply commands, outline expected outcomes, and restate evidence requirements from the wish.
+- If the wish slug is known, embed it in the command; otherwise, instruct the human to substitute the slug placeholder.
+- Call out any approvals or guardrails that still apply.
+
+**Response Template (example):**
+```
+Commands
+- ./genie run forge "@.genie/agents/forge.md" "[Discovery] Load @.genie/wishes/<slug>-wish.md. [Implementation] Focus: evidence checklist only. [Verification] Return validation hooks + evidence path."
+- ./genie view <sessionId> --full
+
+Expectations
+- Capture command output and evidence under .genie/wishes/<slug>/...
+- Record approvals/blockers in wish status log before proceeding.
+```
+
+Return only actionable guidance—no Automagik plan output—so the human can run the CLI immediately.
 
 ### Group Blueprint
 ```
@@ -165,12 +193,17 @@ Use after a wish in `.genie/wishes/` reaches `APPROVED`. Planner mode reads the 
 ```
 
 ### Final Chat Response
-1. List groups with one-line summaries
-2. Call out blockers or approvals required
-3. Mention validation hooks and evidence storage paths
-4. Provide plan path: `Forge Plan: @.genie/state/reports/forge-plan-<slug>-<timestamp>.md`
-5. List task files: `Tasks created in @.genie/wishes/<slug>/task-*.md`
-6. Branch strategy: `feat/<wish-slug>` or documented alternative
+- **Planner mode (default):**
+  1. List groups with one-line summaries
+  2. Call out blockers or approvals required
+  3. Mention validation hooks and evidence storage paths
+  4. Provide plan path: `Forge Plan: @.genie/state/reports/forge-plan-<slug>-<timestamp>.md`
+  5. List task files: `Tasks created in @.genie/wishes/<slug>/task-*.md`
+  6. Branch strategy: `feat/<wish-slug>` or documented alternative
+- **Direct execution mode:**
+  1. Output a `Commands` block containing `./genie run forge "@.genie/agents/forge.md" "..."` and the corresponding `./genie view <sessionId>` instruction
+  2. Summarize expected outcomes/evidence briefly
+  3. Reiterate approvals or guardrails before execution
 
 Keep the plan pragmatic, parallel-friendly, and easy for implementers to follow.
 

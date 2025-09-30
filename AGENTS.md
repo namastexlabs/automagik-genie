@@ -45,6 +45,7 @@ All commands in `.claude/commands/` simply `@include` the corresponding `.genie/
 
 ## Evidence & Storage Conventions
 - Wishes must declare where artefacts live; there is no default `qa/` directory. Capture metrics inline in the wish (e.g., tables under a **Metrics** section) or in clearly named companion files.
+- Every wish must complete the **Evidence Checklist** block in @.genie/agents/wish.md before implementation begins, spelling out validation commands, artefact locations, and approval checkpoints.
 - External tracker IDs live in the wish markdown (for example a **Tracking** section with `Forge task: FORGE-123`).
 - Background agent outputs are summarised in the wish context ledger; raw logs can be viewed with `./genie view <sessionId>`.
 
@@ -126,7 +127,7 @@ Genie can handle small, interactive requests without entering Plan → Wish when
 If the task grows beyond a quick assist (requires new tests, broad refactor, multi-file changes), escalate into `/plan` to restart the full Plan → Wish → Forge pipeline. Bug reports that need tracking should route through the **bug-reporter** specialist so evidence is captured and filed as an issue.
 
 ## Subagents & Twin via CLI
-- Start subagent: `./genie run <agent> "<prompt>" [--preset <name>]`
+- Start subagent: `./genie run <agent> "<prompt>"`
 - Resume session: `./genie resume <sessionId> "<prompt>"`
 - List sessions: `./genie list sessions`
 - Stop session: `./genie stop <sessionId>`
@@ -178,6 +179,16 @@ Twin prompt patterns (run through any agent, typically `plan`):
       <trigger>Deleted `.genie/agents/utilities/install.md` without explicit approval.</trigger>
       <correction>Never delete or rename repository files unless the human explicitly instructs it; instead, edit contents in place or mark for removal pending approval.</correction>
       <validation>No future diffs show unapproved deletions; any removal is preceded by documented approval in chat.</validation>
+    </entry>
+    <entry date="2025-09-29" violation_type="CLI_DESIGN" severity="HIGH">
+      <trigger>Documentation suggested `--preset` or `--mode` CLI flags that don't exist and shouldn't exist.</trigger>
+      <correction>Execution modes (sandbox, model, reasoning) are configured per-agent in YAML frontmatter only, never via CLI flags. Remove all documentation references to `--preset` or `--mode` CLI flags. Each agent declares its own settings in frontmatter like `background: true`, `model: gpt-5-codex`, `reasoningEffort: high`.</correction>
+      <validation>Documentation contains no references to `--preset` or `--mode` CLI flags; all execution configuration examples show YAML frontmatter.</validation>
+    </entry>
+    <entry date="2025-09-29" violation_type="WORKFLOW" severity="MEDIUM">
+      <trigger>User called `/wish` directly in chat, expecting Claude to act as wish agent immediately, not dispatch to ./genie CLI.</trigger>
+      <correction>Distinguish between two invocation methods: (1) `/wish` slash command = Claude acts as the agent directly using subagents; (2) `./genie run wish` = dispatch to Codex executor via CLI. For daily work, user prefers slash commands (Claude). For multi-LLM perspective, user uses ./genie (Codex).</correction>
+      <validation>When user types `/command`, act as that agent directly; when they type `./genie run`, acknowledge they're dispatching to external executor.</validation>
     </entry>
   </learning_entries>
 </behavioral_learnings>
