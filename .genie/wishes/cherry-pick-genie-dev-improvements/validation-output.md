@@ -389,3 +389,66 @@ $ ./genie --help && ./genie list agents
 
 **Timestamp:** 2025-09-30 (final review)
 **Validator:** GENIE orchestrator
+
+---
+
+## Future Cherry-Pick Framework Created
+
+**New Agent:** `.genie/agents/specialists/genie-dev-cherrypick.md` (464 lines)
+
+### Purpose
+Automate future cherry-picks from genie-dev → genie-2.0 with systematic approach:
+- **CODE files:** Auto-merge directly (take theirs, no verification)
+- **MARKDOWN files:** Manual review with pattern extraction
+- **PRODUCT files:** Exclude with documentation
+
+### Key Features
+
+1. **File Categorization Rules**
+   - AUTO-MERGE: `.ts`, `.js`, `.yaml`, `.json` (code/config)
+   - MANUAL REVIEW: `.md` files (extract patterns, preserve neutrality)
+   - EXCLUDE: product docs, wishes, reports
+
+2. **Discovery Phase**
+   - Branch comparison with git diff
+   - Categorization manifest generation
+   - File count by type
+
+3. **Implementation Phase**
+   - Automated code merge: `git checkout genie-dev -- <file>`
+   - Guided .md review with pattern extraction checklist
+   - Exclusion documentation
+
+4. **Verification Phase**
+   - VAL-GREP-LEAK (product string detection)
+   - VAL-PLACEHOLDER-INTEGRITY (product doc protection)
+   - VAL-CROSS-GROUP-COHERENCE (Evidence Checklist consistency)
+   - VAL-CLI-SMOKE-TEST (./genie --help)
+   - VAL-COMMAND-WRAPPERS (slash command count)
+
+5. **Evidence Capture**
+   - Cherry-pick manifest
+   - Validation results table
+   - Pattern extraction log
+   - Self-learning entries
+
+### Usage
+
+```bash
+./genie run genie-dev-cherrypick "
+[Discovery] Compare genie-2.0 vs genie-dev branches
+[Implementation] Auto-merge code, review .md, exclude product
+[Verification] Run validation sequence, capture evidence
+"
+```
+
+### Benefits
+
+- **Speed:** Code files merge automatically
+- **Safety:** .md files reviewed with leak detection
+- **Learning:** Patterns extracted and documented
+- **Repeatability:** Framework codifies today's experience
+- **Evidence:** Full audit trail for each cherry-pick
+
+**Timestamp:** 2025-09-30 (framework creation)
+**Lines:** 464 lines (comprehensive coverage)

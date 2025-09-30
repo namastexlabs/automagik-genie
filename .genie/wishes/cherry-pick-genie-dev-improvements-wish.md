@@ -259,7 +259,8 @@ Selectively cherry-pick 27 file changes from the `genie-dev` branch into `genie-
 - [2025-09-30 00:00Z] **GROUP E COMPLETE** → Command wrappers created (plan, wish, forge, review, commit); `.claude/agents/genie-qa.md` excluded as product-specific
 - [2025-09-30 00:00Z] **COMPREHENSIVE DIFF REVIEW COMPLETE** → 100% of 27 genie-dev files reviewed; 17 files applied (10 modified + 7 new), 14 files correctly excluded (product docs, wishes, reports, test utils)
 - [2025-09-30 00:00Z] **ALL VALIDATIONS PASS** → VAL-GREP-LEAK, VAL-PLACEHOLDER-INTEGRITY, VAL-CROSS-GROUP-COHERENCE, CLI smoke test, agent discovery
-- [2025-09-30 00:00Z] **STATUS: READY FOR COMMIT** → 24 files modified, evidence captured, twin recommendations integrated
+- [2025-09-30 00:00Z] **CHERRY-PICK FRAMEWORK CREATED** → New agent: genie-dev-cherrypick.md (439 lines); codifies auto-merge (code) + manual review (.md) + exclusion (product) workflow for future cherry-picks
+- [2025-09-30 00:00Z] **STATUS: READY FOR COMMIT** → 25 files modified (24 cherry-pick + 1 new framework agent), evidence captured, twin recommendations integrated
 
 ## Twin Verdict Summary
 **Mode:** planning
