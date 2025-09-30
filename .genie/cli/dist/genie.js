@@ -1005,8 +1005,37 @@ async function runView(parsed, config, paths) {
             (0, session_store_1.saveSessions)(paths, store);
         }
     }
+    // Try to locate and read from codex session file for full conversation history
+    let sessionFileContent = null;
+    if (entry.sessionId && entry.startTime && executor.locateSessionFile) {
+        const executorConfig = config.executors?.[executorKey] || {};
+        const executorPaths = executor.resolvePaths({
+            config: executorConfig,
+            baseDir: paths.baseDir,
+            resolvePath: (target, base) => path_1.default.isAbsolute(target) ? target : path_1.default.resolve(base || paths.baseDir || '.', target)
+        });
+        const sessionsDir = executorPaths.sessionsDir;
+        const startTime = new Date(entry.startTime).getTime();
+        if (sessionsDir && !Number.isNaN(startTime)) {
+            const sessionFilePath = executor.locateSessionFile({
+                sessionId: entry.sessionId,
+                startTime,
+                sessionsDir
+            });
+            if (sessionFilePath && fs_1.default.existsSync(sessionFilePath)) {
+                try {
+                    sessionFileContent = fs_1.default.readFileSync(sessionFilePath, 'utf8');
+                }
+                catch {
+                    // Fall back to CLI log if session file read fails
+                }
+            }
+        }
+    }
+    // Parse JSONL events from session file or CLI log
     const jsonl = [];
-    for (const line of allLines) {
+    const sourceLines = sessionFileContent ? sessionFileContent.split(/\r?\n/) : allLines;
+    for (const line of sourceLines) {
         const trimmed = line.trim();
         if (!trimmed)
             continue;
@@ -1393,6 +1422,40 @@ function buildTranscriptFromEvents(events) {
         if (!event || typeof event !== 'object')
             return;
         const type = String(event.type || '').toLowerCase();
+        // Handle codex session file format (response_item with payload)
+        if (type === 'response_item') {
+            const payload = event.payload;
+            if (payload && payload.type === 'message') {
+                // Map payload roles to ChatRole types
+                const payloadRole = payload.role;
+                const role = payloadRole === 'assistant' ? 'assistant' : 'reasoning';
+                const title = payloadRole === 'assistant' ? 'Assistant' :
+                    payloadRole === 'user' ? 'User' : 'System';
+                const content = payload.content;
+                if (Array.isArray(content)) {
+                    const textParts = [];
+                    content.forEach((part) => {
+                        if (part.type === 'text' && part.text) {
+                            textParts.push(part.text);
+                        }
+                        else if (part.type === 'input_text' && part.text) {
+                            textParts.push(part.text);
+                        }
+                        else if (part.type === 'output_text' && part.text) {
+                            textParts.push(part.text);
+                        }
+                    });
+                    if (textParts.length > 0) {
+                        pushMessage({ role, title, body: textParts });
+                    }
+                }
+                else if (typeof content === 'string' && content.trim()) {
+                    pushMessage({ role, title, body: [content] });
+                }
+            }
+            return;
+        }
+        // Handle CLI streaming format (item.completed)
         if (type === 'item.completed') {
             const item = event.item || {};
             const itemType = String(item.item_type || '').toLowerCase();

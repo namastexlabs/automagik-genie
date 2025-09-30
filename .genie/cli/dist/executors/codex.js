@@ -43,7 +43,7 @@ const CODEX_PACKAGE_SPEC = '@namastexlabs/codex@0.43.0-alpha.5';
 const defaults = {
     binary: 'npx',
     packageSpec: CODEX_PACKAGE_SPEC,
-    sessionsDir: '.genie/state/agents/codex-sessions',
+    sessionsDir: path_1.default.join(process.env.HOME || process.env.USERPROFILE || '~', '.codex', 'sessions'),
     exec: {
         fullAuto: true,
         model: 'gpt-5-codex',
@@ -174,6 +174,58 @@ function getSessionExtractionDelay({ config = {}, defaultDelay }) {
     }
     return defaultDelay;
 }
+function locateSessionFile({ sessionId, startTime, sessionsDir }) {
+    if (!sessionId || !sessionsDir)
+        return null;
+    const date = new Date(startTime);
+    if (Number.isNaN(date.getTime()))
+        return null;
+    // Helper to check a specific date directory
+    const checkDirectory = (targetDate) => {
+        const year = targetDate.getFullYear();
+        const month = String(targetDate.getMonth() + 1).padStart(2, '0');
+        const day = String(targetDate.getDate()).padStart(2, '0');
+        const dayDir = path_1.default.join(sessionsDir, String(year), month, day);
+        if (!fs_1.default.existsSync(dayDir))
+            return null;
+        // Try exact match first
+        const exactPattern = new RegExp(`rollout-.*-${sessionId}\\.jsonl$`, 'i');
+        const files = fs_1.default.readdirSync(dayDir);
+        for (const file of files) {
+            if (exactPattern.test(file)) {
+                return path_1.default.join(dayDir, file);
+            }
+        }
+        // Fuzzy matching with ±5min window
+        const fuzzyFiles = files
+            .filter((file) => file.startsWith('rollout-') && file.endsWith('.jsonl'))
+            .map((file) => {
+            const fullPath = path_1.default.join(dayDir, file);
+            const stat = fs_1.default.statSync(fullPath);
+            return { name: file, path: fullPath, mtime: stat.mtimeMs };
+        })
+            .filter((file) => Math.abs(file.mtime - startTime) < 300000);
+        for (const file of fuzzyFiles) {
+            const match = file.name.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+            if (match && match[1].toLowerCase() === sessionId.toLowerCase()) {
+                return file.path;
+            }
+        }
+        return null;
+    };
+    // Try the date from startTime first
+    let result = checkDirectory(date);
+    if (result)
+        return result;
+    // Try yesterday (in case of timezone differences)
+    const yesterday = new Date(date.getTime() - 24 * 60 * 60 * 1000);
+    result = checkDirectory(yesterday);
+    if (result)
+        return result;
+    // Try tomorrow (in case of timezone differences)
+    const tomorrow = new Date(date.getTime() + 24 * 60 * 60 * 1000);
+    return checkDirectory(tomorrow);
+}
 function mergeExecConfig(execConfig = {}) {
     return {
         ...defaults.exec,
@@ -250,6 +302,7 @@ const codexExecutor = {
     resolvePaths,
     extractSessionId,
     getSessionExtractionDelay,
+    locateSessionFile,
     logViewer
 };
 exports.default = codexExecutor;

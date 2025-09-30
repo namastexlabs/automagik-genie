@@ -77,6 +77,12 @@ export interface ExecutorSessionDelayArgs {
   defaultDelay: number;
 }
 
+export interface ExecutorLocateSessionFileArgs {
+  sessionId: string;
+  startTime: number;
+  sessionsDir: string;
+}
+
 export interface Executor {
   defaults: ExecutorDefaults;
   buildRunCommand(args: ExecutorBuildRunArgs): ExecutorCommand;
@@ -84,5 +90,6 @@ export interface Executor {
   resolvePaths(args: ExecutorResolvePathsArgs): Record<string, any>;
   extractSessionId?(args: ExecutorExtractSessionArgs): string | null;
   getSessionExtractionDelay?(args: ExecutorSessionDelayArgs): number;
+  locateSessionFile?(args: ExecutorLocateSessionFileArgs): string | null;
   logViewer?: ExecutorLogViewer;
 }
