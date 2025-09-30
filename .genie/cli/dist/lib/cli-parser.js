@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.parseArguments = void 0;
+exports.parseArguments = parseArguments;
 function parseArguments(argv) {
     const raw = argv.slice();
     const command = raw.shift()?.toLowerCase();
@@ -36,4 +36,3 @@ function parseArguments(argv) {
     }
     return { command, commandArgs: filtered, options };
 }
-exports.parseArguments = parseArguments;

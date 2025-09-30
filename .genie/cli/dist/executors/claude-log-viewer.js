@@ -3,7 +3,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.buildJsonlView = exports.extractSessionIdFromContent = exports.readSessionIdFromLog = void 0;
+exports.readSessionIdFromLog = readSessionIdFromLog;
+exports.extractSessionIdFromContent = extractSessionIdFromContent;
+exports.buildJsonlView = buildJsonlView;
 const fs_1 = __importDefault(require("fs"));
 const chat_1 = require("../views/chat");
 const transcript_utils_1 = require("./transcript-utils");
@@ -18,7 +20,6 @@ function readSessionIdFromLog(logFile) {
         return null;
     }
 }
-exports.readSessionIdFromLog = readSessionIdFromLog;
 function extractSessionIdFromContent(content) {
     const lines = Array.isArray(content) ? content : String(content).split(/\r?\n/);
     for (const line of lines) {
@@ -44,7 +45,6 @@ function extractSessionIdFromContent(content) {
     }
     return null;
 }
-exports.extractSessionIdFromContent = extractSessionIdFromContent;
 /**
  * Parse Claude JSONL events into ChatMessage[] for conversation view.
  * Extracts all message types: assistant, user, reasoning, tool calls/results.
@@ -227,7 +227,6 @@ function buildJsonlView(ctx) {
         showFull
     });
 }
-exports.buildJsonlView = buildJsonlView;
 exports.default = {
     readSessionIdFromLog,
     extractSessionIdFromContent,
