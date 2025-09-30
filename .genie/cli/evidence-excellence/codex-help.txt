@@ -1,0 +1,79 @@
+Run Codex non-interactively
+
+Usage: codex exec [OPTIONS] [PROMPT] [COMMAND]
+
+Commands:
+  resume  Resume a previous session by id or pick the most recent with --last
+  help    Print this message or the help of the given subcommand(s)
+
+Arguments:
+  [PROMPT]
+          Initial instructions for the agent. If not provided as an argument (or if `-` is used),
+          instructions are read from stdin
+
+Options:
+  -c, --config <key=value>
+          Override a configuration value that would otherwise be loaded from `~/.codex/config.toml`.
+          Use a dotted path (`foo.bar.baz`) to override nested values. The `value` portion is parsed
+          as JSON. If it fails to parse as JSON, the raw string is used as a literal.
+
+          Examples: - `-c model="o3"` - `-c 'sandbox_permissions=["disk-full-read-access"]'` - `-c
+          shell_environment_policy.inherit=all`
+
+  -i, --image <FILE>...
+          Optional image(s) to attach to the initial prompt
+
+  -m, --model <MODEL>
+          Model the agent should use
+
+      --oss
+
+
+  -s, --sandbox <SANDBOX_MODE>
+          Select the sandbox policy to use when executing model-generated shell commands
+
+          [possible values: read-only, workspace-write, danger-full-access]
+
+  -p, --profile <CONFIG_PROFILE>
+          Configuration profile from config.toml to specify default options
+
+      --full-auto
+          Convenience alias for low-friction sandboxed automatic execution (-a on-failure, --sandbox
+          workspace-write)
+
+      --dangerously-bypass-approvals-and-sandbox
+          Skip all confirmation prompts and execute commands without sandboxing. EXTREMELY
+          DANGEROUS. Intended solely for running in environments that are externally sandboxed
+
+  -C, --cd <DIR>
+          Tell the agent to use the specified directory as its working root
+
+      --skip-git-repo-check
+          Allow running Codex outside a Git repository
+
+      --output-schema <FILE>
+          Path to a JSON Schema file describing the model's final response shape
+
+      --color <COLOR>
+          Specifies color settings for use in the output
+
+          [default: auto]
+          [possible values: always, never, auto]
+
+      --json
+          Print events to stdout as JSONL
+
+      --experimental-json
+
+
+      --include-plan-tool
+          Whether to include the plan tool in the conversation
+
+      --output-last-message <LAST_MESSAGE_FILE>
+          Specifies file where the last message from the agent should be written
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+  -V, --version
+          Print version

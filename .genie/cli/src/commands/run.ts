@@ -245,10 +245,23 @@ export function executeRun(args: ExecuteRunArgs): Promise<void> {
       if (data && typeof data === 'object' && data.type === 'session.created') {
         const sessionId = data.session_id || data.sessionId;
         if (sessionId) {
+          try {
+            fs.appendFileSync('.genie/state/debug-session.log', `${new Date().toISOString()} session.created line: ${trimmed}\n`);
+          } catch {
+            // ignore debug logging errors
+          }
           if (entry.sessionId !== sessionId) {
             entry.sessionId = sessionId;
             entry.lastUsed = new Date().toISOString();
             saveSessions(paths as SessionPathsConfig, store);
+            try {
+              fs.appendFileSync(
+                '.genie/state/debug-session.log',
+                `${new Date().toISOString()} sessionId persisted: ${sessionId}\n`
+              );
+            } catch {
+              // ignore debug logging errors
+            }
           }
         }
       }

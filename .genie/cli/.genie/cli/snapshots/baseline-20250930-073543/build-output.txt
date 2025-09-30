@@ -1,6 +1,0 @@
-npm error Missing script: "build"
-npm error
-npm error To see a list of scripts, run:
-npm error   npm run
-npm error A complete log of this run can be found in: /home/namastex/.npm/_logs/2025-09-30T10_35_43_196Z-debug-0.log
-Exit code: 1
