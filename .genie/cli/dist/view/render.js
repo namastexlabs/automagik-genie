@@ -171,23 +171,8 @@ function renderTableNode(node) {
     const minRequiredWidth = fixedWidthTotal + minFlexibleWidth + gapTotal;
     // Create an array of minimum widths per column (use fixed width or MIN_COL_WIDTH)
     const minWidthPerColumn = baseWidths.map((width, idx) => fixedWidthColumns[idx] ? width : MIN_COL_WIDTH);
-    const totalBase = sumWithGaps(baseWidths, gapSize);
-    // If we have fixed-width columns, prioritize them over terminal width
-    // This may cause table overflow in narrow terminals, but preserves critical data
-    const allowedWidth = 1000; // TEST: Force large width to preserve all columns
-    const widths = squeezeWidthsWithMinimums(baseWidths.slice(), gapSize, allowedWidth, minWidthPerColumn, fixedWidthColumns);
-    // Expand flexible columns to fill available terminal width
-    const currentTotal = sumWithGaps(widths, gapSize);
-    const remaining = termWidth - currentTotal;
-    if (remaining > 0) {
-        // Find the last flexible (non-fixed) column and expand it
-        for (let i = widths.length - 1; i >= 0; i--) {
-            if (!fixedWidthColumns[i]) {
-                widths[i] = Math.min(widths[i] + remaining, MAX_COL_WIDTH);
-                break;
-            }
-        }
-    }
+    // TEST: Use baseWidths directly without squeezing
+    const widths = baseWidths.slice();
     const tableWidth = sumWithGaps(widths, gapSize);
     const renderRow = (row, isHeader = false) => ((0, jsx_runtime_1.jsx)(InkBox, { flexDirection: "row", children: columns.map((col, idx) => {
             const raw = isHeader ? col.label : row[col.key] ?? '';
@@ -196,14 +181,18 @@ function renderTableNode(node) {
             const color = isHeader ? (0, theme_1.accentToColor)('secondary') : theme_1.palette.foreground.default;
             return ((0, jsx_runtime_1.jsx)(InkBox, { width: widths[idx], marginRight: idx < columns.length - 1 ? gapSize : 0, children: (0, jsx_runtime_1.jsx)(InkText, { color: color, bold: isHeader, wrap: "truncate", children: aligned }) }, `${col.key}-${idx}`));
         }) }));
+    // Set explicit width when we have fixed-width columns
+    const hasFixedWidths = fixedWidthColumns.some(fixed => fixed);
+    const explicitWidth = hasFixedWidths ? tableWidth + 4 : undefined; // +4 for border padding
     const containerProps = node.border === 'none'
-        ? { flexDirection: 'column' }
+        ? { flexDirection: 'column', width: explicitWidth }
         : {
             flexDirection: 'column',
             borderStyle: 'round',
             borderColor: (0, theme_1.accentToColor)('muted'),
             paddingX: 0,
-            paddingY: 0
+            paddingY: 0,
+            width: explicitWidth
         };
     const showDivider = node.divider !== false && node.rows.length > 0;
     return ((0, jsx_runtime_1.jsxs)(InkBox, { ...containerProps, children: [renderRow(Object.fromEntries(columns.map((c) => [c.key, c.label])), true), showDivider ? ((0, jsx_runtime_1.jsx)(InkBox, { children: (0, jsx_runtime_1.jsx)(InkText, { color: (0, theme_1.accentToColor)('muted'), dimColor: true, children: '─'.repeat(tableWidth) }) })) : null, node.rows.length === 0 && node.emptyText ? ((0, jsx_runtime_1.jsx)(InkBox, { children: (0, jsx_runtime_1.jsx)(InkText, { color: theme_1.palette.foreground.placeholder, children: node.emptyText }) })) : ((0, jsx_runtime_1.jsx)(react_1.Fragment, { children: node.rows.map((row, idx) => ((0, jsx_runtime_1.jsx)(InkBox, { marginBottom: idx < node.rows.length - 1 ? rowGap : 0, children: renderRow(row) }, `row-${idx}`))) }))] }));
