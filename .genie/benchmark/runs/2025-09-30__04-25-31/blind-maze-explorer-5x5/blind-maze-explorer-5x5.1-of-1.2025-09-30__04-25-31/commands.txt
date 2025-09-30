@@ -1,3 +1,0 @@
-['asciinema rec --stdin /logs/agent.cast', 'Enter']
-['clear', 'Enter']
-['asciinema rec --stdin /logs/tests.cast', 'Enter']

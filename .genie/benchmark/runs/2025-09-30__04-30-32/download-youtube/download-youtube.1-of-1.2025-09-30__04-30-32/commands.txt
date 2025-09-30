@@ -1,5 +1,0 @@
-['asciinema rec --stdin /logs/agent.cast', 'Enter']
-['clear', 'Enter']
-['source /installed-agent/setup-env.sh', 'Enter']
-["source /installed-agent/install-agent.sh || echo 'INSTALL_FAIL_STATUS'", 'Enter']
-["claude --verbose --output-format stream-json -p 'Download the first video ever uploaded to YouTube as an mp4. Then, trim the video to the final 10 seconds and save it as `result.mp4`.' --allowedTools Bash Edit Write Read Glob Grep LS WebFetch NotebookEdit NotebookRead TodoRead TodoWrite Agent", 'Enter']
