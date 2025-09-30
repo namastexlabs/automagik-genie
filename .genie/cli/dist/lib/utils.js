@@ -3,13 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.formatRelativeTime = formatRelativeTime;
-exports.formatPathRelative = formatPathRelative;
-exports.truncateText = truncateText;
-exports.sanitizeLogFilename = sanitizeLogFilename;
-exports.safeIsoString = safeIsoString;
-exports.deriveStartTime = deriveStartTime;
-exports.deriveLogFile = deriveLogFile;
+exports.deriveLogFile = exports.deriveStartTime = exports.safeIsoString = exports.sanitizeLogFilename = exports.truncateText = exports.formatPathRelative = exports.formatRelativeTime = void 0;
 const path_1 = __importDefault(require("path"));
 const background_manager_1 = require("../background-manager");
 function formatRelativeTime(value) {
@@ -38,6 +32,7 @@ function formatRelativeTime(value) {
         return `${weeks}w ago`;
     return new Date(value).toLocaleDateString();
 }
+exports.formatRelativeTime = formatRelativeTime;
 function formatPathRelative(targetPath, baseDir) {
     if (!targetPath)
         return 'n/a';
@@ -48,6 +43,7 @@ function formatPathRelative(targetPath, baseDir) {
         return targetPath;
     }
 }
+exports.formatPathRelative = formatPathRelative;
 function truncateText(text, maxLength = 64) {
     if (!text)
         return '';
@@ -56,6 +52,7 @@ function truncateText(text, maxLength = 64) {
     const sliceLength = Math.max(0, maxLength - 3);
     return text.slice(0, sliceLength).trimEnd() + '...';
 }
+exports.truncateText = truncateText;
 function sanitizeLogFilename(agentName) {
     const fallback = 'agent';
     if (!agentName || typeof agentName !== 'string')
@@ -70,12 +67,14 @@ function sanitizeLogFilename(agentName) {
         .replace(/^\.+|\.+$/g, '');
     return normalized.length ? normalized : fallback;
 }
+exports.sanitizeLogFilename = sanitizeLogFilename;
 function safeIsoString(value) {
     const timestamp = new Date(value).getTime();
     if (!Number.isFinite(timestamp))
         return null;
     return new Date(timestamp).toISOString();
 }
+exports.safeIsoString = safeIsoString;
 function deriveStartTime() {
     const fromEnv = process.env[background_manager_1.INTERNAL_START_TIME_ENV];
     if (!fromEnv)
@@ -85,6 +84,7 @@ function deriveStartTime() {
         return parsed;
     return Date.now();
 }
+exports.deriveStartTime = deriveStartTime;
 function deriveLogFile(agentName, startTime, paths) {
     const envPath = process.env[background_manager_1.INTERNAL_LOG_PATH_ENV];
     if (envPath)
@@ -92,3 +92,4 @@ function deriveLogFile(agentName, startTime, paths) {
     const filename = `${sanitizeLogFilename(agentName)}-${startTime}.log`;
     return path_1.default.join(paths.logsDir || '.genie/state/agents/logs', filename);
 }
+exports.deriveLogFile = deriveLogFile;

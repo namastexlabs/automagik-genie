@@ -3,15 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.recordStartupWarning = recordStartupWarning;
-exports.getStartupWarnings = getStartupWarnings;
-exports.clearStartupWarnings = clearStartupWarnings;
-exports.buildDefaultConfig = buildDefaultConfig;
-exports.loadConfig = loadConfig;
-exports.mergeDeep = mergeDeep;
-exports.resolvePaths = resolvePaths;
-exports.prepareDirectories = prepareDirectories;
-exports.applyDefaults = applyDefaults;
+exports.applyDefaults = exports.prepareDirectories = exports.resolvePaths = exports.mergeDeep = exports.loadConfig = exports.buildDefaultConfig = exports.clearStartupWarnings = exports.getStartupWarnings = exports.recordStartupWarning = void 0;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const executors_1 = require("../executors");
@@ -88,12 +80,15 @@ const startupWarnings = [];
 function recordStartupWarning(message) {
     startupWarnings.push(message);
 }
+exports.recordStartupWarning = recordStartupWarning;
 function getStartupWarnings() {
     return [...startupWarnings];
 }
+exports.getStartupWarnings = getStartupWarnings;
 function clearStartupWarnings() {
     startupWarnings.length = 0;
 }
+exports.clearStartupWarnings = clearStartupWarnings;
 function buildDefaultConfig() {
     const config = deepClone(BASE_CONFIG);
     config.executors = config.executors || {};
@@ -102,6 +97,7 @@ function buildDefaultConfig() {
     });
     return config;
 }
+exports.buildDefaultConfig = buildDefaultConfig;
 function loadConfig() {
     let config = deepClone(buildDefaultConfig());
     const configFilePath = fs_1.default.existsSync(CONFIG_PATH) ? CONFIG_PATH : null;
@@ -139,6 +135,7 @@ function loadConfig() {
     }
     return config;
 }
+exports.loadConfig = loadConfig;
 function mergeDeep(target, source) {
     if (source === null || source === undefined)
         return target;
@@ -154,6 +151,7 @@ function mergeDeep(target, source) {
     });
     return base;
 }
+exports.mergeDeep = mergeDeep;
 function deepClone(input) {
     return JSON.parse(JSON.stringify(input));
 }
@@ -167,6 +165,7 @@ function resolvePaths(paths) {
         executors: paths.executors || {}
     };
 }
+exports.resolvePaths = resolvePaths;
 function prepareDirectories(paths) {
     [paths.logsDir, paths.backgroundDir, path_1.default.dirname(paths.sessionsFile)].forEach((dir) => {
         if (!fs_1.default.existsSync(dir)) {
@@ -174,8 +173,10 @@ function prepareDirectories(paths) {
         }
     });
 }
+exports.prepareDirectories = prepareDirectories;
 function applyDefaults(options, defaults) {
     if (!options.backgroundExplicit) {
         options.background = Boolean(defaults?.background);
     }
 }
+exports.applyDefaults = applyDefaults;

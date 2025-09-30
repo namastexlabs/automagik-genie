@@ -3,11 +3,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.readSessionIdFromLog = readSessionIdFromLog;
-exports.extractSessionIdFromContent = extractSessionIdFromContent;
-exports.buildJsonlView = buildJsonlView;
+exports.buildJsonlView = exports.extractSessionIdFromContent = exports.readSessionIdFromLog = void 0;
 const fs_1 = __importDefault(require("fs"));
 const chat_1 = require("../views/chat");
+const transcript_utils_1 = require("./transcript-utils");
 function readSessionIdFromLog(logFile) {
     if (!logFile)
         return null;
@@ -19,6 +18,7 @@ function readSessionIdFromLog(logFile) {
         return null;
     }
 }
+exports.readSessionIdFromLog = readSessionIdFromLog;
 function extractSessionIdFromContent(content) {
     const lines = Array.isArray(content) ? content : String(content).split(/\r?\n/);
     for (let i = lines.length - 1; i >= 0; i -= 1) {
@@ -48,6 +48,7 @@ function extractSessionIdFromContent(content) {
     }
     return null;
 }
+exports.extractSessionIdFromContent = extractSessionIdFromContent;
 /**
  * Parse Codex JSONL events into ChatMessage[] for conversation view.
  * Extracts all message types: reasoning, tool calls, assistant messages.
@@ -357,30 +358,6 @@ function extractMetrics(jsonl) {
     }
     return metrics;
 }
-/**
- * Slice messages to show only the latest assistant message (and optional preceding reasoning).
- * Used for --live mode.
- */
-function sliceForLatest(messages) {
-    if (messages.length === 0)
-        return [];
-    // Find the last assistant message
-    let lastAssistantIdx = -1;
-    for (let i = messages.length - 1; i >= 0; i--) {
-        if (messages[i].role === 'assistant') {
-            lastAssistantIdx = i;
-            break;
-        }
-    }
-    if (lastAssistantIdx === -1)
-        return [];
-    // Include preceding reasoning if it's immediately before the assistant message
-    let startIdx = lastAssistantIdx;
-    if (lastAssistantIdx > 0 && messages[lastAssistantIdx - 1].role === 'reasoning') {
-        startIdx = lastAssistantIdx - 1;
-    }
-    return messages.slice(startIdx);
-}
 function buildJsonlView(ctx) {
     const { render, parsed, paths, store, save } = ctx;
     const { entry, jsonl } = render;
@@ -414,7 +391,7 @@ function buildJsonlView(ctx) {
     }
     else if (parsed.options.live) {
         // Live mode: show latest assistant message (+ optional preceding reasoning)
-        messages = sliceForLatest(allMessages);
+        messages = (0, transcript_utils_1.sliceForLatest)(allMessages);
     }
     else {
         // Default mode: show last 5 messages
@@ -432,6 +409,7 @@ function buildJsonlView(ctx) {
         showFull
     });
 }
+exports.buildJsonlView = buildJsonlView;
 exports.default = {
     readSessionIdFromLog,
     extractSessionIdFromContent,

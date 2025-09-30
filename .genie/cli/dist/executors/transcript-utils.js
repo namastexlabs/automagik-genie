@@ -6,11 +6,7 @@
  * and slicing message arrays for both Codex and Claude executors.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sliceForLatest = sliceForLatest;
-exports.sliceForRecent = sliceForRecent;
-exports.summarizeCodexMetrics = summarizeCodexMetrics;
-exports.summarizeClaudeMetrics = summarizeClaudeMetrics;
-exports.aggregateToolCalls = aggregateToolCalls;
+exports.buildTranscriptFromEvents = exports.aggregateToolCalls = exports.summarizeClaudeMetrics = exports.summarizeCodexMetrics = exports.sliceForRecent = exports.sliceForLatest = void 0;
 // ============================================================================
 // Message Slicing Utilities
 // ============================================================================
@@ -50,6 +46,7 @@ function sliceForLatest(messages) {
     }
     return messages.slice(startIndex);
 }
+exports.sliceForLatest = sliceForLatest;
 /**
  * Slice messages to show the last N messages (default 5).
  *
@@ -65,6 +62,7 @@ function sliceForRecent(messages, count = 5) {
         return [];
     return messages.slice(-count);
 }
+exports.sliceForRecent = sliceForRecent;
 /**
  * Summarize Codex metrics into header-friendly meta items.
  *
@@ -131,6 +129,7 @@ function summarizeCodexMetrics(metrics) {
     }
     return items;
 }
+exports.summarizeCodexMetrics = summarizeCodexMetrics;
 /**
  * Summarize Claude metrics into header-friendly meta items.
  *
@@ -171,6 +170,7 @@ function summarizeClaudeMetrics(metrics) {
     }
     return items;
 }
+exports.summarizeClaudeMetrics = summarizeClaudeMetrics;
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -185,3 +185,149 @@ function aggregateToolCalls(toolCalls) {
     });
     return Array.from(counts.entries()).map(([name, count]) => ({ name, count }));
 }
+exports.aggregateToolCalls = aggregateToolCalls;
+// ============================================================================
+// Transcript Building from Events
+// ============================================================================
+/**
+ * Build a transcript of ChatMessages from an array of executor events.
+ *
+ * Supports both Codex session file format (response_item) and CLI streaming format (item.completed).
+ * Also handles shell commands, MCP tool calls, and other event types.
+ *
+ * @param events - Array of JSONL event objects from executor logs
+ * @returns Array of ChatMessages suitable for display
+ */
+function buildTranscriptFromEvents(events) {
+    const messages = [];
+    const commandIndex = new Map();
+    const toolIndex = new Map();
+    const pushMessage = (message) => {
+        messages.push({
+            ...message,
+            body: message.body.filter((line) => Boolean(line?.trim()))
+        });
+        return messages.length - 1;
+    };
+    events.forEach((event) => {
+        if (!event || typeof event !== 'object')
+            return;
+        const type = String(event.type || '').toLowerCase();
+        // Handle codex session file format (response_item with payload)
+        if (type === 'response_item') {
+            const payload = event.payload;
+            if (payload && payload.type === 'message') {
+                // Map payload roles to ChatRole types
+                const payloadRole = payload.role;
+                const role = payloadRole === 'assistant' ? 'assistant' :
+                    payloadRole === 'user' ? 'action' :
+                        'reasoning';
+                const title = payloadRole === 'assistant' ? 'Assistant' :
+                    payloadRole === 'user' ? 'User' : 'System';
+                const content = payload.content;
+                if (Array.isArray(content)) {
+                    const textParts = [];
+                    content.forEach((part) => {
+                        if (part.type === 'text' && part.text) {
+                            textParts.push(part.text);
+                        }
+                        else if (part.type === 'input_text' && part.text) {
+                            textParts.push(part.text);
+                        }
+                        else if (part.type === 'output_text' && part.text) {
+                            textParts.push(part.text);
+                        }
+                    });
+                    if (textParts.length > 0) {
+                        pushMessage({ role, title, body: textParts });
+                    }
+                }
+                else if (typeof content === 'string' && content.trim()) {
+                    pushMessage({ role, title, body: [content] });
+                }
+            }
+            return;
+        }
+        // Handle CLI streaming format (item.completed)
+        if (type === 'item.completed') {
+            const item = event.item || {};
+            const itemType = String(item.item_type || '').toLowerCase();
+            const text = typeof item.text === 'string' ? item.text.trim() : '';
+            if (!text)
+                return;
+            if (itemType === 'assistant_message') {
+                pushMessage({ role: 'assistant', title: 'Assistant', body: [text] });
+            }
+            else if (itemType === 'reasoning') {
+                pushMessage({ role: 'reasoning', title: 'Reasoning', body: [text] });
+            }
+            else if (itemType === 'tool_call') {
+                const header = item.tool_name || item.tool || 'Tool call';
+                const idx = pushMessage({ role: 'tool', title: header, body: [text] });
+                if (item.id)
+                    toolIndex.set(item.id, idx);
+            }
+            else if (itemType === 'tool_result') {
+                const header = item.tool_name || item.tool || 'Tool result';
+                const idx = item.id && toolIndex.has(item.id)
+                    ? toolIndex.get(item.id)
+                    : pushMessage({ role: 'tool', title: header, body: [] });
+                messages[idx].body.push(text);
+            }
+            else {
+                pushMessage({ role: 'reasoning', title: itemType || 'Item', body: [text] });
+            }
+            return;
+        }
+        const payload = event.msg || event;
+        const callId = payload?.call_id || payload?.callId || null;
+        switch (type) {
+            case 'exec_command_begin': {
+                const command = Array.isArray(payload?.command) ? payload.command.join(' ') : payload?.command || '(unknown)';
+                const cwd = payload?.cwd ? `cwd: ${payload.cwd}` : null;
+                const idx = pushMessage({
+                    role: 'action',
+                    title: 'Shell command',
+                    body: [`$ ${command}`, cwd || undefined].filter(Boolean)
+                });
+                if (callId)
+                    commandIndex.set(callId, idx);
+                break;
+            }
+            case 'exec_command_end': {
+                if (!callId || !commandIndex.has(callId))
+                    break;
+                const idx = commandIndex.get(callId);
+                const exit = payload?.exit_code;
+                const duration = payload?.duration?.secs != null ? `${payload.duration.secs}s` : null;
+                const line = `→ exit ${exit ?? 'unknown'}${duration ? ` (${duration})` : ''}`;
+                messages[idx].body.push(line);
+                break;
+            }
+            case 'mcp_tool_call_begin': {
+                const server = payload?.invocation?.server;
+                const tool = payload?.invocation?.tool || 'MCP tool';
+                const idx = pushMessage({
+                    role: 'tool',
+                    title: 'MCP call',
+                    body: [`${tool}${server ? ` @ ${server}` : ''}`]
+                });
+                if (callId)
+                    toolIndex.set(callId, idx);
+                break;
+            }
+            case 'mcp_tool_call_end': {
+                if (!callId || !toolIndex.has(callId))
+                    break;
+                const idx = toolIndex.get(callId);
+                const duration = payload?.duration?.secs != null ? `${payload.duration.secs}s` : null;
+                messages[idx].body.push(`→ completed${duration ? ` in ${duration}` : ''}`);
+                break;
+            }
+            default:
+                break;
+        }
+    });
+    return messages;
+}
+exports.buildTranscriptFromEvents = buildTranscriptFromEvents;
