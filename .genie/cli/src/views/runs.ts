@@ -30,33 +30,21 @@ export function buildRunsOverviewView(params: RunsViewParams): ViewEnvelope {
   };
   return {
     style: GENIE_STYLE,
-    title: 'Background Sessions',
+    title: 'Sessions',
     body: {
       type: 'layout',
       direction: 'column',
-      gap: 1,
+      gap: 0,
       children: [
-        { type: 'heading', level: 1, text: 'Background Sessions', accent: 'primary' },
         badgeRow,
-        {
-          type: 'callout',
-          tone: 'info',
-          icon: '🛰️',
-          title: 'Manage background work',
-          body: [
-            'Use `genie resume <sessionId>` to feed follow-up prompts.',
-            'Run `genie stop <sessionId>` to terminate detached processes.'
-          ]
-        },
-        { type: 'divider', variant: 'solid', accent: 'muted' },
-        sectionWithTable('Active Sessions', active, 'No active sessions'),
-        sectionWithTable('Recent Sessions (last 10)', recent, 'No recent sessions'),
+        active.length > 0 ? simpleTable('Active', active) : null,
+        recent.length > 0 ? simpleTable('Recent (last 10)', recent) : null,
         warnings && warnings.length
           ? {
               type: 'callout',
               tone: 'warning',
               icon: '⚠️',
-              title: 'Session store warning',
+              title: 'Warnings',
               body: warnings
             }
           : null,
@@ -64,31 +52,24 @@ export function buildRunsOverviewView(params: RunsViewParams): ViewEnvelope {
           type: 'callout',
           tone: 'info',
           icon: '💡',
-          title: 'Tips',
-          body: ['View details: `genie view <sessionId>`', 'Resume work: `genie resume <sessionId> "<prompt>"`']
+          title: 'Commands',
+          body: [
+            'genie view <sessionId>',
+            'genie resume <sessionId> "<prompt>"',
+            'genie stop <sessionId>'
+          ]
         }
       ].filter(Boolean) as ViewNode[]
     }
   };
 }
 
-function sectionWithTable(title: string, rows: RunRow[], emptyText: string): ViewNode {
-  const badge: ViewNode = {
-    type: 'badge',
-    text: rows.length ? `${rows.length} entries` : 'Empty',
-    tone: rows.length ? 'info' : 'muted'
-  };
+function simpleTable(title: string, rows: RunRow[]): ViewNode {
   return {
     type: 'layout' as const,
     direction: 'column' as const,
     children: [
       { type: 'heading', level: 2, text: title, accent: 'secondary' },
-      {
-        type: 'layout',
-        direction: 'row',
-        gap: 1,
-        children: [badge]
-      },
       {
         type: 'table' as const,
         columns: [
@@ -102,8 +83,7 @@ function sectionWithTable(title: string, rows: RunRow[], emptyText: string): Vie
           status: decorateStatus(row.status),
           sessionId: row.sessionId ?? 'n/a',
           updated: row.updated || 'n/a'
-        })),
-        emptyText
+        }))
       }
     ]
   };

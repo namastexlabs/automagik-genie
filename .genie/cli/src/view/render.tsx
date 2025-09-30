@@ -212,7 +212,7 @@ function renderKeyValueNode(node: KeyValueNode): React.ReactElement {
 function renderTableNode(node: TableNode): React.ReactElement {
   const { Box: InkBox, Text: InkText } = useInk();
   const columns = node.columns;
-  const MAX_COL_WIDTH = 50;
+  const MAX_COL_WIDTH = 100;
   const MIN_COL_WIDTH = 6;
   const rowGap = node.rowGap ?? 0;
   const sanitized = (value: string) => value.replace(/\s+/g, ' ').trim();
@@ -223,20 +223,44 @@ function renderTableNode(node: TableNode): React.ReactElement {
   };
   const clampWidth = (length: number) => Math.max(MIN_COL_WIDTH, Math.min(MAX_COL_WIDTH, length));
   const termWidth = typeof process !== 'undefined' && process.stdout && Number.isFinite(process.stdout.columns)
-    ? Math.max(40, Math.min(process.stdout.columns - 6, 140))
+    ? Math.max(40, Math.min(process.stdout.columns - 8, 140))
     : 120;
-  const gapSize = 2;
-  const baseWidths = columns.map((col) => clampWidth(col.label.length));
+  const gapSize = 1;
+  const baseWidths = columns.map((col) => {
+    // Use explicit width if provided, otherwise calculate from label
+    if (col.width !== undefined) {
+      return clampWidth(col.width);
+    }
+    return clampWidth(col.label.length);
+  });
   node.rows.forEach((row) => {
     columns.forEach((col, idx) => {
+      // Skip width calculation for columns with explicit width
+      if (col.width !== undefined) return;
+
       const raw = row[col.key];
       const value = raw == null ? '' : String(raw);
       baseWidths[idx] = Math.max(baseWidths[idx], clampWidth(sanitized(value).length));
     });
   });
+  const fixedWidthColumns = columns.map((col) => col.width !== undefined);
   const totalBase = sumWithGaps(baseWidths, gapSize);
   const allowedWidth = Math.max(sumWithGaps(baseWidths.map(() => MIN_COL_WIDTH), gapSize), Math.min(termWidth, totalBase));
-  const widths = squeezeWidths(baseWidths.slice(), gapSize, allowedWidth, MIN_COL_WIDTH);
+  const widths = squeezeWidths(baseWidths.slice(), gapSize, allowedWidth, MIN_COL_WIDTH, fixedWidthColumns);
+
+  // Expand flexible columns to fill available terminal width
+  const currentTotal = sumWithGaps(widths, gapSize);
+  const remaining = termWidth - currentTotal;
+  if (remaining > 0) {
+    // Find the last flexible (non-fixed) column and expand it
+    for (let i = widths.length - 1; i >= 0; i--) {
+      if (!fixedWidthColumns[i]) {
+        widths[i] = Math.min(widths[i] + remaining, MAX_COL_WIDTH);
+        break;
+      }
+    }
+  }
+
   const tableWidth = sumWithGaps(widths, gapSize);
 
   const renderRow = (row: Record<string, string>, isHeader = false) => (
@@ -263,8 +287,8 @@ function renderTableNode(node: TableNode): React.ReactElement {
         flexDirection: 'column' as const,
         borderStyle: 'round' as const,
         borderColor: accentToColor('muted'),
-        paddingX: 1,
-        paddingY: 1
+        paddingX: 0,
+        paddingY: 0
       };
 
   const showDivider = node.divider !== false && node.rows.length > 0;
@@ -307,17 +331,24 @@ function renderTableNode(node: TableNode): React.ReactElement {
   }
 }
 
-function squeezeWidths(widths: number[], gapSize: number, targetWidth: number, minWidth: number): number[] {
+function squeezeWidths(widths: number[], gapSize: number, targetWidth: number, minWidth: number, fixedWidthColumns: boolean[] = []): number[] {
   const total = () => sumWithGaps(widths, gapSize);
   if (total() <= targetWidth) return widths;
 
-  const shrinkable = () => widths.some((width) => width > minWidth);
+  const shrinkable = () => widths.some((width, idx) => !fixedWidthColumns[idx] && width > minWidth);
   while (total() > targetWidth && shrinkable()) {
     let largestIdx = 0;
     for (let i = 1; i < widths.length; i += 1) {
-      if (widths[i] > widths[largestIdx]) largestIdx = i;
+      // Skip fixed-width columns
+      if (fixedWidthColumns[i]) continue;
+      // Find largest non-fixed column
+      if (!fixedWidthColumns[largestIdx] && widths[i] > widths[largestIdx]) {
+        largestIdx = i;
+      } else if (fixedWidthColumns[largestIdx] && !fixedWidthColumns[i]) {
+        largestIdx = i;
+      }
     }
-    if (widths[largestIdx] <= minWidth) break;
+    if (fixedWidthColumns[largestIdx] || widths[largestIdx] <= minWidth) break;
     widths[largestIdx] -= 1;
   }
   return widths;

@@ -1,7 +1,6 @@
 ---
 name: wish
-description: "\U0001F9DE\u2728 Convert any idea or existing thread into a roadmap-aligned\
-  \ wish with inline spec contract, context distribution, and execution hand-off."
+description: Convert ideas into roadmap-aligned wishes with spec contracts
 genie:
   executor: codex
   model: gpt-5

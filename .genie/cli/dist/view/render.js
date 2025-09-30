@@ -129,7 +129,7 @@ function renderKeyValueNode(node) {
 function renderTableNode(node) {
     const { Box: InkBox, Text: InkText } = useInk();
     const columns = node.columns;
-    const MAX_COL_WIDTH = 50;
+    const MAX_COL_WIDTH = 100;
     const MIN_COL_WIDTH = 6;
     const rowGap = node.rowGap ?? 0;
     const sanitized = (value) => value.replace(/\s+/g, ' ').trim();
@@ -142,20 +142,42 @@ function renderTableNode(node) {
     };
     const clampWidth = (length) => Math.max(MIN_COL_WIDTH, Math.min(MAX_COL_WIDTH, length));
     const termWidth = typeof process !== 'undefined' && process.stdout && Number.isFinite(process.stdout.columns)
-        ? Math.max(40, Math.min(process.stdout.columns - 6, 140))
+        ? Math.max(40, Math.min(process.stdout.columns - 8, 140))
         : 120;
-    const gapSize = 2;
-    const baseWidths = columns.map((col) => clampWidth(col.label.length));
+    const gapSize = 1;
+    const baseWidths = columns.map((col) => {
+        // Use explicit width if provided, otherwise calculate from label
+        if (col.width !== undefined) {
+            return clampWidth(col.width);
+        }
+        return clampWidth(col.label.length);
+    });
     node.rows.forEach((row) => {
         columns.forEach((col, idx) => {
+            // Skip width calculation for columns with explicit width
+            if (col.width !== undefined)
+                return;
             const raw = row[col.key];
             const value = raw == null ? '' : String(raw);
             baseWidths[idx] = Math.max(baseWidths[idx], clampWidth(sanitized(value).length));
         });
     });
+    const fixedWidthColumns = columns.map((col) => col.width !== undefined);
     const totalBase = sumWithGaps(baseWidths, gapSize);
     const allowedWidth = Math.max(sumWithGaps(baseWidths.map(() => MIN_COL_WIDTH), gapSize), Math.min(termWidth, totalBase));
-    const widths = squeezeWidths(baseWidths.slice(), gapSize, allowedWidth, MIN_COL_WIDTH);
+    const widths = squeezeWidths(baseWidths.slice(), gapSize, allowedWidth, MIN_COL_WIDTH, fixedWidthColumns);
+    // Expand flexible columns to fill available terminal width
+    const currentTotal = sumWithGaps(widths, gapSize);
+    const remaining = termWidth - currentTotal;
+    if (remaining > 0) {
+        // Find the last flexible (non-fixed) column and expand it
+        for (let i = widths.length - 1; i >= 0; i--) {
+            if (!fixedWidthColumns[i]) {
+                widths[i] = Math.min(widths[i] + remaining, MAX_COL_WIDTH);
+                break;
+            }
+        }
+    }
     const tableWidth = sumWithGaps(widths, gapSize);
     const renderRow = (row, isHeader = false) => ((0, jsx_runtime_1.jsx)(InkBox, { flexDirection: "row", children: columns.map((col, idx) => {
             const raw = isHeader ? col.label : row[col.key] ?? '';
@@ -170,8 +192,8 @@ function renderTableNode(node) {
             flexDirection: 'column',
             borderStyle: 'round',
             borderColor: (0, theme_1.accentToColor)('muted'),
-            paddingX: 1,
-            paddingY: 1
+            paddingX: 0,
+            paddingY: 0
         };
     const showDivider = node.divider !== false && node.rows.length > 0;
     return ((0, jsx_runtime_1.jsxs)(InkBox, { ...containerProps, children: [renderRow(Object.fromEntries(columns.map((c) => [c.key, c.label])), true), showDivider ? ((0, jsx_runtime_1.jsx)(InkBox, { children: (0, jsx_runtime_1.jsx)(InkText, { color: (0, theme_1.accentToColor)('muted'), dimColor: true, children: '─'.repeat(tableWidth) }) })) : null, node.rows.length === 0 && node.emptyText ? ((0, jsx_runtime_1.jsx)(InkBox, { children: (0, jsx_runtime_1.jsx)(InkText, { color: theme_1.palette.foreground.placeholder, children: node.emptyText }) })) : ((0, jsx_runtime_1.jsx)(react_1.Fragment, { children: node.rows.map((row, idx) => ((0, jsx_runtime_1.jsx)(InkBox, { marginBottom: idx < node.rows.length - 1 ? rowGap : 0, children: renderRow(row) }, `row-${idx}`))) }))] }));
@@ -187,18 +209,26 @@ function renderTableNode(node) {
         return text.padEnd(width);
     }
 }
-function squeezeWidths(widths, gapSize, targetWidth, minWidth) {
+function squeezeWidths(widths, gapSize, targetWidth, minWidth, fixedWidthColumns = []) {
     const total = () => sumWithGaps(widths, gapSize);
     if (total() <= targetWidth)
         return widths;
-    const shrinkable = () => widths.some((width) => width > minWidth);
+    const shrinkable = () => widths.some((width, idx) => !fixedWidthColumns[idx] && width > minWidth);
     while (total() > targetWidth && shrinkable()) {
         let largestIdx = 0;
         for (let i = 1; i < widths.length; i += 1) {
-            if (widths[i] > widths[largestIdx])
+            // Skip fixed-width columns
+            if (fixedWidthColumns[i])
+                continue;
+            // Find largest non-fixed column
+            if (!fixedWidthColumns[largestIdx] && widths[i] > widths[largestIdx]) {
                 largestIdx = i;
+            }
+            else if (fixedWidthColumns[largestIdx] && !fixedWidthColumns[i]) {
+                largestIdx = i;
+            }
         }
-        if (widths[largestIdx] <= minWidth)
+        if (fixedWidthColumns[largestIdx] || widths[largestIdx] <= minWidth)
             break;
         widths[largestIdx] -= 1;
     }

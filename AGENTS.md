@@ -137,6 +137,45 @@ Twin prompt patterns (run through any agent, typically `plan`):
 - Consensus Loop: "Challenge my conclusion. Provide counterpoints, evidence, and a recommendation. Finish with Twin Verdict + confidence."
 - Focused Deep-Dive: "Investigate <topic>. Provide findings, affected files, follow-ups."
 
+## Self-Learn & Behavioral Corrections
+
+Use the `self-learn` agent to record violations and propagate corrections across the framework.
+
+**When to Use:**
+- ✅ You violated a behavioral rule (e.g., deleted a file without approval)
+- ✅ User identifies a recurring pattern that needs correction
+- ✅ A bug reveals a gap in agent instructions
+- ✅ New guardrail needs to be enforced across all agents
+
+**How to Invoke:**
+```bash
+./genie run self-learn "Violation: [description]
+Evidence: [logs/diffs/screenshots]
+Impact: [which agents/docs affected]
+Correction: [what should happen instead]
+Validation: [how to verify fix]"
+```
+
+**Anti-Patterns:**
+- ❌ Manually editing `AGENTS.md` behavioral learnings without using self-learn
+- ❌ Ignoring violations hoping they won't recur
+- ❌ Recording speculative rules without evidence
+
+**Example:**
+```bash
+./genie run self-learn "Violation: forge agent created task descriptions with hundreds of lines instead of using @-references.
+
+Evidence: @.genie/wishes/view-fix/forge-output.md shows 200+ line descriptions
+
+Impact: Forge agent, wish agent, CLAUDE.md patterns
+
+Correction: Task descriptions must be ≤3 lines with @agent- prefix pointing to task files for full context.
+
+Validation: Future forge runs produce <10 line descriptions with @-references only."
+```
+
+**Result:** Self-learn will update `AGENTS.md` behavioral learnings, affected agent prompts, and create a Done Report at `.genie/reports/done-self-learn-<slug>-<timestamp>.md`.
+
 ## Agent Playbook
 
 <prompt>
@@ -189,6 +228,11 @@ Twin prompt patterns (run through any agent, typically `plan`):
       <trigger>User called `/wish` directly in chat, expecting Claude to act as wish agent immediately, not dispatch to ./genie CLI.</trigger>
       <correction>Distinguish between two invocation methods: (1) `/wish` slash command = Claude acts as the agent directly using subagents; (2) `./genie run wish` = dispatch to Codex executor via CLI. For daily work, user prefers slash commands (Claude). For multi-LLM perspective, user uses ./genie (Codex).</correction>
       <validation>When user types `/command`, act as that agent directly; when they type `./genie run`, acknowledge they're dispatching to external executor.</validation>
+    </entry>
+    <entry date="2025-09-30" violation_type="POLLING" severity="MEDIUM">
+      <trigger>Polling background sessions with short sleep intervals, leading to impatient behavior and user directive to slow down.</trigger>
+      <correction>Increase sleep duration between consecutive session status checks to avoid rapid-fire polling; default to longer waits unless urgency is documented.</correction>
+      <validation>Future monitoring loops record waits of at least 60 seconds between checks, with evidence captured in session logs.</validation>
     </entry>
   </learning_entries>
 </behavioral_learnings>

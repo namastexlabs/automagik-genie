@@ -229,7 +229,7 @@ Replace metrics-only view in both Codex and Claude executors with proper convers
   - Metrics header validation (verify no truncation, summaries accurate)
   - Evidence captured for each test case
 - **Evidence:**
-  - `.genie/reports/evidence-view-fix/qa-comprehensive.md` with test results table
+  - `.genie/reports/evidence-view-fix/qa-validation.md` with test results table
   - `.genie/reports/evidence-view-fix/test-transcripts/` directory with all outputs
   - Performance metrics for --full mode (target: <500ms for 100 messages)
   - Metrics validation: spot-check 3 sessions to verify header values match source data
@@ -259,7 +259,7 @@ Replace metrics-only view in both Codex and Claude executors with proper convers
 
 **R1: Background Start Reports Session ID**
 ```bash
-./genie run utilities/thinkdeep "Remember: my name is Felipe" --background
+./genie run utilities/thinkdeep "Remember: my name is Felipe"
 # Expected: Should show session ID within 20 seconds
 ```
 
@@ -354,7 +354,7 @@ time ./genie view <large-session-id> --full
 # Expected: <500ms for 100 messages
 
 # Background + context memory test
-./genie run utilities/thinkdeep "I am testing background mode. Remember the number 42." --background
+./genie run utilities/thinkdeep "I am testing background mode. Remember the number 42."
 sleep 5
 BG_SESSION=$(./genie list sessions | grep thinkdeep | head -1 | awk '{print $2}')
 echo "Session ID should be displayed: $BG_SESSION"
@@ -374,9 +374,11 @@ echo "Session ID should be displayed: $BG_SESSION"
   - Repeat for Claude executor with configured agent
   - Background session reports session ID within 20s
   - Metrics validation: spot-check 3 sessions
+  - `pnpm run check`
+  - `cargo test --workspace`
   - `pnpm run build:genie && pnpm run test:genie` (if tests exist)
 - **Artefact paths:**
-  - `.genie/reports/evidence-view-fix/qa-comprehensive.md`
+  - `.genie/reports/evidence-view-fix/qa-validation.md`
   - `.genie/reports/evidence-view-fix/codex-tests/`
   - `.genie/reports/evidence-view-fix/claude-tests/`
   - `.genie/reports/evidence-view-fix/test-transcripts/`
@@ -457,13 +459,6 @@ echo "Session ID should be displayed: $BG_SESSION"
 - **No backwards compatibility needed** - replace metrics view entirely with conversation view
 - **Critical finding**: No plaintext mode exists - all rendering uses Ink (JSON or Ink are only options)
 - **Bugs found**: Role mapping (user→reasoning at line 1784), slice count (20 instead of 5 at line 1908)
-
-## Execution Group Overview
-
-- **Group A**: Replace metrics view with conversation view in codex-log-viewer.ts; extract and display metrics in header for all modes
-- **Group B**: Replace metrics view with conversation view in claude-log-viewer.ts; extract and display metrics in header for all modes
-- **Group C**: Fix fallback bugs (role mapping, slice count) for non-codex/claude executors
-- **Group D**: Comprehensive QA with 12 test cases + 8 regression tests (including context memory, background mode, metrics validation, --live mode)
 
 ## Assumptions / Risks
 

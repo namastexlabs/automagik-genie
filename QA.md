@@ -8,7 +8,7 @@
 
 ### 3. Session Listings
 - `./genie list sessions`
-- Trigger a background run (`./genie run implementor "[Discovery] hello" --background`) and confirm the session appears under **Active**.
+- Trigger a background run (`./genie run implementor "[Discovery] hello"`) and confirm the session appears under **Active**.
 - Stop the run: `./genie stop <sessionId>`; the entry should move to **Recent**.
 
 ### 4. Transcript View
@@ -24,8 +24,8 @@ Use a recent session id:
 
 ### 6. Background Detach Preview
 Pick a specialist agent with a lightweight prompt (e.g., `polish`):
-- `./genie run polish "[Discovery] sanity ping" --no-background`
-- `./genie run polish "[Discovery] background" --background`
+- `./genie run polish "[Discovery] sanity ping"`
+- `./genie run polish "[Discovery] background"`
   - Ensure detach callout displays log path + session id.
 - `./genie resume <sessionId> "[Verification] follow-up"`
 - `./genie list sessions` should briefly show the session under **Active**.

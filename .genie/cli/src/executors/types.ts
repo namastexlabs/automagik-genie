@@ -92,5 +92,6 @@ export interface Executor {
   getSessionExtractionDelay?(args: ExecutorSessionDelayArgs): number;
   locateSessionFile?(args: ExecutorLocateSessionFileArgs): string | null;
   tryLocateSessionFileBySessionId?(sessionId: string, sessionsDir: string): string | null;
+  createOutputFilter?(destination: NodeJS.WritableStream): NodeJS.ReadWriteStream;
   logViewer?: ExecutorLogViewer;
 }

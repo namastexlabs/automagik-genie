@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { Transform } from 'stream';
 import { Executor, ExecutorCommand, ExecutorDefaults } from './types';
 import * as logViewer from './claude-log-viewer';
 
@@ -113,6 +114,84 @@ function mergeResumeConfig(resume: Record<string, any> = {}) {
   };
 }
 
+function createOutputFilter(destination: NodeJS.WritableStream): NodeJS.ReadWriteStream {
+  return new Transform({
+    transform(chunk: Buffer, _encoding: string, callback: (error?: Error | null) => void) {
+      const text = chunk.toString('utf8');
+      const lines = text.split('\n');
+      const output: string[] = [];
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith('{')) {
+          output.push(line);
+          continue;
+        }
+
+        try {
+          const event = JSON.parse(trimmed);
+          const type = event.type;
+
+          if (type === 'system' && event.subtype === 'init') {
+            const minimal = JSON.stringify({
+              type: 'system',
+              subtype: 'init',
+              session_id: event.session_id,
+              model: event.model
+            });
+            output.push(minimal);
+          } else if (type === 'assistant' && event.message?.content) {
+            const content = event.message.content;
+
+            if (Array.isArray(content)) {
+              for (const block of content) {
+                if (block.type === 'text' && block.text?.trim()) {
+                  output.push(`\n[assistant] ${block.text}`);
+                } else if (block.type === 'tool_use') {
+                  output.push(`[tool] ${block.name}`);
+                }
+              }
+            }
+          } else if (type === 'user' && event.message?.content) {
+            // Tool results
+            const content = event.message.content;
+            if (Array.isArray(content)) {
+              for (const block of content) {
+                if (block.type === 'tool_result') {
+                  const resultText = typeof block.content === 'string'
+                    ? block.content.slice(0, 100)
+                    : JSON.stringify(block.content).slice(0, 100);
+                  output.push(`[tool_result] ${resultText}...`);
+                }
+              }
+            }
+          } else if (type === 'result' && event.subtype === 'success') {
+            const summary = JSON.stringify({
+              type: 'result',
+              success: true,
+              duration_ms: event.duration_ms,
+              session_id: event.session_id,
+              tokens: {
+                input: event.usage?.input_tokens || 0,
+                output: event.usage?.output_tokens || 0
+              },
+              cost_usd: event.total_cost_usd
+            });
+            output.push(summary);
+          }
+        } catch {
+          output.push(line);
+        }
+      }
+
+      const filtered = output.join('\n') + '\n';
+      this.push(filtered);
+      destination.write(filtered);
+      callback();
+    }
+  });
+}
+
 const claudeExecutor: Executor = {
   defaults,
   buildRunCommand,
@@ -120,6 +199,7 @@ const claudeExecutor: Executor = {
   resolvePaths,
   extractSessionId,
   getSessionExtractionDelay,
+  createOutputFilter,
   logViewer
 };
 

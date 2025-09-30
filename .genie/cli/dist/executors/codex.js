@@ -38,6 +38,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
+const stream_1 = require("stream");
 const logViewer = __importStar(require("./codex-log-viewer"));
 const CODEX_PACKAGE_SPEC = '@namastexlabs/codex@0.43.0-alpha.5';
 const defaults = {
@@ -144,29 +145,45 @@ function extractSessionId({ startTime, paths = {} }) {
     const date = new Date(startTime ?? 0);
     if (Number.isNaN(date.getTime()))
         return null;
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const dayDir = path_1.default.join(sessionsDir, String(year), month, day);
-    if (!fs_1.default.existsSync(dayDir))
-        return null;
-    const files = fs_1.default
-        .readdirSync(dayDir)
-        .filter((file) => file.startsWith('rollout-') && file.endsWith('.jsonl'))
-        .map((file) => {
-        const fullPath = path_1.default.join(dayDir, file);
-        const stat = fs_1.default.statSync(fullPath);
-        return { name: file, path: fullPath, mtime: stat.mtimeMs };
-    })
-        .sort((a, b) => b.mtime - a.mtime);
-    for (const file of files) {
-        if (Math.abs(file.mtime - (startTime ?? 0)) < 60000) {
-            const match = file.name.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
-            if (match)
-                return match[1];
+    // Helper to check a specific date directory
+    const checkDirectory = (targetDate) => {
+        const year = targetDate.getFullYear();
+        const month = String(targetDate.getMonth() + 1).padStart(2, '0');
+        const day = String(targetDate.getDate()).padStart(2, '0');
+        const dayDir = path_1.default.join(sessionsDir, String(year), month, day);
+        if (!fs_1.default.existsSync(dayDir))
+            return null;
+        const files = fs_1.default
+            .readdirSync(dayDir)
+            .filter((file) => file.startsWith('rollout-') && file.endsWith('.jsonl'))
+            .map((file) => {
+            const fullPath = path_1.default.join(dayDir, file);
+            const stat = fs_1.default.statSync(fullPath);
+            return { name: file, path: fullPath, mtime: stat.mtimeMs };
+        })
+            .sort((a, b) => b.mtime - a.mtime);
+        // Expand time window from 60s to 120s to catch slower API calls
+        for (const file of files) {
+            if (Math.abs(file.mtime - (startTime ?? 0)) < 120000) {
+                const match = file.name.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+                if (match)
+                    return match[1];
+            }
         }
-    }
-    return null;
+        return null;
+    };
+    // Try the date from startTime first
+    let result = checkDirectory(date);
+    if (result)
+        return result;
+    // Try yesterday (in case of timezone differences or day rollover during startup)
+    const yesterday = new Date(date.getTime() - 24 * 60 * 60 * 1000);
+    result = checkDirectory(yesterday);
+    if (result)
+        return result;
+    // Try tomorrow (in case of timezone differences)
+    const tomorrow = new Date(date.getTime() + 24 * 60 * 60 * 1000);
+    return checkDirectory(tomorrow);
 }
 function getSessionExtractionDelay({ config = {}, defaultDelay }) {
     if (typeof config.sessionExtractionDelayMs === 'number') {
@@ -328,6 +345,68 @@ function tryLocateSessionFileBySessionId(sessionId, sessionsDir) {
     }
     return null;
 }
+function createOutputFilter(destination) {
+    return new stream_1.Transform({
+        transform(chunk, _encoding, callback) {
+            const text = chunk.toString('utf8');
+            const lines = text.split('\n');
+            const output = [];
+            for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed || !trimmed.startsWith('{')) {
+                    output.push(line);
+                    continue;
+                }
+                try {
+                    const event = JSON.parse(trimmed);
+                    const type = event.type;
+                    if (type === 'session.created') {
+                        const minimal = JSON.stringify({
+                            type: 'session.created',
+                            session_id: event.session_id
+                        });
+                        output.push(minimal);
+                    }
+                    else if (type === 'item.completed' && event.item) {
+                        const item = event.item;
+                        if (item.item_type === 'reasoning' && item.text) {
+                            output.push(`\n[reasoning] ${item.text}`);
+                        }
+                        else if (item.item_type === 'command_execution') {
+                            output.push(`[command] ${item.command}`);
+                            if (item.aggregated_output && item.status === 'completed') {
+                                const outputLines = item.aggregated_output.split('\n').slice(0, 10).join('\n');
+                                output.push(`[output] ${outputLines}${item.aggregated_output.split('\n').length > 10 ? '\n...' : ''}`);
+                            }
+                        }
+                        else if (item.item_type === 'assistant_message' && item.text) {
+                            output.push(`\n[assistant] ${item.text}`);
+                        }
+                    }
+                    else if (type === 'turn.completed' && event.usage) {
+                        const summary = JSON.stringify({
+                            type: 'turn.completed',
+                            tokens: {
+                                input: event.usage.input_tokens || 0,
+                                cached: event.usage.cached_input_tokens || 0,
+                                output: event.usage.output_tokens || 0
+                            }
+                        });
+                        output.push(summary);
+                    }
+                    // Drop turn.started, item.started, and other verbose events
+                }
+                catch {
+                    output.push(line);
+                }
+            }
+            const filtered = output.join('\n') + '\n';
+            this.push(filtered);
+            destination.write(filtered);
+            callback();
+        }
+    });
+}
 const codexExecutor = {
     defaults,
     buildRunCommand,
@@ -337,6 +416,7 @@ const codexExecutor = {
     getSessionExtractionDelay,
     locateSessionFile,
     tryLocateSessionFileBySessionId,
+    createOutputFilter,
     logViewer
 };
 exports.default = codexExecutor;

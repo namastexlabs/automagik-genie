@@ -1,7 +1,6 @@
 ---
 name: forge
-description: Forge task orchestrator that creates optimized single-group plans in
-  Forge MCP with comprehensive @ context loading for precise, isolated execution.
+description: Break wishes into execution groups with task files and validation hooks
 color: gold
 genie:
   executor: codex

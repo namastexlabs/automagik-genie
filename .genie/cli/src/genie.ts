@@ -173,7 +173,7 @@ const BASE_CONFIG: GenieConfig = {
     enabled: true,
     detach: true,
     pollIntervalMs: 1500,
-    sessionExtractionDelayMs: 2000
+    sessionExtractionDelayMs: 5000
   }
 };
 
@@ -446,24 +446,22 @@ async function maybeHandleBackgroundLaunch(params: {
 
   // Print directly to stdout instead of using Ink for background
   process.stdout.write(`▸ Launching ${agentName} in background...\n`);
+  process.stdout.write(`▸ Waiting for session ID...\n`);
 
-  // Poll for session ID (up to 20 seconds with progress indicator)
+  // Poll for session ID (up to 20 seconds)
   const pollStart = Date.now();
   const pollTimeout = 20000; // 20 seconds
-  const spinner = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-  let spinnerIndex = 0;
+  const pollInterval = 500; // Check every 500ms
 
   while (Date.now() - pollStart < pollTimeout) {
-    await sleep(250);
+    await sleep(pollInterval);
     const liveStore = loadSessions(paths as SessionPathsConfig, config as SessionLoadConfig, DEFAULT_CONFIG as any);
     const liveEntry = liveStore.agents?.[agentName];
 
     if (liveEntry?.sessionId) {
-      // Clear spinner line
-      process.stdout.write('\r\x1b[K');
-
+      const elapsed = ((Date.now() - pollStart) / 1000).toFixed(1);
       entry.sessionId = liveEntry.sessionId;
-      process.stdout.write(`▸ Session ID: ${liveEntry.sessionId}\n\n`);
+      process.stdout.write(`▸ Session ID: ${liveEntry.sessionId} (${elapsed}s)\n\n`);
       process.stdout.write(`  View output:\n`);
       process.stdout.write(`    ./genie view ${liveEntry.sessionId}\n\n`);
       process.stdout.write(`  Continue conversation:\n`);
@@ -472,15 +470,10 @@ async function maybeHandleBackgroundLaunch(params: {
       process.stdout.write(`    ./genie stop ${liveEntry.sessionId}\n`);
       return true;
     }
-
-    // Show spinner while waiting
-    const elapsed = Math.floor((Date.now() - pollStart) / 1000);
-    process.stdout.write(`\r${spinner[spinnerIndex++ % spinner.length]} Waiting for session ID... (${elapsed}s)`);
   }
 
   // Timeout - show pending with helpful commands
-  process.stdout.write('\r\x1b[K');
-  process.stdout.write(`▸ Session started but ID not available yet\n\n`);
+  process.stdout.write(`▸ Session started but ID not available yet (timeout after 20s)\n\n`);
   process.stdout.write(`  List sessions to find ID:\n`);
   process.stdout.write(`    ./genie list sessions\n\n`);
   process.stdout.write(`  Then view output:\n`);
@@ -725,7 +718,16 @@ function executeRun(args: ExecuteRunArgs): Promise<void> {
   if (runnerPid) entry.runnerPid = runnerPid;
   saveSessions(paths as SessionPathsConfig, store);
 
-  if (proc.stdout) proc.stdout.pipe(logStream);
+  let filteredStdout: NodeJS.ReadWriteStream | null = null;
+
+  if (proc.stdout) {
+    if (executor.createOutputFilter) {
+      filteredStdout = executor.createOutputFilter(logStream);
+      proc.stdout.pipe(filteredStdout);
+    } else {
+      proc.stdout.pipe(logStream);
+    }
+  }
   if (proc.stderr) proc.stderr.pipe(logStream);
 
   const updateSessionFromLine = (line: string) => {
@@ -764,7 +766,13 @@ function executeRun(args: ExecuteRunArgs): Promise<void> {
   }
 
   if (!background) {
-    if (proc.stdout) proc.stdout.pipe(process.stdout);
+    if (filteredStdout) {
+      // Filter is active, pipe filtered output to console
+      filteredStdout.pipe(process.stdout);
+    } else if (proc.stdout) {
+      // No filter, pipe directly
+      proc.stdout.pipe(process.stdout);
+    }
     if (proc.stderr) proc.stderr.pipe(process.stderr);
   }
 
@@ -794,6 +802,9 @@ function executeRun(args: ExecuteRunArgs): Promise<void> {
         outcome: 'failure',
         sessionId: entry.sessionId,
         executorKey,
+        model: executorConfig.exec?.model || executorConfig.model || null,
+        permissionMode: executorConfig.exec?.permissionMode || executorConfig.permissionMode || null,
+        sandbox: executorConfig.exec?.sandbox || executorConfig.sandbox || null,
         mode: entry.mode || entry.preset || executionMode,
         background: entry.background,
         exitCode: null,
@@ -833,6 +844,9 @@ function executeRun(args: ExecuteRunArgs): Promise<void> {
         outcome,
         sessionId: entry.sessionId,
         executorKey,
+        model: executorConfig.exec?.model || executorConfig.model || null,
+        permissionMode: executorConfig.exec?.permissionMode || executorConfig.permissionMode || null,
+        sandbox: executorConfig.exec?.sandbox || executorConfig.sandbox || null,
         mode: entry.mode || entry.preset || executionMode,
         background: entry.background,
         exitCode: code,
@@ -845,25 +859,36 @@ function executeRun(args: ExecuteRunArgs): Promise<void> {
     }
   });
 
-  const defaultDelay = (config.background && config.background.sessionExtractionDelayMs) || 2000;
+  const defaultDelay = (config.background && config.background.sessionExtractionDelayMs) || 5000;
   const sessionDelay = executor.getSessionExtractionDelay
     ? executor.getSessionExtractionDelay({ config: executorConfig, defaultDelay })
     : defaultDelay;
 
   if (executor.extractSessionId) {
-    setTimeout(() => {
+    // Retry extractSessionId with exponential intervals: 5s, 7s, 10s, 13s
+    const retryIntervals = [sessionDelay, 2000, 3000, 3000];
+    let retryIndex = 0;
+
+    const attemptExtraction = () => {
       if (entry.sessionId) return;
+
       const sessionId = executor.extractSessionId?.({
         startTime,
         config: executorConfig,
         paths: executorPaths
       }) || null;
+
       if (sessionId) {
         entry.sessionId = sessionId;
         entry.lastUsed = new Date().toISOString();
         saveSessions(paths as SessionPathsConfig, store);
+      } else if (retryIndex < retryIntervals.length) {
+        setTimeout(attemptExtraction, retryIntervals[retryIndex]);
+        retryIndex++;
       }
-    }, sessionDelay);
+    };
+
+    setTimeout(attemptExtraction, retryIntervals[retryIndex++]);
   }
 
   return promise;
@@ -1150,7 +1175,14 @@ async function runRuns(parsed: ParsedCommand, config: GenieConfig, paths: Requir
 
 async function runList(parsed: ParsedCommand, config: GenieConfig, paths: Required<ConfigPaths>): Promise<void> {
   const [targetRaw] = parsed.commandArgs;
-  const target = (targetRaw || 'agents').toLowerCase();
+
+  // Show help if no subcommand provided
+  if (!targetRaw) {
+    await emitView(buildListHelpView(), parsed.options);
+    return;
+  }
+
+  const target = targetRaw.toLowerCase();
 
   if (target === 'agents') {
     await emitAgentCatalog(parsed, config, paths);

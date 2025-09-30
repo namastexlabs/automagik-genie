@@ -38,6 +38,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
+const stream_1 = require("stream");
 const logViewer = __importStar(require("./claude-log-viewer"));
 const defaults = {
     binary: 'claude',
@@ -132,6 +133,83 @@ function mergeResumeConfig(resume = {}) {
         ...resume
     };
 }
+function createOutputFilter(destination) {
+    return new stream_1.Transform({
+        transform(chunk, _encoding, callback) {
+            const text = chunk.toString('utf8');
+            const lines = text.split('\n');
+            const output = [];
+            for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed || !trimmed.startsWith('{')) {
+                    output.push(line);
+                    continue;
+                }
+                try {
+                    const event = JSON.parse(trimmed);
+                    const type = event.type;
+                    if (type === 'system' && event.subtype === 'init') {
+                        const minimal = JSON.stringify({
+                            type: 'system',
+                            subtype: 'init',
+                            session_id: event.session_id,
+                            model: event.model
+                        });
+                        output.push(minimal);
+                    }
+                    else if (type === 'assistant' && event.message?.content) {
+                        const content = event.message.content;
+                        if (Array.isArray(content)) {
+                            for (const block of content) {
+                                if (block.type === 'text' && block.text?.trim()) {
+                                    output.push(`\n[assistant] ${block.text}`);
+                                }
+                                else if (block.type === 'tool_use') {
+                                    output.push(`[tool] ${block.name}`);
+                                }
+                            }
+                        }
+                    }
+                    else if (type === 'user' && event.message?.content) {
+                        // Tool results
+                        const content = event.message.content;
+                        if (Array.isArray(content)) {
+                            for (const block of content) {
+                                if (block.type === 'tool_result') {
+                                    const resultText = typeof block.content === 'string'
+                                        ? block.content.slice(0, 100)
+                                        : JSON.stringify(block.content).slice(0, 100);
+                                    output.push(`[tool_result] ${resultText}...`);
+                                }
+                            }
+                        }
+                    }
+                    else if (type === 'result' && event.subtype === 'success') {
+                        const summary = JSON.stringify({
+                            type: 'result',
+                            success: true,
+                            duration_ms: event.duration_ms,
+                            session_id: event.session_id,
+                            tokens: {
+                                input: event.usage?.input_tokens || 0,
+                                output: event.usage?.output_tokens || 0
+                            },
+                            cost_usd: event.total_cost_usd
+                        });
+                        output.push(summary);
+                    }
+                }
+                catch {
+                    output.push(line);
+                }
+            }
+            const filtered = output.join('\n') + '\n';
+            this.push(filtered);
+            destination.write(filtered);
+            callback();
+        }
+    });
+}
 const claudeExecutor = {
     defaults,
     buildRunCommand,
@@ -139,6 +217,7 @@ const claudeExecutor = {
     resolvePaths,
     extractSessionId,
     getSessionExtractionDelay,
+    createOutputFilter,
     logViewer
 };
 exports.default = claudeExecutor;

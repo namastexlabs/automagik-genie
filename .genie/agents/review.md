@@ -1,7 +1,6 @@
 ---
 name: review
-description: Validate whether a wish has been fully delivered by consolidating evidence, rerunning checks, and producing a
-  concise follow-up report.
+description: Validate wish delivery by consolidating evidence and rerunning checks
 genie:
   executor: codex
   model: gpt-5-codex

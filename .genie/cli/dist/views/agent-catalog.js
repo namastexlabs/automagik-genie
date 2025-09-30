@@ -9,71 +9,50 @@ function buildAgentCatalogView(params) {
         direction: 'row',
         gap: 1,
         children: [
-            { type: 'badge', text: `Total ${total}`, tone: 'info' },
+            { type: 'badge', text: `${total} agents`, tone: 'info' },
             { type: 'badge', text: `${groups.length} folders`, tone: 'muted' }
         ]
     };
+    // Calculate responsive column widths across all groups
+    const allRows = groups.flatMap(g => g.rows);
+    const maxIdLength = Math.max(...allRows.map(r => r.id.length), 10);
+    // Use just enough width for the longest identifier, with small padding
+    const idWidth = maxIdLength + 1;
     return {
         style: GENIE_STYLE,
-        title: 'Agent Catalog',
+        title: 'Agents',
         body: {
             type: 'layout',
             direction: 'column',
-            gap: 1,
+            gap: 0,
             children: [
-                { type: 'heading', level: 1, text: 'Agent Catalog', accent: 'primary' },
                 badgeRow,
+                ...groups.map(group => buildGroupSection(group, idWidth)),
                 {
                     type: 'callout',
                     tone: 'info',
-                    icon: '🧭',
-                    title: 'Usage',
+                    icon: '💡',
+                    title: 'Commands',
                     body: [
-                        'Run an agent: `genie run <agent-id> "<prompt>"`.',
-                        'List active work: `genie list sessions`.'
-                    ]
-                },
-                { type: 'divider', variant: 'solid', accent: 'muted' },
-                ...groups.flatMap((group, index) => {
-                    const section = buildGroupSection(group);
-                    return index < groups.length - 1
-                        ? [section, { type: 'divider', variant: 'solid', accent: 'muted' }]
-                        : [section];
-                }),
-                {
-                    type: 'callout',
-                    tone: 'success',
-                    icon: '🧪',
-                    title: 'Next steps',
-                    body: [
-                        'Pair `/forge` plans with `/implementor` runs for structured delivery.',
-                        'Keep wish context updated as you add or retire agents.'
+                        'genie run <agent-id> "<prompt>"',
+                        'genie list sessions'
                     ]
                 }
             ]
         }
     };
 }
-function buildGroupSection(group) {
-    const badges = {
-        type: 'layout',
-        direction: 'row',
-        gap: 1,
-        children: [
-            { type: 'badge', text: `${group.rows.length} agents`, tone: 'info' }
-        ]
-    };
+function buildGroupSection(group, idWidth) {
     return {
         type: 'layout',
         direction: 'column',
-        gap: 1,
+        gap: 0,
         children: [
-            { type: 'heading', level: 2, text: group.label, accent: 'secondary' },
-            badges,
+            { type: 'heading', level: 2, text: `${group.label} (${group.rows.length})`, accent: 'secondary' },
             {
                 type: 'table',
                 columns: [
-                    { key: 'id', label: 'Identifier' },
+                    { key: 'id', label: 'Identifier', width: idWidth },
                     { key: 'summary', label: 'Summary' }
                 ],
                 rows: group.rows.map((row) => ({

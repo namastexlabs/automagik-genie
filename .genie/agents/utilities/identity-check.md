@@ -1,10 +1,10 @@
 ---
 name: identity-check
-description: Minimal agent used to verify append_user_instructions_file wiring.
+description: Verify append_user_instructions_file wiring for testing
 color: cyan
 genie:
   executor: codex
-  background: true
+  background: false
 ---
 
 # Identity Check Agent
