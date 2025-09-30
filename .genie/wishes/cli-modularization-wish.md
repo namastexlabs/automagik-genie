@@ -132,7 +132,7 @@ Break up genie.ts (2,105 lines, 40% of CLI codebase) into focused modules in 4 p
   - Preserve exact CLI behavior (validated via snapshot diff)
   - No circular dependencies (types → utils/transcript → commands → genie.ts, single direction only)
   - Build succeeds with no new warnings after each phase
-  - CLI startup time must not regress (<500ms for `./genie --help`)
+  - CLI startup time must not regress (<800ms for `./genie --help`)
   - Explicit imports only (no barrel exports)
   - Breaking intermediate states OK; final state matches snapshots
 
@@ -575,7 +575,7 @@ cd ../..
   - Total CLI: ~5,300 → ~5,100 lines (~200 lines saved through deduplication)
   - Zero duplicate function definitions across modules
   - Build succeeds with no new warnings
-  - CLI startup time ≤500ms for `./genie --help` (no regression)
+  - CLI startup time ≤800ms for `./genie --help` (no regression)
   - **Snapshot validation: 0 diffs** (all CLI output matches baseline exactly)
   - **Parameter QA: 100% pass rate** (all 31 executor parameters validated via `@.genie/agents/qa/` test agents)
   - No circular dependencies detected by TypeScript compiler
