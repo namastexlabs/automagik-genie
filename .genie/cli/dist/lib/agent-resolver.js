@@ -3,11 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.listAgents = listAgents;
-exports.resolveAgentIdentifier = resolveAgentIdentifier;
-exports.agentExists = agentExists;
-exports.loadAgentSpec = loadAgentSpec;
-exports.extractFrontMatter = extractFrontMatter;
+exports.extractFrontMatter = exports.loadAgentSpec = exports.agentExists = exports.resolveAgentIdentifier = exports.listAgents = void 0;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const config_1 = require("./config");
@@ -49,6 +45,7 @@ function listAgents() {
     visit(baseDir, null);
     return records;
 }
+exports.listAgents = listAgents;
 function resolveAgentIdentifier(input) {
     const trimmed = (input || '').trim();
     if (!trimmed) {
@@ -78,6 +75,7 @@ function resolveAgentIdentifier(input) {
         return 'forge';
     throw new Error(`❌ Agent '${input}' not found. Try 'genie list agents' to see available ids.`);
 }
+exports.resolveAgentIdentifier = resolveAgentIdentifier;
 function agentExists(id) {
     if (!id)
         return false;
@@ -85,6 +83,7 @@ function agentExists(id) {
     const file = path_1.default.join('.genie', 'agents', `${normalized}.md`);
     return fs_1.default.existsSync(file);
 }
+exports.agentExists = agentExists;
 function loadAgentSpec(name) {
     const base = name.endsWith('.md') ? name.slice(0, -3) : name;
     const agentPath = path_1.default.join('.genie', 'agents', `${base}.md`);
@@ -98,6 +97,7 @@ function loadAgentSpec(name) {
         instructions: body.replace(/^(\r?\n)+/, '')
     };
 }
+exports.loadAgentSpec = loadAgentSpec;
 function extractFrontMatter(source) {
     if (!source.startsWith('---')) {
         return { meta: {}, body: source };
@@ -120,3 +120,4 @@ function extractFrontMatter(source) {
         return { meta: {}, body };
     }
 }
+exports.extractFrontMatter = extractFrontMatter;

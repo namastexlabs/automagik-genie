@@ -3,11 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.recordRuntimeWarning = recordRuntimeWarning;
-exports.getRuntimeWarnings = getRuntimeWarnings;
-exports.clearRuntimeWarnings = clearRuntimeWarnings;
-exports.findSessionEntry = findSessionEntry;
-exports.resolveDisplayStatus = resolveDisplayStatus;
+exports.resolveDisplayStatus = exports.findSessionEntry = exports.clearRuntimeWarnings = exports.getRuntimeWarnings = exports.recordRuntimeWarning = void 0;
 const fs_1 = __importDefault(require("fs"));
 const session_store_1 = require("../session-store");
 const background_manager_1 = __importDefault(require("../background-manager"));
@@ -16,12 +12,15 @@ const runtimeWarnings = [];
 function recordRuntimeWarning(message) {
     runtimeWarnings.push(message);
 }
+exports.recordRuntimeWarning = recordRuntimeWarning;
 function getRuntimeWarnings() {
     return [...runtimeWarnings];
 }
+exports.getRuntimeWarnings = getRuntimeWarnings;
 function clearRuntimeWarnings() {
     runtimeWarnings.length = 0;
 }
+exports.clearRuntimeWarnings = clearRuntimeWarnings;
 function findSessionEntry(store, sessionId, paths) {
     if (!sessionId || typeof sessionId !== 'string')
         return null;
@@ -54,6 +53,7 @@ function findSessionEntry(store, sessionId, paths) {
     }
     return null;
 }
+exports.findSessionEntry = findSessionEntry;
 function resolveDisplayStatus(entry) {
     const baseStatus = entry.status || 'unknown';
     const executorRunning = backgroundManager.isAlive(entry.executorPid);
@@ -78,3 +78,4 @@ function resolveDisplayStatus(entry) {
     }
     return baseStatus;
 }
+exports.resolveDisplayStatus = resolveDisplayStatus;

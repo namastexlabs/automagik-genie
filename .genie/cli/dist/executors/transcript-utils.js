@@ -6,12 +6,7 @@
  * and slicing message arrays for both Codex and Claude executors.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sliceForLatest = sliceForLatest;
-exports.sliceForRecent = sliceForRecent;
-exports.summarizeCodexMetrics = summarizeCodexMetrics;
-exports.summarizeClaudeMetrics = summarizeClaudeMetrics;
-exports.aggregateToolCalls = aggregateToolCalls;
-exports.buildTranscriptFromEvents = buildTranscriptFromEvents;
+exports.buildTranscriptFromEvents = exports.aggregateToolCalls = exports.summarizeClaudeMetrics = exports.summarizeCodexMetrics = exports.sliceForRecent = exports.sliceForLatest = void 0;
 // ============================================================================
 // Message Slicing Utilities
 // ============================================================================
@@ -51,6 +46,7 @@ function sliceForLatest(messages) {
     }
     return messages.slice(startIndex);
 }
+exports.sliceForLatest = sliceForLatest;
 /**
  * Slice messages to show the last N messages (default 5).
  *
@@ -66,6 +62,7 @@ function sliceForRecent(messages, count = 5) {
         return [];
     return messages.slice(-count);
 }
+exports.sliceForRecent = sliceForRecent;
 /**
  * Summarize Codex metrics into header-friendly meta items.
  *
@@ -132,6 +129,7 @@ function summarizeCodexMetrics(metrics) {
     }
     return items;
 }
+exports.summarizeCodexMetrics = summarizeCodexMetrics;
 /**
  * Summarize Claude metrics into header-friendly meta items.
  *
@@ -172,6 +170,7 @@ function summarizeClaudeMetrics(metrics) {
     }
     return items;
 }
+exports.summarizeClaudeMetrics = summarizeClaudeMetrics;
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -186,6 +185,7 @@ function aggregateToolCalls(toolCalls) {
     });
     return Array.from(counts.entries()).map(([name, count]) => ({ name, count }));
 }
+exports.aggregateToolCalls = aggregateToolCalls;
 // ============================================================================
 // Transcript Building from Events
 // ============================================================================
@@ -330,3 +330,4 @@ function buildTranscriptFromEvents(events) {
     });
     return messages;
 }
+exports.buildTranscriptFromEvents = buildTranscriptFromEvents;

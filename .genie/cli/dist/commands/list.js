@@ -1,8 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.runRuns = runRuns;
-exports.runList = runList;
-exports.emitAgentCatalog = emitAgentCatalog;
+exports.emitAgentCatalog = exports.runList = exports.runRuns = void 0;
 const session_store_1 = require("../session-store");
 const session_helpers_1 = require("../lib/session-helpers");
 const utils_1 = require("../lib/utils");
@@ -46,6 +44,7 @@ async function runRuns(parsed, config, paths) {
     });
     await (0, view_helpers_1.emitView)(envelope, parsed.options);
 }
+exports.runRuns = runRuns;
 async function runList(parsed, config, paths) {
     const [targetRaw] = parsed.commandArgs;
     if (!targetRaw) {
@@ -64,6 +63,7 @@ async function runList(parsed, config, paths) {
     await (0, view_helpers_1.emitView)((0, common_1.buildErrorView)('Unknown list target', `Unknown list target '${targetRaw}'. Try 'agents' or 'sessions'.`), parsed.options, { stream: process.stderr });
     process.exitCode = 1;
 }
+exports.runList = runList;
 async function emitAgentCatalog(parsed) {
     const agents = (0, agent_resolver_1.listAgents)();
     const summarize = (entry) => {
@@ -97,3 +97,4 @@ async function emitAgentCatalog(parsed) {
     });
     await (0, view_helpers_1.emitView)(envelope, parsed.options);
 }
+exports.emitAgentCatalog = emitAgentCatalog;
