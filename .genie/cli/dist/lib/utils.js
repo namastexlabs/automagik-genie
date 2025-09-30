@@ -126,10 +126,11 @@ function safeIsoString(value) {
  *
  * @returns {number} - Unix timestamp in milliseconds
  */
-function deriveStartTime() {
-    const isBackgroundRunner = process.env[background_manager_1.INTERNAL_BACKGROUND_ENV] === '1';
+function deriveStartTime(isBackgroundRunner = false) {
+    if (!isBackgroundRunner)
+        return Date.now();
     const fromEnv = process.env[background_manager_1.INTERNAL_START_TIME_ENV];
-    if (!isBackgroundRunner || !fromEnv)
+    if (!fromEnv)
         return Date.now();
     const parsed = Number(fromEnv);
     if (Number.isFinite(parsed))
@@ -150,8 +151,8 @@ function deriveStartTime() {
  * deriveLogFile('plan', 1630000000000, paths)
  * // Returns: '.genie/state/agents/logs/plan-1630000000000.log'
  */
-function deriveLogFile(agentName, startTime, paths) {
-    const envPath = process.env[background_manager_1.INTERNAL_LOG_PATH_ENV];
+function deriveLogFile(agentName, startTime, paths, isBackgroundRunner = false) {
+    const envPath = isBackgroundRunner ? process.env[background_manager_1.INTERNAL_LOG_PATH_ENV] : undefined;
     if (envPath)
         return envPath;
     const filename = `${sanitizeLogFilename(agentName)}-${startTime}.log`;

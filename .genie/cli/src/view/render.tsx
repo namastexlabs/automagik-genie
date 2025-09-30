@@ -258,8 +258,22 @@ function renderTableNode(node: TableNode): React.ReactElement {
     fixedWidthColumns[idx] ? width : MIN_COL_WIDTH
   );
 
-  // TEST: Use baseWidths directly without squeezing
-  const widths = baseWidths.slice();
+  // Allow wide tables to preserve content (may overflow narrow terminals)
+  const allowedWidth = Math.max(termWidth, sumWithGaps(baseWidths, gapSize));
+  const widths = squeezeWidthsWithMinimums(baseWidths.slice(), gapSize, allowedWidth, minWidthPerColumn, fixedWidthColumns);
+
+  // Expand flexible columns to fill available terminal width
+  const finalTotal = sumWithGaps(widths, gapSize);
+  const remaining = termWidth - finalTotal;
+  if (remaining > 0) {
+    // Find the last flexible (non-fixed) column and expand it
+    for (let i = widths.length - 1; i >= 0; i--) {
+      if (!fixedWidthColumns[i]) {
+        widths[i] = Math.min(widths[i] + remaining, MAX_COL_WIDTH);
+        break;
+      }
+    }
+  }
 
   const tableWidth = sumWithGaps(widths, gapSize);
 
@@ -281,19 +295,15 @@ function renderTableNode(node: TableNode): React.ReactElement {
     </InkBox>
   );
 
-  // Set explicit width when we have fixed-width columns
-  const hasFixedWidths = fixedWidthColumns.some(fixed => fixed);
-  const explicitWidth = hasFixedWidths ? tableWidth + 4 : undefined; // +4 for border padding
-
   const containerProps = node.border === 'none'
-    ? { flexDirection: 'column' as const, width: explicitWidth }
+    ? { flexDirection: 'column' as const, width: tableWidth }
     : {
         flexDirection: 'column' as const,
         borderStyle: 'round' as const,
         borderColor: accentToColor('muted'),
         paddingX: 0,
         paddingY: 0,
-        width: explicitWidth
+        width: tableWidth
       };
 
   const showDivider = node.divider !== false && node.rows.length > 0;

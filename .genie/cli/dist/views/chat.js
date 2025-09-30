@@ -40,7 +40,7 @@ function buildChatView(params) {
     }
     else {
         children.push({ type: 'heading', level: 2, text: showFull ? 'Full conversation' : 'Latest output', accent: 'secondary' });
-        children.push({ type: 'layout', direction: 'column', gap: 1, children: messages.map((message) => chatMessageNode(message)) });
+        children.push({ type: 'layout', direction: 'column', gap: 0, children: messages.map((message) => chatMessageNode(message)) });
         if (!showFull) {
             children.push({
                 type: 'callout',
@@ -64,7 +64,7 @@ function buildChatView(params) {
         body: {
             type: 'layout',
             direction: 'column',
-            gap: 1,
+            gap: 0,
             children
         }
     };

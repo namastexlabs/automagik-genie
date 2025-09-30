@@ -48,8 +48,9 @@ export async function runChat(
   const executorPaths = resolveExecutorPaths(paths, executorKey);
   const store = loadSessions(paths as SessionPathsConfig, config as SessionLoadConfig, DEFAULT_CONFIG as any);
 
-  const startTime = deriveStartTime();
-  const logFile = deriveLogFile(resolvedAgentName, startTime, paths);
+  const isBackgroundRunner = parsed.options.backgroundRunner === true;
+  const startTime = deriveStartTime(isBackgroundRunner);
+  const logFile = deriveLogFile(resolvedAgentName, startTime, paths, isBackgroundRunner);
 
   const entry: SessionEntry = {
     ...(store.agents[resolvedAgentName] || {}),

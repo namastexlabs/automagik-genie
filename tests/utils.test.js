@@ -191,7 +191,7 @@ const {
 (function testDeriveStartTimeWithEnv() {
   const testTime = 1234567890000;
   process.env.GENIE_AGENT_START_TIME = String(testTime);
-  const result = deriveStartTime();
+  const result = deriveStartTime(true);
   assert.strictEqual(result, testTime, 'should use env variable when present');
   delete process.env.GENIE_AGENT_START_TIME;
 })();
@@ -199,7 +199,7 @@ const {
 // Test: deriveStartTime with invalid env
 (function testDeriveStartTimeInvalidEnv() {
   process.env.GENIE_AGENT_START_TIME = 'invalid';
-  const result = deriveStartTime();
+  const result = deriveStartTime(true);
   assert.ok(typeof result === 'number', 'should fallback to Date.now() for invalid env');
   delete process.env.GENIE_AGENT_START_TIME;
 })();
@@ -219,8 +219,8 @@ const {
   const testPath = '/custom/path/test.log';
   process.env.GENIE_AGENT_LOG_FILE = testPath;
   const paths = { logsDir: '.genie/state/agents/logs', baseDir: '.', sessionsFile: '', agentsDir: '' };
-  const result = deriveLogFile('test-agent', 1234567890000, paths);
-  assert.strictEqual(result, testPath, 'should use env variable when present');
+  const result = deriveLogFile('test-agent', 1234567890000, paths, true);
+  assert.strictEqual(result, testPath, 'should use env variable when present for background runs');
   delete process.env.GENIE_AGENT_LOG_FILE;
 })();
 

@@ -22,7 +22,7 @@ void main();
 async function main() {
     try {
         let parsed = (0, cli_parser_1.parseArguments)(process.argv.slice(2));
-        const envIsBackground = process.env[background_manager_1.INTERNAL_BACKGROUND_ENV] === '1';
+        const envIsBackground = process.env[background_manager_1.INTERNAL_BACKGROUND_MARKER_ENV] === '1';
         if (envIsBackground) {
             parsed.options.background = true;
             parsed.options.backgroundRunner = true;

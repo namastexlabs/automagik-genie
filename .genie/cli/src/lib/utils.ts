@@ -1,10 +1,6 @@
 import path from 'path';
 import type { ConfigPaths } from './types';
-import {
-  INTERNAL_START_TIME_ENV,
-  INTERNAL_LOG_PATH_ENV,
-  INTERNAL_BACKGROUND_ENV
-} from '../background-manager';
+import { INTERNAL_START_TIME_ENV, INTERNAL_LOG_PATH_ENV } from '../background-manager';
 
 /**
  * Formats ISO timestamp as human-readable relative time.
@@ -111,10 +107,10 @@ export function safeIsoString(value: string): string | null {
  *
  * @returns {number} - Unix timestamp in milliseconds
  */
-export function deriveStartTime(): number {
-  const isBackgroundRunner = process.env[INTERNAL_BACKGROUND_ENV] === '1';
+export function deriveStartTime(isBackgroundRunner = false): number {
+  if (!isBackgroundRunner) return Date.now();
   const fromEnv = process.env[INTERNAL_START_TIME_ENV];
-  if (!isBackgroundRunner || !fromEnv) return Date.now();
+  if (!fromEnv) return Date.now();
   const parsed = Number(fromEnv);
   if (Number.isFinite(parsed)) return parsed;
   return Date.now();
@@ -134,8 +130,13 @@ export function deriveStartTime(): number {
  * deriveLogFile('plan', 1630000000000, paths)
  * // Returns: '.genie/state/agents/logs/plan-1630000000000.log'
  */
-export function deriveLogFile(agentName: string, startTime: number, paths: Required<ConfigPaths>): string {
-  const envPath = process.env[INTERNAL_LOG_PATH_ENV];
+export function deriveLogFile(
+  agentName: string,
+  startTime: number,
+  paths: Required<ConfigPaths>,
+  isBackgroundRunner = false
+): string {
+  const envPath = isBackgroundRunner ? process.env[INTERNAL_LOG_PATH_ENV] : undefined;
   if (envPath) return envPath;
   const filename = `${sanitizeLogFilename(agentName)}-${startTime}.log`;
   return path.join(paths.logsDir || '.genie/state/agents/logs', filename);

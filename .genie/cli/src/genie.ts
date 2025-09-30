@@ -29,14 +29,14 @@ import { runList } from './commands/list';
 import { runView } from './commands/view';
 import { runStop } from './commands/stop';
 import { runHelp } from './commands/help';
-import { INTERNAL_BACKGROUND_ENV } from './background-manager';
+import { INTERNAL_BACKGROUND_MARKER_ENV } from './background-manager';
 
 void main();
 
 async function main(): Promise<void> {
   try {
     let parsed = parseArguments(process.argv.slice(2));
-    const envIsBackground = process.env[INTERNAL_BACKGROUND_ENV] === '1';
+    const envIsBackground = process.env[INTERNAL_BACKGROUND_MARKER_ENV] === '1';
     if (envIsBackground) {
       parsed.options.background = true;
       parsed.options.backgroundRunner = true;
