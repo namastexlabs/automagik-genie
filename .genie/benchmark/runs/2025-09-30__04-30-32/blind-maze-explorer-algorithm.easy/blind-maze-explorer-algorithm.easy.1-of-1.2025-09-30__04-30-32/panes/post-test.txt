@@ -1,0 +1,267 @@
+root@da8d92aff58f:/app# bash /tests/run-tests.sh; tmux wait -S done
+Hit:1 http://deb.debian.org/debian bookworm InRelease
+Hit:2 http://deb.debian.org/debian bookworm-updates InRelease
+Hit:3 http://deb.debian.org/debian-security bookworm-security InRelease
+Reading package lists... Done
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+curl is already the newest version (7.88.1-10+deb12u14).
+0 upgraded, 0 newly installed, 0 to remove and 40 not upgraded.
+downloading uv 0.8.22 x86_64-unknown-linux-gnu
+no checksums to verify
+installing to /root/.local/bin
+  uv
+  uvx
+everything's installed!
+
+To add $HOME/.local/bin to your PATH, either restart your shell or run:
+
+    source $HOME/.local/bin/env (sh, bash, zsh)
+    source $HOME/.local/bin/env.fish (fish)
+Initialized project `app`
+Using CPython 3.13.1 interpreter at: /usr/local/bin/python3.13
+Creating virtual environment at: .venv
+Resolved 7 packages in 265ms
+Prepared 5 packages in 233ms
+Installed 5 packages in 23ms
+ + iniconfig==2.1.0
+ + packaging==25.0
+ + pluggy==1.6.0
+ + pygments==2.19.2
+ + pytest==8.4.2
+===================================================================== test session starts ======================================================================
+platform linux -- Python 3.13.1, pytest-8.4.2, pluggy-1.6.0
+rootdir: /tests
+collected 11 items
+
+../tests/test_outputs.py FFFFFFFFFFF                                                                                                                     [100%]
+
+=========================================================================== FAILURES ===========================================================================
+__________________________________________________________________ test_maze_map_files_exist ___________________________________________________________________
+
+    def test_maze_map_files_exist():
+        """Test that all required maze map files have been created."""
+        # Make sure the output directory exists
+        ensure_output_directory()
+
+        # Get the number of mazes
+        maze_count = get_maze_count()
+
+        # Check if each maze file exists
+        missing_files = []
+        for maze_id in range(1, maze_count + 1):
+            map_file_path = find_maze_map_file(maze_id)
+            if map_file_path is None:
+                missing_files.append(maze_id)
+
+>       assert not missing_files, f"{missing_files} are missing: "
+E       AssertionError: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] are missing:
+E       assert not [1, 2, 3, 4, 5, 6, ...]
+
+/tests/test_outputs.py:159: AssertionError
+--------------------------------------------------------------------- Captured stdout call ---------------------------------------------------------------------
+Searching for 1.txt in the file system...
+Searching for 2.txt in the file system...
+Searching for 3.txt in the file system...
+Searching for 4.txt in the file system...
+Searching for 5.txt in the file system...
+Searching for 6.txt in the file system...
+Searching for 7.txt in the file system...
+Searching for 8.txt in the file system...
+Searching for 9.txt in the file system...
+Searching for 10.txt in the file system...
+__________________________________________________________________ test_maze_map_contents[1] ___________________________________________________________________
+
+maze_id = 1
+
+    @pytest.mark.parametrize("maze_id", range(1, maze_count + 1))
+    def test_maze_map_contents(maze_id):
+        """
+        Test that the maze map content for a specific maze ID
+        matches the ground truth maze layout.
+        """
+        map_file_path = find_maze_map_file(maze_id)
+>       assert map_file_path is not None, f"Could not find maze map file for maze {maze_id}"
+E       AssertionError: Could not find maze map file for maze 1
+E       assert None is not None
+
+/tests/test_outputs.py:174: AssertionError
+--------------------------------------------------------------------- Captured stdout call ---------------------------------------------------------------------
+Searching for 1.txt in the file system...
+__________________________________________________________________ test_maze_map_contents[2] ___________________________________________________________________
+
+maze_id = 2
+
+    @pytest.mark.parametrize("maze_id", range(1, maze_count + 1))
+    def test_maze_map_contents(maze_id):
+        """
+        Test that the maze map content for a specific maze ID
+        matches the ground truth maze layout.
+        """
+        map_file_path = find_maze_map_file(maze_id)
+>       assert map_file_path is not None, f"Could not find maze map file for maze {maze_id}"
+E       AssertionError: Could not find maze map file for maze 2
+E       assert None is not None
+
+/tests/test_outputs.py:174: AssertionError
+--------------------------------------------------------------------- Captured stdout call ---------------------------------------------------------------------
+Searching for 2.txt in the file system...
+__________________________________________________________________ test_maze_map_contents[3] ___________________________________________________________________
+
+maze_id = 3
+
+    @pytest.mark.parametrize("maze_id", range(1, maze_count + 1))
+    def test_maze_map_contents(maze_id):
+        """
+        Test that the maze map content for a specific maze ID
+        matches the ground truth maze layout.
+        """
+        map_file_path = find_maze_map_file(maze_id)
+>       assert map_file_path is not None, f"Could not find maze map file for maze {maze_id}"
+E       AssertionError: Could not find maze map file for maze 3
+E       assert None is not None
+
+/tests/test_outputs.py:174: AssertionError
+--------------------------------------------------------------------- Captured stdout call ---------------------------------------------------------------------
+Searching for 3.txt in the file system...
+__________________________________________________________________ test_maze_map_contents[4] ___________________________________________________________________
+
+maze_id = 4
+
+    @pytest.mark.parametrize("maze_id", range(1, maze_count + 1))
+    def test_maze_map_contents(maze_id):
+        """
+        Test that the maze map content for a specific maze ID
+        matches the ground truth maze layout.
+        """
+        map_file_path = find_maze_map_file(maze_id)
+>       assert map_file_path is not None, f"Could not find maze map file for maze {maze_id}"
+E       AssertionError: Could not find maze map file for maze 4
+E       assert None is not None
+
+/tests/test_outputs.py:174: AssertionError
+--------------------------------------------------------------------- Captured stdout call ---------------------------------------------------------------------
+Searching for 4.txt in the file system...
+__________________________________________________________________ test_maze_map_contents[5] ___________________________________________________________________
+
+maze_id = 5
+
+    @pytest.mark.parametrize("maze_id", range(1, maze_count + 1))
+    def test_maze_map_contents(maze_id):
+        """
+        Test that the maze map content for a specific maze ID
+        matches the ground truth maze layout.
+        """
+        map_file_path = find_maze_map_file(maze_id)
+>       assert map_file_path is not None, f"Could not find maze map file for maze {maze_id}"
+E       AssertionError: Could not find maze map file for maze 5
+E       assert None is not None
+
+/tests/test_outputs.py:174: AssertionError
+--------------------------------------------------------------------- Captured stdout call ---------------------------------------------------------------------
+Searching for 5.txt in the file system...
+__________________________________________________________________ test_maze_map_contents[6] ___________________________________________________________________
+
+maze_id = 6
+
+    @pytest.mark.parametrize("maze_id", range(1, maze_count + 1))
+    def test_maze_map_contents(maze_id):
+        """
+        Test that the maze map content for a specific maze ID
+        matches the ground truth maze layout.
+        """
+        map_file_path = find_maze_map_file(maze_id)
+>       assert map_file_path is not None, f"Could not find maze map file for maze {maze_id}"
+E       AssertionError: Could not find maze map file for maze 6
+E       assert None is not None
+
+/tests/test_outputs.py:174: AssertionError
+--------------------------------------------------------------------- Captured stdout call ---------------------------------------------------------------------
+Searching for 6.txt in the file system...
+__________________________________________________________________ test_maze_map_contents[7] ___________________________________________________________________
+
+maze_id = 7
+
+    @pytest.mark.parametrize("maze_id", range(1, maze_count + 1))
+    def test_maze_map_contents(maze_id):
+        """
+        Test that the maze map content for a specific maze ID
+        matches the ground truth maze layout.
+        """
+        map_file_path = find_maze_map_file(maze_id)
+>       assert map_file_path is not None, f"Could not find maze map file for maze {maze_id}"
+E       AssertionError: Could not find maze map file for maze 7
+E       assert None is not None
+
+/tests/test_outputs.py:174: AssertionError
+--------------------------------------------------------------------- Captured stdout call ---------------------------------------------------------------------
+Searching for 7.txt in the file system...
+__________________________________________________________________ test_maze_map_contents[8] ___________________________________________________________________
+
+maze_id = 8
+
+    @pytest.mark.parametrize("maze_id", range(1, maze_count + 1))
+    def test_maze_map_contents(maze_id):
+        """
+        Test that the maze map content for a specific maze ID
+        matches the ground truth maze layout.
+        """
+        map_file_path = find_maze_map_file(maze_id)
+>       assert map_file_path is not None, f"Could not find maze map file for maze {maze_id}"
+E       AssertionError: Could not find maze map file for maze 8
+E       assert None is not None
+
+/tests/test_outputs.py:174: AssertionError
+--------------------------------------------------------------------- Captured stdout call ---------------------------------------------------------------------
+Searching for 8.txt in the file system...
+__________________________________________________________________ test_maze_map_contents[9] ___________________________________________________________________
+
+maze_id = 9
+
+    @pytest.mark.parametrize("maze_id", range(1, maze_count + 1))
+    def test_maze_map_contents(maze_id):
+        """
+        Test that the maze map content for a specific maze ID
+        matches the ground truth maze layout.
+        """
+        map_file_path = find_maze_map_file(maze_id)
+>       assert map_file_path is not None, f"Could not find maze map file for maze {maze_id}"
+E       AssertionError: Could not find maze map file for maze 9
+E       assert None is not None
+
+/tests/test_outputs.py:174: AssertionError
+--------------------------------------------------------------------- Captured stdout call ---------------------------------------------------------------------
+Searching for 9.txt in the file system...
+__________________________________________________________________ test_maze_map_contents[10] __________________________________________________________________
+
+maze_id = 10
+
+    @pytest.mark.parametrize("maze_id", range(1, maze_count + 1))
+    def test_maze_map_contents(maze_id):
+        """
+        Test that the maze map content for a specific maze ID
+        matches the ground truth maze layout.
+        """
+        map_file_path = find_maze_map_file(maze_id)
+>       assert map_file_path is not None, f"Could not find maze map file for maze {maze_id}"
+E       AssertionError: Could not find maze map file for maze 10
+E       assert None is not None
+
+/tests/test_outputs.py:174: AssertionError
+--------------------------------------------------------------------- Captured stdout call ---------------------------------------------------------------------
+Searching for 10.txt in the file system...
+=================================================================== short test summary info ====================================================================
+FAILED ../tests/test_outputs.py::test_maze_map_files_exist - AssertionError: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] are missing:
+FAILED ../tests/test_outputs.py::test_maze_map_contents[1] - AssertionError: Could not find maze map file for maze 1
+FAILED ../tests/test_outputs.py::test_maze_map_contents[2] - AssertionError: Could not find maze map file for maze 2
+FAILED ../tests/test_outputs.py::test_maze_map_contents[3] - AssertionError: Could not find maze map file for maze 3
+FAILED ../tests/test_outputs.py::test_maze_map_contents[4] - AssertionError: Could not find maze map file for maze 4
+FAILED ../tests/test_outputs.py::test_maze_map_contents[5] - AssertionError: Could not find maze map file for maze 5
+FAILED ../tests/test_outputs.py::test_maze_map_contents[6] - AssertionError: Could not find maze map file for maze 6
+FAILED ../tests/test_outputs.py::test_maze_map_contents[7] - AssertionError: Could not find maze map file for maze 7
+FAILED ../tests/test_outputs.py::test_maze_map_contents[8] - AssertionError: Could not find maze map file for maze 8
+FAILED ../tests/test_outputs.py::test_maze_map_contents[9] - AssertionError: Could not find maze map file for maze 9
+FAILED ../tests/test_outputs.py::test_maze_map_contents[10] - AssertionError: Could not find maze map file for maze 10
+====================================================================== 11 failed in 0.68s ======================================================================
+root@da8d92aff58f:/app#

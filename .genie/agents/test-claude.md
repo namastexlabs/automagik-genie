@@ -4,7 +4,7 @@ description: Test agent for Claude executor validation
 genie:
   executor: claude
   model: claude-sonnet-4-5-20250929
-  background: false
+  background: true
 ---
 
 # Test Claude Executor

@@ -11,18 +11,63 @@ Each agent is a specialized persona with specific expertise and behavioral patte
 
 ## Agent Parameter Configuration
 
-When agents are invoked through the GENIE CLI, they inherit a set of default parameters that can be overridden:
+When agents are invoked through the GENIE CLI, they inherit a set of default parameters that can be overridden through agent frontmatter or config.yaml.
 
-### Core Execution Parameters
+### Codex Core Execution Parameters
 
-| Parameter | Default | Description | Override Method |
-|-----------|---------|-------------|-----------------|
-| **model** | `gpt-5-codex` | AI model to use | Agent metadata |
-| **reasoning-effort** | `low` | Reasoning depth (`low`, `medium`, `high`) | Agent metadata |
-| **sandbox** | `workspace-write` | File system access level | Agent metadata |
-| **approval-policy** | `on-failure` | When to ask for approval | Agent metadata |
-| **include-plan-tool** | `false` | Enable planning capabilities | Agent metadata |
-| **base-instructions** | (from agent file) | Agent-specific instructions | Loaded from agent markdown |
+| Parameter | Default | Valid Values | Description |
+|-----------|---------|--------------|-------------|
+| **model** | `gpt-5-codex` | Model name | AI model to use |
+| **reasoningEffort** | `low` | `low`, `medium`, `high` | Reasoning depth |
+| **sandbox** | `workspace-write` | `read-only`, `workspace-write`, `danger-full-access` | File system access level |
+| **approvalPolicy** | `on-failure` | `never`, `on-failure`, `on-request`, `untrusted` | When to ask for approval |
+| **fullAuto** | `true` | `true`, `false` | Enable full automation mode |
+| **includePlanTool** | `false` | `true`, `false` | Enable planning capabilities |
+| **search** | `false` | `true`, `false` | Enable web search capability |
+| **profile** | `null` | String or null | Codex profile to use |
+| **skipGitRepoCheck** | `false` | `true`, `false` | Skip git repository validation |
+| **json** | `false` | `true`, `false` | JSON output mode |
+| **experimentalJson** | `true` | `true`, `false` | Enhanced JSON output mode |
+| **color** | `auto` | `auto`, `always`, `never` | Color output control |
+| **cd** | `null` | Directory path | Working directory override |
+| **outputSchema** | `null` | JSON schema path | Structured output schema |
+| **outputLastMessage** | `null` | File path | Extract last message to file |
+| **additionalArgs** | `[]` | Array of strings | Extra CLI flags passed to Codex |
+| **images** | `[]` | Array of file paths | Image inputs for vision models |
+
+### Codex Resume Parameters
+
+| Parameter | Default | Valid Values | Description |
+|-----------|---------|--------------|-------------|
+| **includePlanTool** | `false` | `true`, `false` | Enable planning capabilities |
+| **search** | `false` | `true`, `false` | Enable web search |
+| **last** | `false` | `true`, `false` | Resume last session |
+| **additionalArgs** | `[]` | Array of strings | Extra CLI flags |
+
+### Claude Executor Parameters
+
+| Parameter | Default | Valid Values | Description |
+|-----------|---------|--------------|-------------|
+| **model** | `sonnet` | `sonnet`, `opus`, `haiku` | Claude model variant |
+| **permissionMode** | `default` | `default`, `acceptEdits`, `plan`, `bypassPermissions` | Permission level |
+| **outputFormat** | `stream-json` | `stream-json` | Output format (fixed) |
+| **allowedTools** | `[]` | Array of tool names | Whitelist of allowed tools (empty = all) |
+| **disallowedTools** | `[]` | Array of patterns | Blacklist of blocked tools (empty = none) |
+| **additionalArgs** (exec) | `[]` | Array of strings | Extra CLI flags for exec |
+| **additionalArgs** (resume) | `[]` | Array of strings | Extra CLI flags for resume |
+
+### Infrastructure Parameters (Both Executors)
+
+These parameters control executor binaries and session management:
+
+| Parameter | Codex Default | Claude Default | Description |
+|-----------|---------------|----------------|-------------|
+| **binary** | `npx` | `claude` | Executable command |
+| **packageSpec** | `@namastexlabs/codex@0.43.0-alpha.5` | `null` | npm package for npx |
+| **sessionsDir** | `~/.codex/sessions` | `null` | Session storage directory |
+| **sessionExtractionDelayMs** | `null` | `1000` | Delay before reading session (ms) |
+
+**Note:** Infrastructure parameters are typically configured in `.genie/cli/config.yaml` rather than agent frontmatter.
 
 ### Parameter Inheritance Hierarchy
 
@@ -82,14 +127,18 @@ meta:
 | **workspace-write** | Read/write in workspace | Implementation agents |
 | **danger-full-access** | Full system access | System configuration (rare) |
 
-## Approval Policy Modes
+## Approval Policy Modes (Codex)
+
+Codex uses approval policies to control when human approval is required:
 
 | Policy | Behavior | Best For |
 |--------|----------|----------|
-| **never** | No approvals | Fully automated workflows |
-| **on-failure** | Ask when commands fail (default with --full-auto) | Semi-automated tasks |
+| **never** | No approvals (requires `fullAuto: true`) | Fully automated workflows |
+| **on-failure** | Ask when commands fail (default) | Semi-automated tasks |
 | **on-request** | Ask for risky operations | Interactive development |
 | **untrusted** | Ask for everything | High-security contexts |
+
+**Note:** Claude uses `permissionMode` instead (see Claude Executor Parameters section).
 
 ## Common Agent Configurations
 
@@ -237,10 +286,11 @@ Current agent routing (see AGENTS.md for updates):
 
 ### Agent not using expected parameters?
 Check priority order:
-1. CLI flags (highest)
-2. Preset config
-3. Agent metadata
-4. Global defaults
+1. Agent frontmatter `genie:` section (highest priority)
+2. Executor defaults in config.yaml (`executors.codex.exec` or `executors.claude.exec`)
+3. Global defaults in executor source (codex.ts or claude.ts)
+
+**Note:** Direct CLI flag overrides are not currently supported. All configuration must be done via frontmatter or config.yaml.
 
 ### Performance issues?
 - Lower reasoning effort for simple tasks
