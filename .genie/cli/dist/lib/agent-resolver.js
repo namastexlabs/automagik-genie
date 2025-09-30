@@ -19,6 +19,13 @@ try {
 catch (_) {
     // yaml module optional
 }
+/**
+ * Lists all available agent definitions from .genie/agents directory.
+ *
+ * Recursively scans for .md files, extracts metadata, and filters out hidden/disabled agents.
+ *
+ * @returns {ListedAgent[]} - Array of agent records with id, label, metadata, and folder path
+ */
 function listAgents() {
     const baseDir = '.genie/agents';
     const records = [];
@@ -49,6 +56,21 @@ function listAgents() {
     visit(baseDir, null);
     return records;
 }
+/**
+ * Resolves agent identifier to canonical agent path.
+ *
+ * Tries multiple resolution strategies: direct path match, exact ID match,
+ * label match, legacy prefix handling (genie-, template-), and special cases (forge-master).
+ *
+ * @param {string} input - Agent identifier (e.g., "plan", "utilities/twin", "forge-master")
+ * @returns {string} - Canonical agent ID (path without .md extension)
+ * @throws {Error} - If agent cannot be found
+ *
+ * @example
+ * resolveAgentIdentifier('plan') // Returns: 'plan'
+ * resolveAgentIdentifier('twin') // Returns: 'utilities/twin'
+ * resolveAgentIdentifier('forge-master') // Returns: 'forge' (legacy alias)
+ */
 function resolveAgentIdentifier(input) {
     const trimmed = (input || '').trim();
     if (!trimmed) {
@@ -78,6 +100,12 @@ function resolveAgentIdentifier(input) {
         return 'forge';
     throw new Error(`❌ Agent '${input}' not found. Try 'genie list agents' to see available ids.`);
 }
+/**
+ * Checks if an agent exists at the given path.
+ *
+ * @param {string} id - Agent identifier (without .md extension)
+ * @returns {boolean} - True if agent file exists
+ */
 function agentExists(id) {
     if (!id)
         return false;
@@ -85,6 +113,17 @@ function agentExists(id) {
     const file = path_1.default.join('.genie', 'agents', `${normalized}.md`);
     return fs_1.default.existsSync(file);
 }
+/**
+ * Loads agent specification from markdown file with frontmatter metadata.
+ *
+ * @param {string} name - Agent name/path (with or without .md extension)
+ * @returns {AgentSpec} - Object containing metadata and instructions
+ * @throws {Error} - If agent file doesn't exist
+ *
+ * @example
+ * const spec = loadAgentSpec('plan');
+ * // Returns: { meta: { name: 'plan', ... }, instructions: '...' }
+ */
 function loadAgentSpec(name) {
     const base = name.endsWith('.md') ? name.slice(0, -3) : name;
     const agentPath = path_1.default.join('.genie', 'agents', `${base}.md`);
@@ -98,6 +137,19 @@ function loadAgentSpec(name) {
         instructions: body.replace(/^(\r?\n)+/, '')
     };
 }
+/**
+ * Extracts YAML frontmatter and body content from markdown source.
+ *
+ * Parses frontmatter delimited by `---` markers at the start of the file.
+ * Falls back to empty metadata if YAML module unavailable or parsing fails.
+ *
+ * @param {string} source - Markdown source content
+ * @returns {{ meta?: Record<string, any>; body: string }} - Parsed metadata and remaining body
+ *
+ * @example
+ * const { meta, body } = extractFrontMatter('---\nname: plan\n---\n# Content');
+ * // Returns: { meta: { name: 'plan' }, body: '# Content' }
+ */
 function extractFrontMatter(source) {
     if (!source.startsWith('---')) {
         return { meta: {}, body: source };

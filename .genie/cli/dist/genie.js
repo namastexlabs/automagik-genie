@@ -28,15 +28,27 @@ async function main() {
             parsed.options.backgroundRunner = true;
             parsed.options.backgroundExplicit = true;
         }
-        const config = (0, config_1.loadConfig)();
-        (0, config_1.applyDefaults)(parsed.options, config.defaults);
-        const paths = (0, config_1.resolvePaths)(config.paths || {});
-        (0, config_1.prepareDirectories)(paths);
-        const startupWarnings = (0, config_1.getStartupWarnings)();
-        if (startupWarnings.length) {
-            const envelope = (0, common_1.buildWarningView)('Configuration warnings', startupWarnings);
-            await (0, view_helpers_1.emitView)(envelope, parsed.options);
-            (0, config_1.clearStartupWarnings)();
+        // Fast path for help commands - skip config loading
+        const isHelpOnly = (parsed.command === 'help' || parsed.command === undefined) ||
+            parsed.options.requestHelp;
+        let config;
+        let paths;
+        if (isHelpOnly) {
+            // Minimal config for help display
+            config = { defaults: { background: true } };
+            paths = (0, config_1.resolvePaths)({});
+        }
+        else {
+            config = (0, config_1.loadConfig)();
+            (0, config_1.applyDefaults)(parsed.options, config.defaults);
+            paths = (0, config_1.resolvePaths)(config.paths || {});
+            (0, config_1.prepareDirectories)(paths);
+            const startupWarnings = (0, config_1.getStartupWarnings)();
+            if (startupWarnings.length) {
+                const envelope = (0, common_1.buildWarningView)('Configuration warnings', startupWarnings);
+                await (0, view_helpers_1.emitView)(envelope, parsed.options);
+                (0, config_1.clearStartupWarnings)();
+            }
         }
         switch (parsed.command) {
             case 'run':

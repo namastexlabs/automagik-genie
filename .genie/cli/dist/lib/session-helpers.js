@@ -13,15 +13,48 @@ const session_store_1 = require("../session-store");
 const background_manager_1 = __importDefault(require("../background-manager"));
 const backgroundManager = new background_manager_1.default();
 const runtimeWarnings = [];
+/**
+ * Records a runtime warning message for later retrieval.
+ *
+ * @param {string} message - Warning message to record
+ * @returns {void}
+ */
 function recordRuntimeWarning(message) {
     runtimeWarnings.push(message);
 }
+/**
+ * Retrieves all recorded runtime warnings.
+ *
+ * @returns {string[]} - Copy of all runtime warnings
+ */
 function getRuntimeWarnings() {
     return [...runtimeWarnings];
 }
+/**
+ * Clears all recorded runtime warnings.
+ *
+ * @returns {void}
+ */
 function clearRuntimeWarnings() {
     runtimeWarnings.length = 0;
 }
+/**
+ * Finds a session entry by session ID across all agents.
+ *
+ * First searches by sessionId field, then scans log files for session_id markers.
+ * Updates session metadata and saves if found in logs.
+ *
+ * @param {SessionStore} store - Session store containing agent sessions
+ * @param {string} sessionId - Session identifier to search for
+ * @param {Required<ConfigPaths>} paths - Configuration paths for saving updates
+ * @returns {{ agentName: string; entry: SessionEntry } | null} - Found session or null
+ *
+ * @example
+ * const result = findSessionEntry(store, 'abc-123', paths);
+ * if (result) {
+ *   console.log(`Found session for agent: ${result.agentName}`);
+ * }
+ */
 function findSessionEntry(store, sessionId, paths) {
     if (!sessionId || typeof sessionId !== 'string')
         return null;
@@ -54,6 +87,22 @@ function findSessionEntry(store, sessionId, paths) {
     }
     return null;
 }
+/**
+ * Resolves human-readable display status for a session entry.
+ *
+ * Combines entry status with process liveness checks to determine accurate state.
+ * Status progression: running → pending-completion → completed/failed/stopped.
+ *
+ * @param {SessionEntry} entry - Session entry to evaluate
+ * @returns {string} - Display status: 'running', 'pending-completion', 'completed', 'failed (code)', 'stopped', or base status
+ *
+ * @example
+ * const status = resolveDisplayStatus(entry);
+ * // Returns: 'running' if executor process alive
+ * // Returns: 'pending-completion' if runner still processing
+ * // Returns: 'completed' if exit code 0
+ * // Returns: 'failed (1)' if exit code non-zero
+ */
 function resolveDisplayStatus(entry) {
     const baseStatus = entry.status || 'unknown';
     const executorRunning = backgroundManager.isAlive(entry.executorPid);

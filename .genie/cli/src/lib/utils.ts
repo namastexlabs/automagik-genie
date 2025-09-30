@@ -5,6 +5,16 @@ import {
   INTERNAL_LOG_PATH_ENV
 } from '../background-manager';
 
+/**
+ * Formats ISO timestamp as human-readable relative time.
+ *
+ * @param {string} value - ISO timestamp string
+ * @returns {string} - Relative time (e.g., '3m ago', '2h ago', '5d ago') or date string
+ *
+ * @example
+ * formatRelativeTime('2025-09-30T10:00:00Z')
+ * // Returns: '5m ago' (if current time is 10:05:00)
+ */
 export function formatRelativeTime(value: string): string {
   const timestamp = new Date(value).getTime();
   if (!Number.isFinite(timestamp)) return 'n/a';
@@ -24,6 +34,13 @@ export function formatRelativeTime(value: string): string {
   return new Date(value).toLocaleDateString();
 }
 
+/**
+ * Formats absolute path as relative to base directory.
+ *
+ * @param {string} targetPath - Absolute path to format
+ * @param {string} baseDir - Base directory for relative calculation
+ * @returns {string} - Relative path or original path if calculation fails
+ */
 export function formatPathRelative(targetPath: string, baseDir: string): string {
   if (!targetPath) return 'n/a';
   try {
@@ -33,6 +50,13 @@ export function formatPathRelative(targetPath: string, baseDir: string): string 
   }
 }
 
+/**
+ * Truncates text to maximum length with ellipsis.
+ *
+ * @param {string} text - Text to truncate
+ * @param {number} [maxLength=64] - Maximum length (default: 64)
+ * @returns {string} - Truncated text with '...' suffix if needed
+ */
 export function truncateText(text: string, maxLength = 64): string {
   if (!text) return '';
   if (text.length <= maxLength) return text;
@@ -40,6 +64,19 @@ export function truncateText(text: string, maxLength = 64): string {
   return text.slice(0, sliceLength).trimEnd() + '...';
 }
 
+/**
+ * Sanitizes agent name for safe use as log filename.
+ *
+ * Replaces path separators with dashes, removes special characters,
+ * collapses consecutive separators, and trims edge characters.
+ *
+ * @param {string} agentName - Agent name to sanitize
+ * @returns {string} - Safe filename (alphanumeric, dashes, dots, underscores only)
+ *
+ * @example
+ * sanitizeLogFilename('utilities/twin')  // Returns: 'utilities-twin'
+ * sanitizeLogFilename('my-agent@@!!')    // Returns: 'my-agent'
+ */
 export function sanitizeLogFilename(agentName: string): string {
   const fallback = 'agent';
   if (!agentName || typeof agentName !== 'string') return fallback;
@@ -54,12 +91,25 @@ export function sanitizeLogFilename(agentName: string): string {
   return normalized.length ? normalized : fallback;
 }
 
+/**
+ * Converts timestamp string to ISO string with validation.
+ *
+ * @param {string} value - Timestamp string (any format Date can parse)
+ * @returns {string | null} - ISO string or null if invalid timestamp
+ */
 export function safeIsoString(value: string): string | null {
   const timestamp = new Date(value).getTime();
   if (!Number.isFinite(timestamp)) return null;
   return new Date(timestamp).toISOString();
 }
 
+/**
+ * Derives session start time from environment or current time.
+ *
+ * Used by background processes to maintain consistent timestamps.
+ *
+ * @returns {number} - Unix timestamp in milliseconds
+ */
 export function deriveStartTime(): number {
   const fromEnv = process.env[INTERNAL_START_TIME_ENV];
   if (!fromEnv) return Date.now();
@@ -68,6 +118,20 @@ export function deriveStartTime(): number {
   return Date.now();
 }
 
+/**
+ * Derives log file path from agent name and start time.
+ *
+ * Checks environment for override path, otherwise constructs standard log filename.
+ *
+ * @param {string} agentName - Agent name for sanitized filename component
+ * @param {number} startTime - Unix timestamp for filename uniqueness
+ * @param {Required<ConfigPaths>} paths - Configuration paths with logs directory
+ * @returns {string} - Absolute path to log file
+ *
+ * @example
+ * deriveLogFile('plan', 1630000000000, paths)
+ * // Returns: '.genie/state/agents/logs/plan-1630000000000.log'
+ */
 export function deriveLogFile(agentName: string, startTime: number, paths: Required<ConfigPaths>): string {
   const envPath = process.env[INTERNAL_LOG_PATH_ENV];
   if (envPath) return envPath;

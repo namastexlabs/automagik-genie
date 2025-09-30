@@ -143,7 +143,7 @@ export async function maybeHandleBackgroundLaunch(params: {
     startTime,
     logFile,
     backgroundConfig: config.background,
-    scriptPath: __filename
+    scriptPath: path.resolve(__dirname, '..', 'genie.js')
   });
 
   entry.runnerPid = runnerPid;

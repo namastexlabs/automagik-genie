@@ -43,16 +43,29 @@ async function main(): Promise<void> {
       parsed.options.backgroundExplicit = true;
     }
 
-    const config = loadConfig();
-    applyDefaults(parsed.options, config.defaults);
-    const paths = resolvePaths(config.paths || {});
-    prepareDirectories(paths);
+    // Fast path for help commands - skip config loading
+    const isHelpOnly = (parsed.command === 'help' || parsed.command === undefined) ||
+                      parsed.options.requestHelp;
 
-    const startupWarnings = getStartupWarnings();
-    if (startupWarnings.length) {
-      const envelope = buildWarningView('Configuration warnings', startupWarnings);
-      await emitView(envelope, parsed.options);
-      clearStartupWarnings();
+    let config: ReturnType<typeof loadConfig>;
+    let paths: ReturnType<typeof resolvePaths>;
+
+    if (isHelpOnly) {
+      // Minimal config for help display
+      config = { defaults: { background: true } } as ReturnType<typeof loadConfig>;
+      paths = resolvePaths({});
+    } else {
+      config = loadConfig();
+      applyDefaults(parsed.options, config.defaults);
+      paths = resolvePaths(config.paths || {});
+      prepareDirectories(paths);
+
+      const startupWarnings = getStartupWarnings();
+      if (startupWarnings.length) {
+        const envelope = buildWarningView('Configuration warnings', startupWarnings);
+        await emitView(envelope, parsed.options);
+        clearStartupWarnings();
+      }
     }
 
     switch (parsed.command) {

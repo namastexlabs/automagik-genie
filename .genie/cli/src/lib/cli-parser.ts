@@ -1,5 +1,24 @@
 import type { CLIOptions, ParsedCommand } from './types';
 
+/**
+ * Parses command-line arguments into a structured command object.
+ *
+ * Extracts the command name and processes flags like --help, --full, --live.
+ * Arguments after `--` are preserved as-is without flag parsing.
+ *
+ * @param {string[]} argv - Raw command-line arguments (typically from process.argv.slice(2))
+ * @returns {ParsedCommand} - Object containing command, commandArgs, and options
+ *
+ * @example
+ * // Basic command with flags
+ * parseArguments(['run', 'plan', 'prompt text', '--full'])
+ * // Returns: { command: 'run', commandArgs: ['plan', 'prompt text'], options: { full: true, ... } }
+ *
+ * @example
+ * // Arguments preserved after --
+ * parseArguments(['run', 'agent', '--', '--flag-for-agent'])
+ * // Returns: { command: 'run', commandArgs: ['agent', '--flag-for-agent'], options: { ... } }
+ */
 export function parseArguments(argv: string[]): ParsedCommand {
   const raw = argv.slice();
   const command = raw.shift()?.toLowerCase();
