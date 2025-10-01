@@ -3,11 +3,8 @@
     "genie": {
       "command": "node",
       "args": [
-        "/REPLACE_WITH_ABSOLUTE_PATH/automagik-genie/.genie/mcp/dist/server.js"
-      ],
-      "env": {
-        "MCP_TRANSPORT": "stdio"
-      }
+        "/home/namastex/workspace/automagik-genie/.genie/mcp/dist/server.js"
+      ]
     }
   }
 }
