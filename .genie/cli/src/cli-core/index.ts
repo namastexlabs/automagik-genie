@@ -12,21 +12,25 @@ export type {
 
 export type { HandlerContext, Handler } from './context';
 
+import { createRunHandler } from './handlers/run';
+import { createResumeHandler } from './handlers/resume';
+import { createViewHandler } from './handlers/view';
+import { createStopHandler } from './handlers/stop';
+import { createListHandler } from './handlers/list';
+import type { HandlerContext } from './context';
+
 /**
  * Factory function for creating CLI command handlers
  *
  * Returns an object with handler functions that can be called by both CLI and MCP server.
  * Handlers are pure functions that don't execute on import.
  */
-export function createHandlers(_context: any): any {
-  // TODO: Complete handler extraction from genie.ts
-  // For now, return empty object to satisfy type checking
-  // Full extraction deferred to unblock MCP server development
+export function createHandlers(context: HandlerContext) {
   return {
-    run: null,
-    resume: null,
-    list: null,
-    view: null,
-    stop: null
+    run: createRunHandler(context),
+    resume: createResumeHandler(context),
+    list: createListHandler(context),
+    view: createViewHandler(context),
+    stop: createStopHandler(context)
   };
 }

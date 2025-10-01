@@ -3,13 +3,20 @@
  * Genie MCP Server - Production Implementation
  *
  * Provides Model Context Protocol access to Genie agent orchestration.
- * Tools integrate directly with CLI functionality - NO STUBS.
+ * Tools integrate with CLI via subprocess execution (shell-out pattern).
+ *
+ * NOTE: This is a workaround implementation. See blocker report:
+ * @.genie/reports/blocker-group-a-handler-integration-20251001.md
  */
 
 import { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 import fs from 'fs';
 import path from 'path';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
 
 const PORT = process.env.MCP_PORT ? parseInt(process.env.MCP_PORT) : 8080;
 const TRANSPORT = process.env.MCP_TRANSPORT || 'stdio';
@@ -203,20 +210,23 @@ server.addTool({
     prompt: z.string().describe('Detailed task description for the agent. Be specific about goals, context, and expected outcomes. Agents work best with clear, actionable prompts.')
   }),
   execute: async (args) => {
-    // TODO: Integrate with cli-core handlers when extraction complete
-    // For now, provide clear guidance for manual execution
-    return `Agent session would start with:
-Agent: ${args.agent}
-Prompt: ${args.prompt}
+    const cliPath = path.resolve(__dirname, '../../genie');
+    const escapedPrompt = args.prompt.replace(/"/g, '\\"');
+    const command = `"${cliPath}" run ${args.agent} "${escapedPrompt}"`;
 
-**Implementation Note:** Handler integration is in progress. To run this agent now:
+    try {
+      const { stdout, stderr } = await execAsync(command, {
+        cwd: path.resolve(__dirname, '../..'),
+        maxBuffer: 1024 * 1024 * 10, // 10MB
+        timeout: 120000 // 2 minutes
+      });
 
-\`\`\`bash
-cd /home/namastex/workspace/automagik-genie
-./genie run ${args.agent} "${args.prompt}"
-\`\`\`
+      const output = stdout + (stderr ? `\n\nStderr:\n${stderr}` : '');
 
-Then use list_sessions to find the session ID and view/resume as needed.`;
+      return `Started agent session:\nAgent: ${args.agent}\n\n${output}\n\nUse list_sessions to see the session ID, then use view/resume/stop as needed.`;
+    } catch (error: any) {
+      return `Failed to start agent session:\n${error.message}\n\nCommand: ${command}`;
+    }
   }
 });
 
@@ -229,17 +239,23 @@ server.addTool({
     prompt: z.string().describe('Follow-up message or question for the agent. Build on the previous conversation context.')
   }),
   execute: async (args) => {
-    return `Session would resume with:
-Session ID: ${args.sessionId}
-Follow-up: ${args.prompt}
+    const cliPath = path.resolve(__dirname, '../../genie');
+    const escapedPrompt = args.prompt.replace(/"/g, '\\"');
+    const command = `"${cliPath}" resume ${args.sessionId} "${escapedPrompt}"`;
 
-**Implementation Note:** Handler integration is in progress. To resume this session now:
+    try {
+      const { stdout, stderr } = await execAsync(command, {
+        cwd: path.resolve(__dirname, '../..'),
+        maxBuffer: 1024 * 1024 * 10, // 10MB
+        timeout: 120000 // 2 minutes
+      });
 
-\`\`\`bash
-./genie resume ${args.sessionId} "${args.prompt}"
-\`\`\`
+      const output = stdout + (stderr ? `\n\nStderr:\n${stderr}` : '');
 
-Use list_sessions to verify the session exists before resuming.`;
+      return `Resumed session ${args.sessionId}:\n\n${output}`;
+    } catch (error: any) {
+      return `Failed to resume session:\n${error.message}\n\nCommand: ${command}`;
+    }
   }
 });
 
@@ -252,17 +268,23 @@ server.addTool({
     full: z.boolean().optional().default(false).describe('Show full transcript (true) or recent messages only (false). Default: false.')
   }),
   execute: async (args) => {
-    return `Transcript view would show:
-Session ID: ${args.sessionId}
-Mode: ${args.full ? 'Full transcript' : 'Recent messages'}
+    const cliPath = path.resolve(__dirname, '../../genie');
+    const fullFlag = args.full ? ' --full' : '';
+    const command = `"${cliPath}" view ${args.sessionId}${fullFlag}`;
 
-**Implementation Note:** Handler integration is in progress. To view this session now:
+    try {
+      const { stdout, stderr } = await execAsync(command, {
+        cwd: path.resolve(__dirname, '../..'),
+        maxBuffer: 1024 * 1024 * 10, // 10MB
+        timeout: 30000 // 30 seconds
+      });
 
-\`\`\`bash
-./genie view ${args.sessionId}${args.full ? ' --full' : ''}
-\`\`\`
+      const output = stdout + (stderr ? `\n\nStderr:\n${stderr}` : '');
 
-Use list_sessions to verify the session exists.`;
+      return `Session ${args.sessionId} transcript:\n\n${output}`;
+    } catch (error: any) {
+      return `Failed to view session:\n${error.message}\n\nCommand: ${command}`;
+    }
   }
 });
 
@@ -274,16 +296,22 @@ server.addTool({
     sessionId: z.string().describe('Session ID to stop (get from list_sessions tool)')
   }),
   execute: async (args) => {
-    return `Session would stop:
-Session ID: ${args.sessionId}
+    const cliPath = path.resolve(__dirname, '../../genie');
+    const command = `"${cliPath}" stop ${args.sessionId}`;
 
-**Implementation Note:** Handler integration is in progress. To stop this session now:
+    try {
+      const { stdout, stderr } = await execAsync(command, {
+        cwd: path.resolve(__dirname, '../..'),
+        maxBuffer: 1024 * 1024 * 10, // 10MB
+        timeout: 30000 // 30 seconds
+      });
 
-\`\`\`bash
-./genie stop ${args.sessionId}
-\`\`\`
+      const output = stdout + (stderr ? `\n\nStderr:\n${stderr}` : '');
 
-Use list_sessions to find active sessions that can be stopped.`;
+      return `Stopped session ${args.sessionId}:\n\n${output}`;
+    } catch (error: any) {
+      return `Failed to stop session:\n${error.message}\n\nCommand: ${command}`;
+    }
   }
 });
 
