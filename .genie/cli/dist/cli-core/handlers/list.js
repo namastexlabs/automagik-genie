@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createListHandler = createListHandler;
+exports.createListHandler = void 0;
 const shared_1 = require("./shared");
 function createListHandler(ctx) {
     return async (parsed) => {
@@ -50,6 +50,7 @@ function createListHandler(ctx) {
         throw new Error(`Unknown list target '${targetRaw}'. Try 'agents' or 'sessions'.`);
     };
 }
+exports.createListHandler = createListHandler;
 function resolveDisplayStatus(entry, ctx) {
     const baseStatus = entry.status || 'unknown';
     const executorRunning = ctx.backgroundManager.isAlive(entry.executorPid);

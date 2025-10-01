@@ -3,9 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports._internals = void 0;
-exports.loadSessions = loadSessions;
-exports.saveSessions = saveSessions;
+exports._internals = exports.saveSessions = exports.loadSessions = void 0;
 const fs_1 = __importDefault(require("fs"));
 function loadSessions(paths = {}, config = {}, defaults = {}, callbacks = {}) {
     const storePath = paths.sessionsFile;
@@ -19,12 +17,14 @@ function loadSessions(paths = {}, config = {}, defaults = {}, callbacks = {}) {
     const defaultExecutor = resolveDefaultExecutor(config, defaults);
     return migrateSessionEntries(store, defaultExecutor);
 }
+exports.loadSessions = loadSessions;
 function saveSessions(paths = {}, store) {
     if (!paths.sessionsFile)
         return;
     const payload = JSON.stringify(store, null, 2);
     fs_1.default.writeFileSync(paths.sessionsFile, payload);
 }
+exports.saveSessions = saveSessions;
 function readJson(filePath, callbacks) {
     const content = fs_1.default.readFileSync(filePath, 'utf8');
     if (!content.trim().length)

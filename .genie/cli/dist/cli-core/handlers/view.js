@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createViewHandler = createViewHandler;
+exports.createViewHandler = void 0;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 function createViewHandler(ctx) {
@@ -96,6 +96,7 @@ function createViewHandler(ctx) {
         };
     };
 }
+exports.createViewHandler = createViewHandler;
 function findSessionEntry(store, sessionId, paths) {
     if (!sessionId || typeof sessionId !== 'string')
         return null;
