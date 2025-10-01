@@ -3,7 +3,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.loadExecutors = exports.DEFAULT_EXECUTOR_KEY = void 0;
+exports.DEFAULT_EXECUTOR_KEY = void 0;
+exports.loadExecutors = loadExecutors;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 exports.DEFAULT_EXECUTOR_KEY = 'codex';
@@ -38,4 +39,3 @@ function loadExecutors() {
     });
     return executors;
 }
-exports.loadExecutors = loadExecutors;
