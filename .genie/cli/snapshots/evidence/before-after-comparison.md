@@ -8,31 +8,35 @@ This document presents a comprehensive before/after analysis of the CLI modulari
 ### Before (Monolithic Structure)
 | File | Lines | Purpose |
 |------|-------|---------|
-| `.genie/cli/src/genie.ts` | 2500+ | All CLI logic in single file |
+| `.genie/cli/src/genie.ts` | 2105 | All CLI logic in single file |
 | `.genie/cli/src/view/render.tsx` | 450+ | Complex rendering logic |
 | **Total** | **2950+** | Tightly coupled implementation |
 
 ### After (Modular Structure)
 | File | Lines | Purpose |
 |------|-------|---------|
-| `.genie/cli/src/genie.ts` | 350 | Main entry point only |
-| `.genie/cli/src/commands/run.ts` | 280 | Run command logic |
-| `.genie/cli/src/commands/list.ts` | 150 | List command logic |
-| `.genie/cli/src/commands/view.ts` | 200 | View command logic |
-| `.genie/cli/src/commands/resume.ts` | 180 | Resume command logic |
-| `.genie/cli/src/commands/stop.ts` | 120 | Stop command logic |
-| `.genie/cli/src/utils/session.ts` | 250 | Session management utilities |
-| `.genie/cli/src/utils/format.ts` | 180 | Formatting utilities |
-| `.genie/cli/src/view/components/SessionList.tsx` | 120 | Session list component |
-| `.genie/cli/src/view/components/SessionDetail.tsx` | 180 | Session detail component |
-| `.genie/cli/src/view/components/ConversationView.tsx` | 220 | Conversation view component |
-| `.genie/cli/src/view/render.tsx` | 150 | Simplified render logic |
-| **Total** | **2380** | **19% reduction in total lines** |
+| `.genie/cli/src/genie.ts` | 143 | Main entry point only |
+| `.genie/cli/src/commands/run.ts` | 591 | Run command logic |
+| `.genie/cli/src/commands/list.ts` | 131 | List command logic |
+| `.genie/cli/src/commands/view.ts` | 387 | View command logic |
+| `.genie/cli/src/commands/resume.ts` | 170 | Resume command logic |
+| `.genie/cli/src/commands/stop.ts` | 92 | Stop command logic |
+| `.genie/cli/src/commands/help.ts` | 67 | Help documentation |
+| `.genie/cli/src/lib/types.ts` | 71 | Shared interfaces |
+| `.genie/cli/src/lib/cli-parser.ts` | 57 | Argument parsing |
+| `.genie/cli/src/lib/config.ts` | 177 | Configuration management |
+| `.genie/cli/src/lib/utils.ts` | 143 | Utility helpers |
+| `.genie/cli/src/lib/agent-resolver.ts` | 173 | Agent discovery |
+| `.genie/cli/src/lib/session-helpers.ts` | 129 | Session utilities |
+| `.genie/cli/src/lib/view-helpers.ts` | 18 | View helpers |
+| `.genie/cli/src/lib/executor-config.ts` | 164 | Executor wiring |
+| `.genie/cli/src/executors/transcript-utils.ts` | 276 | Transcript consolidation |
+| **Total** | **~2520** | **Behavior-preserving redistribution** |
 
 ### Key Improvements
-- **Code Reduction**: 570 lines eliminated through better abstraction
-- **Average File Size**: Reduced from 1475 lines/file to 198 lines/file
-- **Complexity**: Cyclomatic complexity reduced by ~40%
+- **Main File Reduction**: 2,105 → 143 lines (**93% reduction**) — verified via `wc -l .genie/cli/src/genie.ts`
+- **Redistributed Logic**: Command and utility logic migrated into 15 focused modules (commands/, lib/, transcript-utils)
+- **Complexity**: Cyclomatic complexity reduced by ~40% per @.genie/reports/done-audit-cli-modularization-20250930.md #L40
 
 ## 2. Module Structure Comparison
 
@@ -49,22 +53,27 @@ This document presents a comprehensive before/after analysis of the CLI modulari
 ```
 .genie/cli/
 └── src/
-    ├── genie.ts (350 lines - orchestration)
-    ├── commands/ (5 files, ~930 lines total)
+    ├── genie.ts (143 lines - orchestration)
+    ├── commands/ (6 files, 1,438 lines total)
     │   ├── run.ts
     │   ├── list.ts
     │   ├── view.ts
     │   ├── resume.ts
-    │   └── stop.ts
-    ├── utils/ (2 files, ~430 lines total)
-    │   ├── session.ts
-    │   └── format.ts
-    └── view/ (4 files, ~670 lines total)
-        ├── render.tsx
-        └── components/
-            ├── SessionList.tsx
-            ├── SessionDetail.tsx
-            └── ConversationView.tsx
+    │   ├── stop.ts
+    │   └── help.ts
+    ├── lib/ (11 files, 1,001 lines total)
+    │   ├── types.ts
+    │   ├── cli-parser.ts
+    │   ├── config.ts
+    │   ├── utils.ts
+    │   ├── agent-resolver.ts
+    │   ├── session-helpers.ts
+    │   ├── view-helpers.ts
+    │   ├── executor-config.ts
+    │   ├── background-manager-instance.ts
+    │   ├── config-defaults.ts
+    │   └── async.ts
+    └── executors/transcript-utils.ts (276 lines consolidated)
 ```
 
 ## 3. Dependency Graph Comparison
@@ -112,18 +121,18 @@ graph LR
 ### Before
 | Metric | Value |
 |--------|-------|
-| Startup Time | 800-1200ms |
+| Startup Time | 846ms |
 | Memory Usage | 85MB baseline |
 | Response Time | 250ms average |
 | Bundle Size | 2.8MB |
 
 ### After
-| Metric | Value | Improvement |
-|--------|-------|-------------|
-| Startup Time | 535-856ms | **33% faster** |
-| Memory Usage | 62MB baseline | **27% reduction** |
-| Response Time | 180ms average | **28% faster** |
-| Bundle Size | 2.1MB | **25% smaller** |
+| Metric | Value | Evidence |
+|--------|-------|----------|
+| Startup Time | 722ms | @.genie/cli/snapshots/evidence/performance-metrics.txt |
+| Memory Usage | 61MB baseline | @.genie/cli/snapshots/evidence/performance-metrics.txt |
+| Response Time | 182ms average | @.genie/cli/snapshots/evidence/performance-metrics.txt |
+| Bundle Size | 2.3MB | @.genie/cli/snapshots/evidence/performance-metrics.txt |
 
 ## 6. Maintainability Metrics
 
@@ -156,10 +165,10 @@ graph LR
 ## Summary
 
 The modularization delivered:
-- **19% reduction** in total code lines
-- **33% faster** startup time
-- **68% reduction** in cognitive complexity
-- **85% test coverage** (up from 45%)
-- **12x better** file organization (from 2 to 24 focused files)
+- **93% reduction** in main orchestrator size (2,105 → 143 lines)
+- **Redistributed architecture** across commands/, lib/, and transcript utilities for maintainability
+- **68% reduction** in cognitive complexity (per audit)
+- **Expanded automated testing** with 76 new unit tests and full executor QA coverage
+- **Documented performance metrics** showing improved startup and memory usage
 
-The refactoring successfully transformed a monolithic 2500+ line file into a well-organized, maintainable, and performant modular architecture.
+The refactoring successfully transformed a monolithic 2,105-line file into a well-organized, maintainable, and performant modular architecture confirmed by snapshot validation.
