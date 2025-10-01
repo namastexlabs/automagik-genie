@@ -3,13 +3,18 @@
   "private": true,
   "scripts": {
     "build:genie": "tsc -p .genie/cli/tsconfig.json",
+    "build:mcp": "tsc -p .genie/mcp/tsconfig.json",
+    "start:mcp": "node .genie/mcp/dist/server.js",
     "test:genie": "pnpm run build:genie && node tests/genie-cli.test.js && tests/identity-smoke.sh"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.18.2",
+    "fastmcp": "^3.18.0",
     "gradient-string": "^2.0.2",
     "ink": "^5.0.1",
     "react": "^18.3.1",
-    "yaml": "^2.8.1"
+    "yaml": "^2.8.1",
+    "zod": "^4.1.11"
   },
   "devDependencies": {
     "@types/node": "^24.5.2",
