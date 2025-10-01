@@ -194,7 +194,7 @@ server.addTool({
         try {
             const { stdout, stderr } = await execAsync(command, {
                 cwd: path_1.default.resolve(__dirname, '../..'),
-                maxBuffer: 1024 * 1024 * 10,
+                maxBuffer: 1024 * 1024 * 10, // 10MB
                 timeout: 120000 // 2 minutes
             });
             const output = stdout + (stderr ? `\n\nStderr:\n${stderr}` : '');
@@ -220,7 +220,7 @@ server.addTool({
         try {
             const { stdout, stderr } = await execAsync(command, {
                 cwd: path_1.default.resolve(__dirname, '../..'),
-                maxBuffer: 1024 * 1024 * 10,
+                maxBuffer: 1024 * 1024 * 10, // 10MB
                 timeout: 120000 // 2 minutes
             });
             const output = stdout + (stderr ? `\n\nStderr:\n${stderr}` : '');
@@ -246,7 +246,7 @@ server.addTool({
         try {
             const { stdout, stderr } = await execAsync(command, {
                 cwd: path_1.default.resolve(__dirname, '../..'),
-                maxBuffer: 1024 * 1024 * 10,
+                maxBuffer: 1024 * 1024 * 10, // 10MB
                 timeout: 30000 // 30 seconds
             });
             const output = stdout + (stderr ? `\n\nStderr:\n${stderr}` : '');
@@ -270,7 +270,7 @@ server.addTool({
         try {
             const { stdout, stderr } = await execAsync(command, {
                 cwd: path_1.default.resolve(__dirname, '../..'),
-                maxBuffer: 1024 * 1024 * 10,
+                maxBuffer: 1024 * 1024 * 10, // 10MB
                 timeout: 30000 // 30 seconds
             });
             const output = stdout + (stderr ? `\n\nStderr:\n${stderr}` : '');
