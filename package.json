@@ -5,7 +5,11 @@
     "build:genie": "tsc -p .genie/cli/tsconfig.json",
     "build:mcp": "tsc -p .genie/mcp/tsconfig.json",
     "start:mcp": "node .genie/mcp/dist/server.js",
-    "test:genie": "pnpm run build:genie && node tests/genie-cli.test.js && tests/identity-smoke.sh"
+    "start:mcp:stdio": "MCP_TRANSPORT=stdio node .genie/mcp/dist/server.js",
+    "start:mcp:http": "MCP_TRANSPORT=httpStream node .genie/mcp/dist/server.js",
+    "test:genie": "pnpm run build:genie && node tests/genie-cli.test.js && tests/identity-smoke.sh",
+    "test:session-service": "pnpm run build:genie && node tests/session-service.test.js",
+    "test:all": "pnpm run test:genie && pnpm run test:session-service"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.18.2",

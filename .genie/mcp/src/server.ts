@@ -10,11 +10,13 @@ import { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 
 const PORT = process.env.MCP_PORT ? parseInt(process.env.MCP_PORT) : 8080;
+const TRANSPORT = process.env.MCP_TRANSPORT || 'stdio'; // Default to stdio for local dev (Claude Desktop)
 
 // Initialize FastMCP server
 const server = new FastMCP({
   name: 'genie-mcp-server',
-  version: '0.1.0'
+  version: '0.1.0',
+  instructions: 'Genie agent orchestration via MCP. Use genie_run to start agents, genie_resume to continue conversations, genie_list_agents to see available agents, genie_list_sessions for active sessions, genie_view for transcripts, and genie_stop to terminate sessions.'
 });
 
 // Tool: genie_run - Start new agent session
@@ -89,20 +91,33 @@ server.addTool({
   }
 });
 
-// Start server with HTTP streaming
+// Start server with configured transport
 console.log('Starting Genie MCP Server...');
-console.log(`Port: ${PORT}`);
+console.log(`Transport: ${TRANSPORT}`);
 console.log('Protocol: MCP (Model Context Protocol)');
 console.log('Implementation: FastMCP v3.18.0');
 console.log('Tools: 6 (genie_run, genie_resume, genie_list_agents, genie_list_sessions, genie_view, genie_stop)');
 
-server.start({
-  transportType: 'httpStream',
-  httpStream: {
-    port: PORT
-  }
-});
-
-console.log(`✅ Server started successfully`);
-console.log(`HTTP Stream: http://localhost:${PORT}/mcp`);
-console.log(`SSE: http://localhost:${PORT}/sse`);
+if (TRANSPORT === 'stdio') {
+  // stdio transport for local development (Claude Desktop, MCP Inspector)
+  server.start({
+    transportType: 'stdio'
+  });
+  console.log('✅ Server started successfully (stdio)');
+  console.log('Ready for Claude Desktop or MCP Inspector connections');
+} else if (TRANSPORT === 'httpStream' || TRANSPORT === 'http') {
+  // HTTP streaming transport for remote server (network access)
+  server.start({
+    transportType: 'httpStream',
+    httpStream: {
+      port: PORT
+    }
+  });
+  console.log(`✅ Server started successfully (HTTP Stream)`);
+  console.log(`HTTP Stream: http://localhost:${PORT}/mcp`);
+  console.log(`SSE: http://localhost:${PORT}/sse`);
+} else {
+  console.error(`❌ Unknown transport type: ${TRANSPORT}`);
+  console.error('Valid options: stdio (default), httpStream, http');
+  process.exit(1);
+}
