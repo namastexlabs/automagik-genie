@@ -195,12 +195,12 @@ server.addTool({
         prompt: zod_1.z.string().describe('Detailed task description for the agent. Be specific about goals, context, and expected outcomes. Agents work best with clear, actionable prompts.')
     }),
     execute: async (args) => {
-        const cliPath = path_1.default.resolve(__dirname, '../../genie');
+        const cliPath = path_1.default.resolve(__dirname, '../../../genie');
         const escapedPrompt = args.prompt.replace(/"/g, '\\"');
         const command = `"${cliPath}" run ${args.agent} "${escapedPrompt}"`;
         try {
             const { stdout, stderr } = await execAsync(command, {
-                cwd: path_1.default.resolve(__dirname, '../..'),
+                cwd: path_1.default.resolve(__dirname, '../../..'),
                 maxBuffer: 1024 * 1024 * 10, // 10MB
                 timeout: 120000 // 2 minutes
             });
@@ -221,12 +221,12 @@ server.addTool({
         prompt: zod_1.z.string().describe('Follow-up message or question for the agent. Build on the previous conversation context.')
     }),
     execute: async (args) => {
-        const cliPath = path_1.default.resolve(__dirname, '../../genie');
+        const cliPath = path_1.default.resolve(__dirname, '../../../genie');
         const escapedPrompt = args.prompt.replace(/"/g, '\\"');
         const command = `"${cliPath}" resume ${args.sessionId} "${escapedPrompt}"`;
         try {
             const { stdout, stderr } = await execAsync(command, {
-                cwd: path_1.default.resolve(__dirname, '../..'),
+                cwd: path_1.default.resolve(__dirname, '../../..'),
                 maxBuffer: 1024 * 1024 * 10, // 10MB
                 timeout: 120000 // 2 minutes
             });
@@ -247,12 +247,12 @@ server.addTool({
         full: zod_1.z.boolean().optional().default(false).describe('Show full transcript (true) or recent messages only (false). Default: false.')
     }),
     execute: async (args) => {
-        const cliPath = path_1.default.resolve(__dirname, '../../genie');
+        const cliPath = path_1.default.resolve(__dirname, '../../../genie');
         const fullFlag = args.full ? ' --full' : '';
         const command = `"${cliPath}" view ${args.sessionId}${fullFlag}`;
         try {
             const { stdout, stderr } = await execAsync(command, {
-                cwd: path_1.default.resolve(__dirname, '../..'),
+                cwd: path_1.default.resolve(__dirname, '../../..'),
                 maxBuffer: 1024 * 1024 * 10, // 10MB
                 timeout: 30000 // 30 seconds
             });
@@ -272,11 +272,11 @@ server.addTool({
         sessionId: zod_1.z.string().describe('Session ID to stop (get from list_sessions tool)')
     }),
     execute: async (args) => {
-        const cliPath = path_1.default.resolve(__dirname, '../../genie');
+        const cliPath = path_1.default.resolve(__dirname, '../../../genie');
         const command = `"${cliPath}" stop ${args.sessionId}`;
         try {
             const { stdout, stderr } = await execAsync(command, {
-                cwd: path_1.default.resolve(__dirname, '../..'),
+                cwd: path_1.default.resolve(__dirname, '../../..'),
                 maxBuffer: 1024 * 1024 * 10, // 10MB
                 timeout: 30000 // 30 seconds
             });
