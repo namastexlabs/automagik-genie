@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createStopHandler = void 0;
+exports.createStopHandler = createStopHandler;
 const fs_1 = __importDefault(require("fs"));
 const shared_1 = require("./shared");
 function createStopHandler(ctx) {
@@ -64,7 +64,6 @@ function createStopHandler(ctx) {
         };
     };
 }
-exports.createStopHandler = createStopHandler;
 function findSessionEntry(store, sessionId, paths) {
     if (!sessionId || typeof sessionId !== 'string')
         return null;

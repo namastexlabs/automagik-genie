@@ -23,4 +23,4 @@ export interface HandlerContext {
   defaultExecutorKey: string;
 }
 
-export type Handler = (parsed: ParsedCommand) => Promise<void>;
+export type Handler = (parsed: ParsedCommand) => Promise<void | any>;

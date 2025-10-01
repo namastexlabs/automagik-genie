@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createResumeHandler = void 0;
+exports.createResumeHandler = createResumeHandler;
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const shared_1 = require("./shared");
@@ -125,7 +125,6 @@ function createResumeHandler(ctx) {
         });
     };
 }
-exports.createResumeHandler = createResumeHandler;
 function findSessionEntry(store, sessionId, paths) {
     if (!sessionId || typeof sessionId !== 'string')
         return null;
@@ -134,7 +133,7 @@ function findSessionEntry(store, sessionId, paths) {
         return null;
     for (const [agentName, entry] of Object.entries(store.agents || {})) {
         if (entry && entry.sessionId === trimmed) {
-            return { agentName, entry };
+            return { agentName, entry: entry };
         }
     }
     for (const [agentName, entry] of Object.entries(store.agents || {})) {
@@ -147,7 +146,7 @@ function findSessionEntry(store, sessionId, paths) {
             if (marker.test(content)) {
                 entry.sessionId = trimmed;
                 entry.lastUsed = new Date().toISOString();
-                return { agentName, entry };
+                return { agentName, entry: entry };
             }
         }
         catch {

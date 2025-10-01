@@ -157,14 +157,14 @@ function findSessionEntry(
   store: any,
   sessionId: string,
   paths: any
-) {
+): { agentName: string; entry: SessionEntry } | null {
   if (!sessionId || typeof sessionId !== 'string') return null;
   const trimmed = sessionId.trim();
   if (!trimmed) return null;
 
   for (const [agentName, entry] of Object.entries(store.agents || {})) {
     if (entry && (entry as any).sessionId === trimmed) {
-      return { agentName, entry };
+      return { agentName, entry: entry as SessionEntry };
     }
   }
 
@@ -177,7 +177,7 @@ function findSessionEntry(
       if (marker.test(content)) {
         (entry as any).sessionId = trimmed;
         (entry as any).lastUsed = new Date().toISOString();
-        return { agentName, entry };
+        return { agentName, entry: entry as SessionEntry };
       }
     } catch {
       // skip

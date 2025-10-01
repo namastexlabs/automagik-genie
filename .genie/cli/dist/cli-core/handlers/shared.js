@@ -3,7 +3,26 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sleep = exports.executeRun = exports.maybeHandleBackgroundLaunch = exports.deriveLogFile = exports.sanitizeLogFilename = exports.deriveStartTime = exports.extractFrontMatter = exports.loadAgentSpec = exports.agentExists = exports.listAgents = exports.resolveAgentIdentifier = exports.mergeDeep = exports.deepClone = exports.resolveExecutorPaths = exports.extractExecutorOverrides = exports.buildExecutorConfig = exports.requireExecutor = exports.resolveExecutorKey = exports.persistStore = exports.applyStoreMerge = void 0;
+exports.applyStoreMerge = applyStoreMerge;
+exports.persistStore = persistStore;
+exports.resolveExecutorKey = resolveExecutorKey;
+exports.requireExecutor = requireExecutor;
+exports.buildExecutorConfig = buildExecutorConfig;
+exports.extractExecutorOverrides = extractExecutorOverrides;
+exports.resolveExecutorPaths = resolveExecutorPaths;
+exports.deepClone = deepClone;
+exports.mergeDeep = mergeDeep;
+exports.resolveAgentIdentifier = resolveAgentIdentifier;
+exports.listAgents = listAgents;
+exports.agentExists = agentExists;
+exports.loadAgentSpec = loadAgentSpec;
+exports.extractFrontMatter = extractFrontMatter;
+exports.deriveStartTime = deriveStartTime;
+exports.sanitizeLogFilename = sanitizeLogFilename;
+exports.deriveLogFile = deriveLogFile;
+exports.maybeHandleBackgroundLaunch = maybeHandleBackgroundLaunch;
+exports.executeRun = executeRun;
+exports.sleep = sleep;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const child_process_1 = require("child_process");
@@ -12,12 +31,10 @@ function applyStoreMerge(target, next) {
     target.version = next.version;
     target.agents = next.agents;
 }
-exports.applyStoreMerge = applyStoreMerge;
 async function persistStore(ctx, store) {
     const result = await ctx.sessionService.save(store);
     applyStoreMerge(store, result.store);
 }
-exports.persistStore = persistStore;
 function resolveExecutorKey(ctx, modeName) {
     const config = ctx.config;
     const modes = config.executionModes || config.presets || {};
@@ -28,7 +45,6 @@ function resolveExecutorKey(ctx, modeName) {
         return config.defaults.executor;
     return ctx.defaultExecutorKey;
 }
-exports.resolveExecutorKey = resolveExecutorKey;
 function requireExecutor(ctx, key) {
     const executor = ctx.executors[key];
     if (!executor) {
@@ -37,7 +53,6 @@ function requireExecutor(ctx, key) {
     }
     return executor;
 }
-exports.requireExecutor = requireExecutor;
 function buildExecutorConfig(ctx, modeName, executorKey, agentOverrides) {
     const { config } = ctx;
     const base = deepClone((config.executors && config.executors[executorKey]) || {});
@@ -54,7 +69,6 @@ function buildExecutorConfig(ctx, modeName, executorKey, agentOverrides) {
     }
     return merged;
 }
-exports.buildExecutorConfig = buildExecutorConfig;
 function extractExecutorOverrides(ctx, agentGenie, executorKey) {
     if (!agentGenie || typeof agentGenie !== 'object')
         return {};
@@ -79,17 +93,14 @@ function extractExecutorOverrides(ctx, agentGenie, executorKey) {
     });
     return overrides;
 }
-exports.extractExecutorOverrides = extractExecutorOverrides;
 function resolveExecutorPaths(paths, executorKey) {
     if (!paths.executors)
         return {};
     return paths.executors[executorKey] || {};
 }
-exports.resolveExecutorPaths = resolveExecutorPaths;
 function deepClone(input) {
     return JSON.parse(JSON.stringify(input));
 }
-exports.deepClone = deepClone;
 function mergeDeep(target, source) {
     if (source === null || source === undefined)
         return target;
@@ -105,7 +116,6 @@ function mergeDeep(target, source) {
     });
     return base;
 }
-exports.mergeDeep = mergeDeep;
 function getExecutorOverrides(mode, executorKey) {
     if (!mode || !mode.overrides)
         return {};
@@ -147,7 +157,6 @@ function resolveAgentIdentifier(input) {
         return 'forge';
     throw new Error(`❌ Agent '${input}' not found. Try 'genie list agents' to see available ids.`);
 }
-exports.resolveAgentIdentifier = resolveAgentIdentifier;
 function listAgents() {
     const baseDir = '.genie/agents';
     const records = [];
@@ -178,7 +187,6 @@ function listAgents() {
     visit(baseDir, null);
     return records;
 }
-exports.listAgents = listAgents;
 function agentExists(id) {
     if (!id)
         return false;
@@ -186,7 +194,6 @@ function agentExists(id) {
     const file = path_1.default.join('.genie', 'agents', `${normalized}.md`);
     return fs_1.default.existsSync(file);
 }
-exports.agentExists = agentExists;
 function loadAgentSpec(ctx, name) {
     const base = name.endsWith('.md') ? name.slice(0, -3) : name;
     const agentPath = path_1.default.join('.genie', 'agents', `${base}.md`);
@@ -200,7 +207,6 @@ function loadAgentSpec(ctx, name) {
         instructions: body.replace(/^(\r?\n)+/, '')
     };
 }
-exports.loadAgentSpec = loadAgentSpec;
 function extractFrontMatter(source, onWarning) {
     if (!source.startsWith('---')) {
         return { meta: {}, body: source };
@@ -221,7 +227,6 @@ function extractFrontMatter(source, onWarning) {
         return { meta: {}, body };
     }
 }
-exports.extractFrontMatter = extractFrontMatter;
 function deriveStartTime() {
     const { INTERNAL_START_TIME_ENV } = require('../../background-manager');
     const fromEnv = process.env[INTERNAL_START_TIME_ENV];
@@ -232,7 +237,6 @@ function deriveStartTime() {
         return parsed;
     return Date.now();
 }
-exports.deriveStartTime = deriveStartTime;
 function sanitizeLogFilename(agentName) {
     const fallback = 'agent';
     if (!agentName || typeof agentName !== 'string')
@@ -247,7 +251,6 @@ function sanitizeLogFilename(agentName) {
         .replace(/^\.+|\.+$/g, '');
     return normalized.length ? normalized : fallback;
 }
-exports.sanitizeLogFilename = sanitizeLogFilename;
 function deriveLogFile(agentName, startTime, paths) {
     const { INTERNAL_LOG_PATH_ENV } = require('../../background-manager');
     const envPath = process.env[INTERNAL_LOG_PATH_ENV];
@@ -256,7 +259,6 @@ function deriveLogFile(agentName, startTime, paths) {
     const filename = `${sanitizeLogFilename(agentName)}-${startTime}.log`;
     return path_1.default.join(paths.logsDir || '.genie/state/agents/logs', filename);
 }
-exports.deriveLogFile = deriveLogFile;
 async function maybeHandleBackgroundLaunch(ctx, params) {
     const { backgroundManager } = ctx;
     const { parsed, config, paths, store, entry, agentName, executionMode, startTime, logFile } = params;
@@ -303,7 +305,6 @@ async function maybeHandleBackgroundLaunch(ctx, params) {
     process.stdout.write('    ./genie view <sessionId>\n');
     return true;
 }
-exports.maybeHandleBackgroundLaunch = maybeHandleBackgroundLaunch;
 async function executeRun(ctx, args) {
     const { agentName, command, executorKey, executor, executorConfig, executorPaths, store, entry, paths, config, startTime, logFile, background, runnerPid, cliOptions, executionMode } = args;
     if (!command || typeof command.command !== 'string' || !Array.isArray(command.args)) {
@@ -475,8 +476,6 @@ async function executeRun(ctx, args) {
     }
     await promise;
 }
-exports.executeRun = executeRun;
 function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
-exports.sleep = sleep;

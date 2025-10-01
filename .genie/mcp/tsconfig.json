@@ -10,7 +10,9 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "declaration": false,
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "types": ["node"],
+    "lib": ["ES2020"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

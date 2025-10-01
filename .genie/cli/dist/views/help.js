@@ -1,6 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.buildGeneralHelpView = exports.buildStopHelpView = exports.buildViewHelpView = exports.buildListHelpView = exports.buildResumeHelpView = exports.buildRunHelpView = exports.buildSubcommandHelpView = exports.buildHelpView = void 0;
+exports.buildHelpView = buildHelpView;
+exports.buildSubcommandHelpView = buildSubcommandHelpView;
+exports.buildRunHelpView = buildRunHelpView;
+exports.buildResumeHelpView = buildResumeHelpView;
+exports.buildListHelpView = buildListHelpView;
+exports.buildViewHelpView = buildViewHelpView;
+exports.buildStopHelpView = buildStopHelpView;
+exports.buildGeneralHelpView = buildGeneralHelpView;
 const GENIE_STYLE = 'genie';
 // Main help view
 function buildHelpView(params) {
@@ -81,7 +88,6 @@ function buildHelpView(params) {
         }
     };
 }
-exports.buildHelpView = buildHelpView;
 // Helper function to build subcommand help views
 function buildSubcommandHelpView(params) {
     const children = [
@@ -157,7 +163,6 @@ function buildSubcommandHelpView(params) {
         }
     };
 }
-exports.buildSubcommandHelpView = buildSubcommandHelpView;
 // Specific help views for each subcommand
 function buildRunHelpView() {
     return buildSubcommandHelpView({
@@ -183,7 +188,6 @@ function buildRunHelpView() {
         ]
     });
 }
-exports.buildRunHelpView = buildRunHelpView;
 function buildResumeHelpView() {
     return buildSubcommandHelpView({
         command: 'resume',
@@ -208,7 +212,6 @@ function buildResumeHelpView() {
         ]
     });
 }
-exports.buildResumeHelpView = buildResumeHelpView;
 function buildListHelpView() {
     return buildSubcommandHelpView({
         command: 'list',
@@ -231,7 +234,6 @@ function buildListHelpView() {
         ]
     });
 }
-exports.buildListHelpView = buildListHelpView;
 function buildViewHelpView() {
     return buildSubcommandHelpView({
         command: 'view',
@@ -255,7 +257,6 @@ function buildViewHelpView() {
         ]
     });
 }
-exports.buildViewHelpView = buildViewHelpView;
 function buildStopHelpView() {
     return buildSubcommandHelpView({
         command: 'stop',
@@ -278,7 +279,6 @@ function buildStopHelpView() {
         ]
     });
 }
-exports.buildStopHelpView = buildStopHelpView;
 function buildGeneralHelpView() {
     return buildSubcommandHelpView({
         command: 'help',
@@ -302,4 +302,3 @@ function buildGeneralHelpView() {
         ]
     });
 }
-exports.buildGeneralHelpView = buildGeneralHelpView;

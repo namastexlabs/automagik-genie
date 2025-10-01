@@ -110,7 +110,7 @@ function startMCPServer(transport, port) {
     // Map user-facing transport names to internal transport names
     const transportMap = {
         stdio: 'stdio',
-        sse: 'httpStream',
+        sse: 'httpStream', // SSE maps to httpStream internally
         http: 'httpStream'
     };
     const internalTransport = transportMap[transport];
