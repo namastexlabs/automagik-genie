@@ -15,8 +15,5 @@
   },
   "include": [
     "src/**/*"
-  ],
-  "exclude": [
-    "src/cli-core/**/*"
   ]
 }

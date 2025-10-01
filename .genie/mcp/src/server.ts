@@ -667,18 +667,18 @@ Request agents to provide:
 });
 
 // Start server with configured transport
-console.log('Starting Genie MCP Server...');
-console.log(`Transport: ${TRANSPORT}`);
-console.log('Protocol: MCP (Model Context Protocol)');
-console.log('Implementation: FastMCP v3.18.0');
-console.log('Tools: 6 (list_agents, list_sessions, run, resume, view, stop)');
+console.error('Starting Genie MCP Server...');
+console.error(`Transport: ${TRANSPORT}`);
+console.error('Protocol: MCP (Model Context Protocol)');
+console.error('Implementation: FastMCP v3.18.0');
+console.error('Tools: 6 (list_agents, list_sessions, run, resume, view, stop)');
 
 if (TRANSPORT === 'stdio') {
   server.start({
     transportType: 'stdio'
   });
-  console.log('✅ Server started successfully (stdio)');
-  console.log('Ready for Claude Desktop or MCP Inspector connections');
+  console.error('✅ Server started successfully (stdio)');
+  console.error('Ready for Claude Desktop or MCP Inspector connections');
 } else if (TRANSPORT === 'httpStream' || TRANSPORT === 'http') {
   server.start({
     transportType: 'httpStream',
@@ -686,9 +686,9 @@ if (TRANSPORT === 'stdio') {
       port: PORT
     }
   });
-  console.log(`✅ Server started successfully (HTTP Stream)`);
-  console.log(`HTTP Stream: http://localhost:${PORT}/mcp`);
-  console.log(`SSE: http://localhost:${PORT}/sse`);
+  console.error(`✅ Server started successfully (HTTP Stream)`);
+  console.error(`HTTP Stream: http://localhost:${PORT}/mcp`);
+  console.error(`SSE: http://localhost:${PORT}/sse`);
 } else {
   console.error(`❌ Unknown transport type: ${TRANSPORT}`);
   console.error('Valid options: stdio (default), httpStream, http');
