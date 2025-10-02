@@ -8,15 +8,6 @@ Genie Dev extends the core Genie template with diagnostics and automation focuse
 - **UI:** `ink` + `react` for interactive CLI flows
 - **Formatting & Parsing:** `yaml` for agent metadata, native fs/stream tooling for logs
 
-## MCP Integration (Model Context Protocol)
-- **Framework:** FastMCP v3.18.0 for TypeScript-first MCP server implementation
-- **Transports:** stdio (local/Claude Desktop) + httpStream (remote server) via environment configuration
-- **Tools:** 6 core tools (run, resume, list_agents, list_sessions, view, stop) with zero code duplication
-- **Architecture:** Reusable `cli-core` module with production-grade `SessionService` (atomic writes, file locking, stale lock reclamation)
-- **Testing:** Comprehensive unit tests for SessionService concurrency handling (`tests/session-service.test.js`)
-- **Documentation:** Full setup guide at `.genie/mcp/README.md` with Claude Desktop configuration examples
-- **Status:** Foundation complete (Groups A & B), handler integration in progress
-
 ## Agent Assets
 - **Prompts:** Markdown agents under `.genie/agents/` with utilities in `.genie/agents/utilities/`
 - **Specialists:** Extensible specialist prompts tuned for self-audit (bug-reporter, tests, qa, self-learn, polish, project-manager)
