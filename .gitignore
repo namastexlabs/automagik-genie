@@ -185,3 +185,4 @@ docs/elevenlabs/*.html
 docs/ag-ui/*.html
 !docs/**/*.txt
 !docs/**/*.md
+.cache/
