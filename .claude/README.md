@@ -12,6 +12,7 @@ Access via: `/command`
 - `/review` — QA validation dialogue
 - `/install` — Framework installation
 - `/prompt` — Prompt refinement helper
+- `/genie-dev-cherrypick` — Cherry-pick improvements from genie-dev branch
 
 ### Both Command & Agent (Dual-Purpose)
 Can be invoked interactively OR delegated to background/subagents.
@@ -93,7 +94,8 @@ Access via: `./genie run <agent>` OR Task tool
 ├── forge.md → @.genie/agents/forge.md
 ├── review.md → @.genie/agents/review.md
 ├── commit.md → @.genie/agents/utilities/commit.md
-└── prompt.md → @.genie/agents/utilities/prompt.md
+├── prompt.md → @.genie/agents/utilities/prompt.md
+└── genie-dev-cherrypick.md → @.genie/agents/specialists/genie-dev-cherrypick.md
 ```
 
 ## Agent Frontmatter Configuration
