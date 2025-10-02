@@ -288,349 +288,369 @@ server.addTool({
         }
     }
 });
-// Prompt: start-agent - Guide for starting a new agent
+// Prompt: plan - Strategic planning and analysis
 server.addPrompt({
-    name: 'start-agent',
-    description: 'Get guidance on how to effectively start a Genie agent session with a well-formulated prompt',
+    name: 'plan',
+    description: 'Strategic planning for features, bugs, refactors, and product decisions',
     arguments: [
         {
-            name: 'goal',
-            description: 'What you want to accomplish (e.g., "implement a new feature", "fix a bug", "plan an architecture")',
+            name: 'idea',
+            description: 'What you want to accomplish (feature, bug fix, refactor, architecture decision)',
             required: true
         },
         {
             name: 'context',
-            description: 'Relevant context about your project or the specific area you\'re working on',
+            description: 'Relevant context about your project or specific area',
             required: false
         }
     ],
     load: async (args) => {
-        const contextPart = args.context ? `\n\nContext: ${args.context}` : '';
-        return `You want to: ${args.goal}${contextPart}
+        const contextPart = args.context ? `\nContext: ${args.context}` : '';
+        return `run plan "[Discovery] Analyze: ${args.idea}${contextPart}
 
-# Choosing the Right Agent
+Load context: @.genie/product/mission.md @.genie/product/roadmap.md @.genie/standards/best-practices.md
+Review: existing architecture, integration points, dependencies
+Document: assumptions (ASM-#), decisions (DEC-#), risks, open questions (Q-#)
 
-Based on your goal, here are recommended agents:
+[Implementation] Propose high-level approach with phases
 
-**For Planning & Architecture:**
-- \`plan\` - Strategic planning, requirement analysis, high-level design
-- \`twin\` - Get a second opinion, pressure-test decisions, find blind spots
+[Verification] Define success criteria, validation steps, evidence requirements"
 
-**For Implementation:**
-- \`implementor\` - Write code, implement features
-- \`forge\` - Break down work into execution groups
-- \`tests\` - Write test cases and validation
-
-**For Code Quality:**
-- \`codereview\` - Review code changes for issues
-- \`polish\` - Refine and improve existing code
-- \`refactor\` - Restructure code for better design
-
-**For Debugging:**
-- \`debug\` - Investigate root causes, analyze errors
-- \`analyze\` - Deep dive into system architecture
-
-**For Project Management:**
-- \`commit\` - Generate commit messages
-- \`review\` - Validate completed work
-
-# Crafting an Effective Prompt
-
-A good agent prompt should include:
-
-1. **Clear Goal**: What do you want to achieve?
-2. **Context**: Where in the codebase? What's the current state?
-3. **Constraints**: Any technical requirements or limitations?
-4. **Success Criteria**: How will you know it's done?
-
-# Example Prompts
-
-**Good:**
-"Implement a user authentication feature for the web app. We're using Node.js with Express and PostgreSQL. The feature should include login, logout, and JWT token management. Success criteria: tests pass, follows existing auth patterns in src/auth/"
-
-**Too Vague:**
-"Add auth"
-
-# Next Steps
-
-1. Choose an agent from the list above
-2. Use the \`list_agents\` tool to verify the agent exists
-3. Use the \`run\` tool with your agent and a detailed prompt`;
+💡 Prompting Tips:
+• Use for: features, bugs, refactors, migrations, roadmap items, product decisions
+• Reference files with @: auto-loads mission/roadmap/standards context
+• Capture: ASM-# (assumptions), DEC-# (decisions), Q-# (questions), RISK-#
+• Discovery→Implementation→Verification pattern structures thinking`;
     }
 });
-// Prompt: debug-issue - Guide for debugging problems
+// Prompt: wish - Convert ideas into roadmap-aligned wishes
 server.addPrompt({
-    name: 'debug-issue',
-    description: 'Get guidance on how to effectively debug an issue using Genie agents',
+    name: 'wish',
+    description: 'Convert planning brief into a wish document with spec contract',
+    arguments: [
+        {
+            name: 'feature',
+            description: 'Feature or capability to build',
+            required: true
+        },
+        {
+            name: 'planning_context',
+            description: 'Planning brief or context from /plan',
+            required: false
+        }
+    ],
+    load: async (args) => {
+        const contextPart = args.planning_context ? `\nPlanning context: ${args.planning_context}` : '';
+        return `run wish "[Discovery] Analyze requirements for: ${args.feature}${contextPart}
+
+1. Current state vs target state
+2. Scope boundaries (in/out)
+3. Assumptions, decisions, risks
+4. Success metrics
+
+[Implementation] Create wish with execution groups, deliverables, evidence paths
+
+[Verification] Ensure @ references, success criteria, evidence checklist complete"
+
+💡 Prompting Tips:
+• Use @ to reference docs: @.genie/product/roadmap.md auto-loads
+• Structure with <task_breakdown>: Discovery, Implementation, Verification
+• Define clear evidence paths: .genie/wishes/<slug>/evidence/`;
+    }
+});
+// Prompt: forge - Break wishes into execution groups
+server.addPrompt({
+    name: 'forge',
+    description: 'Break approved wish into execution groups with validation hooks',
+    arguments: [
+        {
+            name: 'wish_slug',
+            description: 'Wish slug (e.g., "auth-feature" from auth-feature-wish.md)',
+            required: true
+        },
+        {
+            name: 'focus',
+            description: 'Optional focus area (e.g., "evidence checklist only")',
+            required: false
+        }
+    ],
+    load: async (args) => {
+        const focusPart = args.focus ? `\nFocus: ${args.focus}` : '';
+        return `run forge "[Discovery] Review @.genie/wishes/${args.wish_slug}-wish.md
+Analyze scope, dependencies, complexity${focusPart}
+
+[Implementation] Break into groups (≤3):
+- Group A: Core functionality
+- Group B: Testing & validation
+Each: surfaces, deliverables, evidence, validation
+
+[Verification] Ensure dependencies sequenced, validation hooks defined, ready for implementation"
+
+💡 Prompting Tips:
+• @ auto-loads files: @.genie/wishes/${args.wish_slug}-wish.md (no manual paste)
+• Show concrete commands: \`pnpm test\` not "ensure proper validation"
+• Specify exact paths: .genie/wishes/<slug>/evidence/screenshots/`;
+    }
+});
+// Prompt: review - Validate completed work
+server.addPrompt({
+    name: 'review',
+    description: 'Validate completed work against standards and requirements',
+    arguments: [
+        {
+            name: 'scope',
+            description: 'What to review (e.g., "wish completion", "PR changes", "auth module")',
+            required: true
+        }
+    ],
+    load: async (args) => {
+        return `run review "[Discovery] Analyze ${args.scope}: code changes, tests, docs, security
+
+[Implementation] Evaluate against:
+1. @.genie/standards/*
+2. Security vulnerabilities
+3. Performance
+4. Test coverage
+
+[Verification] Deliver severity-tagged issues (CRITICAL/HIGH/MEDIUM/LOW), file:line refs, improvements"
+
+💡 Prompting Tips:
+• Use [SUCCESS CRITERIA] ✅ and [NEVER DO] ❌ for clear boundaries
+• Show concrete examples: \`try/catch\` code not "ensure error handling"
+• Tag severity: CRITICAL/HIGH/MEDIUM/LOW for prioritization`;
+    }
+});
+// Prompt: twin - Pressure-test decisions with multiple modes
+server.addPrompt({
+    name: 'twin',
+    description: 'Get second opinions, pressure-test plans, or deep-dive analysis using 17+ specialized modes',
+    arguments: [
+        {
+            name: 'situation',
+            description: 'What you want to analyze or pressure-test',
+            required: true
+        },
+        {
+            name: 'goal',
+            description: 'What you want to achieve (e.g., "find risks", "validate approach", "debug issue")',
+            required: true
+        },
+        {
+            name: 'mode_hint',
+            description: 'Preferred twin mode (planning, consensus, debug, deep-dive, etc.) - optional',
+            required: false
+        }
+    ],
+    load: async (args) => {
+        // Infer mode from goal if not provided
+        let inferredMode = args.mode_hint || 'planning';
+        const goalLower = (args.goal || '').toLowerCase();
+        if (goalLower.includes('risk'))
+            inferredMode = 'risk-audit';
+        else if (goalLower.includes('debug') || goalLower.includes('investigate'))
+            inferredMode = 'debug';
+        else if (goalLower.includes('decision') || goalLower.includes('evaluate'))
+            inferredMode = 'consensus';
+        else if (goalLower.includes('deep') || goalLower.includes('analyze'))
+            inferredMode = 'deep-dive';
+        else if (goalLower.includes('test') || goalLower.includes('validate'))
+            inferredMode = 'test-strategy';
+        return `Twin Modes: planning, consensus, deep-dive, debug, analyze, thinkdeep, design-review, risk-audit, test-strategy, socratic, debate, compliance, retrospective + more
+
+Recommended for "${args.goal}": ${inferredMode}
+
+run twin "Mode: ${inferredMode}. Objective: ${args.goal}
+
+Situation: ${args.situation}
+
+Deliver: [mode-specific outputs]
+Finish with: Twin Verdict + confidence (low/med/high)"
+
+💡 Prompting Tips:
+• State objective clearly, specify numbered deliverables (3 risks, 3 validations)
+• Request verdict format: Twin Verdict + confidence level
+• Gives agent clear completion boundaries`;
+    }
+});
+// Prompt: consensus - Decision evaluation and counterpoints
+server.addPrompt({
+    name: 'consensus',
+    description: 'Build consensus and evaluate technical decisions with evidence-based analysis',
+    arguments: [
+        {
+            name: 'decision',
+            description: 'The decision or approach to evaluate',
+            required: true
+        },
+        {
+            name: 'rationale',
+            description: 'Why you\'re considering this decision',
+            required: false
+        }
+    ],
+    load: async (args) => {
+        const rationalePart = args.rationale ? `\nRationale: ${args.rationale}` : '';
+        return `run consensus "[Discovery] Evaluate: ${args.decision}${rationalePart}
+
+[Implementation] Analyze: technical feasibility, long-term implications, alternatives, best practices
+Provide: 3 counterpoints + evidence, supporting evidence, recommendation
+
+[Verification] Verdict: Go/No-Go/Modify + confidence"
+
+💡 Prompting Tips:
+• Use ✅ Counterpoints evidence-based ❌ Opinions without evidence
+• Show concrete concerns: "10M req/day bottleneck?" not "evaluate scalability"
+• Require alternatives exploration`;
+    }
+});
+// Prompt: debug - Root cause investigation workflow
+server.addPrompt({
+    name: 'debug',
+    description: 'Systematic root cause investigation with hypotheses and experiments',
     arguments: [
         {
             name: 'problem',
-            description: 'Description of the issue you\'re experiencing',
+            description: 'The issue you\'re debugging',
             required: true
         },
         {
             name: 'symptoms',
-            description: 'Observable symptoms (error messages, unexpected behavior, etc.)',
+            description: 'Observable symptoms (errors, unexpected behavior)',
             required: false
         }
     ],
     load: async (args) => {
-        const symptomsPart = args.symptoms ? `\n\nSymptoms: ${args.symptoms}` : '';
-        return `Problem: ${args.problem}${symptomsPart}
+        const symptomsPart = args.symptoms ? `\nSymptoms: ${args.symptoms}` : '';
+        return `run debug "[Discovery] Symptoms: ${args.problem}${symptomsPart}
+Gather errors, stack traces, recent changes, repro steps
 
-# Debugging Workflow with Genie
+[Implementation] Generate 3-5 hypotheses ranked by likelihood
+For top hypothesis: minimal experiment, expected outcomes
 
-## Step 1: Investigate
-Use the \`debug\` agent to analyze the issue:
+[Verification] Root cause, minimal fix, regression test"
 
-\`\`\`
-run debug "Investigate: ${args.problem}
-
-Analyze the codebase to:
-1. Identify potential root causes
-2. Check error logs and stack traces
-3. Review recent code changes
-4. Suggest hypotheses ranked by likelihood"
-\`\`\`
-
-## Step 2: Validate (Optional)
-Get a second opinion with the \`twin\` agent:
-
-\`\`\`
-run twin "Mode: debug. Review the debug findings for: ${args.problem}
-
-Provide alternative hypotheses and validation steps."
-\`\`\`
-
-## Step 3: Fix
-Use the \`implementor\` agent to apply the fix:
-
-\`\`\`
-run implementor "Fix: ${args.problem}
-
-Based on debug findings, implement the fix with:
-1. Code changes
-2. Tests to prevent regression
-3. Documentation of the fix"
-\`\`\`
-
-## Step 4: Verify
-Use the \`tests\` agent to validate:
-
-\`\`\`
-run tests "Verify fix for: ${args.problem}
-
-Run relevant tests and confirm:
-1. Issue is resolved
-2. No regressions introduced
-3. Edge cases covered"
-\`\`\`
-
-# Tips for Effective Debugging
-
-- Include error messages and stack traces in your prompts
-- Mention what you've already tried
-- Specify affected files or modules
-- Describe expected vs actual behavior
-- Include reproduction steps if available`;
+💡 Prompting Tips:
+• Use <task_breakdown> to structure investigation phases
+• Show exact commands: \`grep "ERROR" /var/log/app.log\` not "check logs"
+• Rank hypotheses by likelihood`;
     }
 });
-// Prompt: plan-feature - Guide for feature planning
+// Prompt: thinkdeep - Extended reasoning with timebox
 server.addPrompt({
-    name: 'plan-feature',
-    description: 'Get guidance on planning a new feature using the Genie workflow',
+    name: 'thinkdeep',
+    description: 'Extended reasoning on complex topics with timeboxed exploration',
     arguments: [
         {
-            name: 'feature',
-            description: 'Brief description of the feature you want to build',
+            name: 'focus',
+            description: 'What to think deeply about',
             required: true
+        },
+        {
+            name: 'timebox_minutes',
+            description: 'How long to spend (5=quick, 10=standard, 15=complex)',
+            required: false
         }
     ],
     load: async (args) => {
-        return `Feature: ${args.feature}
+        const timebox = args.timebox_minutes || 10;
+        return `run thinkdeep "[Discovery] Outline 3-5 reasoning steps for: ${args.focus}
+Timebox: ${timebox}min
 
-# Genie Feature Planning Workflow
+[Implementation] Explore each: insights, evidence, implications, questions
 
-## Phase 1: Planning (/plan)
-Use the \`plan\` agent to create a strategic plan:
+[Verification] Top 3 insights + confidence, uncertainties, next actions"
 
-\`\`\`
-run plan "[Discovery] Analyze requirements for: ${args.feature}
-
-1. Review existing codebase architecture
-2. Identify integration points
-3. List technical requirements
-4. Document assumptions and risks
-
-[Implementation] Propose high-level approach
-
-[Verification] Define success criteria and validation steps"
-\`\`\`
-
-The plan agent will help you:
-- Understand current system architecture
-- Identify dependencies
-- Surface potential issues early
-- Create a roadmap
-
-## Phase 2: Specification (/wish)
-Use the \`wish\` agent to create a detailed specification:
-
-\`\`\`
-run wish "Create wish for: ${args.feature}
-
-Based on planning, create a specification with:
-1. Clear scope and out-of-scope items
-2. Execution groups
-3. Evidence requirements
-4. Validation criteria"
-\`\`\`
-
-## Phase 3: Task Breakdown (/forge)
-Use the \`forge\` agent to break down into tasks:
-
-\`\`\`
-run forge "Break down wish for: ${args.feature}
-
-Create execution groups with:
-1. Specific deliverables
-2. Test requirements
-3. Validation steps
-4. Dependencies"
-\`\`\`
-
-## Phase 4: Implementation
-Use specialist agents for execution:
-
-\`\`\`
-run implementor "Implement Group A: [specific task]"
-run tests "Write tests for Group A"
-run qa "Validate Group A completion"
-\`\`\`
-
-## Phase 5: Review (/review)
-Use the \`review\` agent to validate completion:
-
-\`\`\`
-run review "Review completion of: ${args.feature}
-
-Validate:
-1. All acceptance criteria met
-2. Tests passing
-3. Documentation complete
-4. No regressions"
-\`\`\`
-
-# Key Principles
-
-- Break large features into smaller execution groups
-- Plan before implementing (avoid jumping straight to code)
-- Get second opinions on critical decisions (use \`twin\` agent)
-- Validate at each phase before proceeding
-- Document assumptions and decisions`;
+💡 Prompting Tips:
+• Show concrete output: "10K req/s bottleneck: PostgreSQL (50K max connections)"
+• Timebox: 5min=quick, 10min=standard, 15min=complex
+• Prevents meandering, forces prioritization`;
     }
 });
-// Prompt: review-code - Guide for code review
+// Prompt: analyze - System architecture analysis
 server.addPrompt({
-    name: 'review-code',
-    description: 'Get guidance on conducting a thorough code review using Genie',
+    name: 'analyze',
+    description: 'Deep analysis of system architecture, dependencies, and design',
     arguments: [
         {
-            name: 'scope',
-            description: 'What code to review (e.g., "recent changes", "auth module", "PR #123")',
+            name: 'component',
+            description: 'Component, module, or system to analyze',
             required: true
+        },
+        {
+            name: 'focus_area',
+            description: 'Specific focus (dependencies, performance, security) - optional',
+            required: false
         }
     ],
     load: async (args) => {
-        return `Review Scope: ${args.scope}
+        const focusPart = args.focus_area ? `\nFocus: ${args.focus_area}` : '';
+        return `run analyze "[Discovery] Map @${args.component}: structure, dependencies, data flow, interfaces${focusPart}
 
-# Code Review with Genie
+[Implementation] Find: coupling hotspots, complexity clusters, bottlenecks, security surface
 
-## Quick Review
-For focused, tactical feedback:
+[Verification] Top 3 refactor opportunities + impact, dependency map, simplifications"
 
-\`\`\`
-run codereview "Review: ${args.scope}
+💡 Prompting Tips:
+• @ auto-loads: @src/auth/ (directory), @src/payment.ts (file)
+• Show concrete coupling: "UserService → 4 deps. Extract EmailNotifier interface"
+• Define success: ✅ Map complete ✅ Hotspots identified ✅ Impact estimated`;
+    }
+});
+// Prompt: prompt - Meta-prompting helper
+server.addPrompt({
+    name: 'prompt',
+    description: 'Improve prompts using Genie prompting framework (@ references, task breakdown, success criteria)',
+    arguments: [
+        {
+            name: 'task_description',
+            description: 'What you want to accomplish',
+            required: true
+        },
+        {
+            name: 'current_prompt',
+            description: 'Current prompt to improve (optional)',
+            required: false
+        }
+    ],
+    load: async (args) => {
+        const improvePart = args.current_prompt ? `\n\nImprove:\n${args.current_prompt}` : '';
+        return `run prompt "Task: ${args.task_description}${improvePart}
 
-Check for:
-1. Security vulnerabilities
-2. Performance issues
-3. Code quality and patterns
-4. Test coverage
-5. Documentation
+Create structured prompt using:"
 
-Provide severity-tagged feedback (CRITICAL/HIGH/MEDIUM/LOW)"
-\`\`\`
+## Genie Prompting Framework (@.genie/agents/utilities/prompt.md)
 
-## Deep Review
-For architectural analysis:
+**1. Task Breakdown:**
+<task_breakdown>
+1. [Discovery] What to investigate
+2. [Implementation] What to change
+3. [Verification] What to validate
+</task_breakdown>
 
-\`\`\`
-run analyze "Analyze: ${args.scope}
+**2. Auto-Context with @:**
+@src/auth/middleware.ts auto-loads files (no manual "read X then Y")
 
-Evaluate:
-1. System design and architecture
-2. Coupling and cohesion
-3. Scalability concerns
-4. Technical debt
-5. Alignment with project standards"
-\`\`\`
+**3. Success/Failure Boundaries:**
+[SUCCESS CRITERIA] ✅ Tests pass ✅ No hardcoded paths
+[NEVER DO] ❌ Skip coverage ❌ Commit secrets
 
-## Get Second Opinion
-Validate findings with \`twin\` agent:
+**4. Concrete Examples:**
+Show code: \`try/catch\` not "ensure error handling"
 
-\`\`\`
-run twin "Mode: design-review. Component: ${args.scope}
+**5. Checklist:**
+✅ Discovery→Implementation→Verification
+✅ @ references for context
+✅ Success criteria defined
+✅ Concrete examples
 
-Pressure-test the implementation:
-1. Find potential blind spots
-2. Identify missing edge cases
-3. Suggest improvements
-4. Rate overall quality (confidence: low/med/high)"
-\`\`\`
+**Example:**
+[Discovery] Review @src/auth/middleware.ts, identify gaps
+[Implementation] Add JWT refresh endpoint, update middleware
+[Verification] Run npm run security-check, test flow
+[SUCCESS CRITERIA] ✅ Tokens work ✅ Audit passes
+[NEVER DO] ❌ Store in localStorage ❌ Log tokens
 
-# Review Checklist
-
-**Functionality:**
-- [ ] Code does what it's supposed to do
-- [ ] Edge cases handled
-- [ ] Error handling present
-
-**Quality:**
-- [ ] Follows project coding standards
-- [ ] No code duplication
-- [ ] Clear naming and structure
-- [ ] Adequate comments where needed
-
-**Testing:**
-- [ ] Unit tests present and passing
-- [ ] Integration tests if needed
-- [ ] Test coverage adequate
-
-**Security:**
-- [ ] No hardcoded secrets
-- [ ] Input validation present
-- [ ] Authentication/authorization correct
-- [ ] No SQL injection or XSS risks
-
-**Performance:**
-- [ ] No obvious performance issues
-- [ ] Database queries optimized
-- [ ] Caching where appropriate
-
-**Documentation:**
-- [ ] README updated if needed
-- [ ] API docs current
-- [ ] Complex logic explained
-
-# Output Format
-
-Request agents to provide:
-1. Summary of findings
-2. Severity-tagged issues
-3. Specific file/line references
-4. Suggested improvements
-5. Overall assessment`;
+💡 This framework = maximum clarity + effectiveness`;
     }
 });
 // Start server with configured transport
