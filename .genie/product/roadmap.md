@@ -1,45 +1,78 @@
-# Genie Dev Roadmap
+# Template Roadmap (Customize Per Project)
 
-The genie-dev branch is the laboratory for Genie’s self-improvement program. Phases are sequenced to keep downstream adopters safe while we iterate quickly.
+This roadmap is a canvas. Replace phases with goals relevant to your project after installing the template.
 
-## Phase 0 — Baseline Capture (✅ complete)
-- Neutralize template placeholders and document the current mission, tech stack, and guardrails
-- Inventory existing behavioural learnings and confirm they are enforced across agents
-- Establish `pnpm run build:genie` + smoke tests as the minimum verification gate
+## Phase 0: Install & Configure
+- Copy `.genie/` and `.claude/commands/` into your repo
+- Run `./genie --help` and a `/plan` smoke
+- Customize `.genie/product/*` placeholders
 
-## Phase 1 — Instrumentation & Telemetry (in progress)
-- Treat the wish **Evidence Checklist** as the gating deliverable before other instrumentation tasks proceed (see @.genie/agents/wish.md).
-- Add branch-specific checklists to every wish to log evidence paths and validation commands
-- Expand done-report coverage so each experiment stores scope, risks, and follow-ups
-- Wire CLI diagnostics to surface missing sessions or misconfigured presets
+## Phase 1: Plan → Wish → Forge
+- Capture a first wish and define evidence paths
+- Add validation hooks (tests, scripts) per project
 
-## Phase 2 — Guided Self-Improvement
-- Author wishes that target prompt quality, guardrail clarity, and CLI usability
-- Pair each wish with twin audits and validation scripts before merging back to `main`
-- Promote validated learnings into `.genie/instructions/` and specialist briefs
+## Phase 2: Implementation & Review
+- Use template-implementor/tests/qa/quality agents
+- Record Done Reports
 
-## Phase 3 — Adoption Kits for Downstream Repos
-- Package upgrade notes, migration diffs, and rollback guidance for every major change
-- Publish branch-to-main release checklist (Plan → Wish → Forge coverage, tests, done report link)
-- Partner with pilot teams to trial upgrades and capture their feedback in structured templates
+## Phase 3: Iterate
+- Expand agents or prompts as needed
+- Keep AGENTS.md and wrappers in sync
+## Optional Extensions
+- [ ] Custom evaluation metrics for {{DOMAIN}}
+- [ ] Project-specific agent specializations
+- [ ] Integration with {{APIS}}
 
-## Phase 4 — Automation & CI Integration
-- Land GitHub Actions pipeline that runs build + smoke tests and attaches artefacts to PRs
-- Add regression checks for behavioural rules (self-learn, guardrail compliance)
-- Introduce metrics capture (latency, wish completion velocity) with reporting hooks
+## Success Metrics (Customize)
+- Task completion rates
+- Code quality improvements
+- Time to deployment
+- {{METRICS}} targets achieved
+- Team adoption rate
 
-## Success Metrics
-- 100% of genie-dev wishes include validation commands and evidence links
-- Smoke suite (`pnpm run test:genie`) passing before merge on every PR
-- Documented learnings promoted within 48 hours of validation
-- Downstream adopters report <5% rollback rate on genie-dev releases
+### Key Milestones Timeline
+- Milestone 1: First successful agent workflow executed
+- Milestone 2: Core workflow complete with evidence capture
+- Milestone 3: 100+ successful executions documented
+- Milestone 4: Enterprise deployment guide published
+- Milestone 5: Community adoption milestone reached
+- Milestone 6: Framework maturity benchmarks met
 
-## Dependencies & Enablers
-- Maintainers available for twin reviews and manual approvals
-- Access to GPT-5 class models (configurable via `GENIE_MODEL`)
-- Stable sandboxed environment mirroring production guardrails
+## Phase 6: Advanced Features (Post-GA)
 
-## Risk Log (actively monitored)
-- **Automation drift:** self-improvement scripts may bypass approval gates → mitigate with review checklist baked into wishes
-- **Telemetry gaps:** missing evidence makes regression root-cause harder → mitigate by enforcing done report template updates
-- **Adopter fatigue:** too many upgrades without guides → mitigate by bundling changes into release kits with opt-in toggles
+Goal: Extend framework with advanced capabilities based on {{DOMAIN}} requirements.
+
+Success Criteria:
+- Custom integrations with {{APIS}}
+- Performance metrics meeting {{METRICS}} targets
+- Full compatibility with {{TECH_STACK}}
+
+Tasks
+- [ ] Design integration architecture `[M]`
+- [ ] Implement core connectors `[L]`
+- [ ] Build monitoring dashboard `[M]`
+- [ ] Create performance benchmarks `[S]`
+- [ ] Document best practices `[S]`
+
+## Technical Effort Scale
+- **XS**: < 1 day
+- **S**: 2-3 days
+- **M**: 1 week
+- **L**: 2 weeks
+- **XL**: 3+ weeks
+
+## Dependencies by Phase
+
+### Phase 0-1
+- {{PROVIDER}} API keys
+- Basic infrastructure
+
+### Phase 2-3
+- PostgreSQL, Redis
+- S3-compatible storage
+- CI/CD pipeline
+
+### Phase 4-5
+- Multi-region infrastructure
+- CDN for edge deployment
+- ML training infrastructure

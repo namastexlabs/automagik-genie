@@ -1,61 +1,72 @@
-# Genie Dev Mission
+# Product Mission
 
 ## Pitch
 
-Genie Dev is the self-development branch of the Genie framework. It turns the template into a living meta-agent that can audit, upgrade, and validate its own workflow stack while remaining installable in any host repository.
+Genie is a template-first agent framework that installs into any repository. It provides unified agents (plan, wish, forge, review, commit, specialist) and a CLI to orchestrate evidence-first workflows. Replace project-specific content with placeholders like `{{PROJECT_NAME}}`, `{{DOMAIN}}`, `{{TECH_STACK}}`, `{{METRICS}}`, `{{APIS}}`.
 
 ## Users
 
 ### Primary Customers
 
-- **Framework Maintainers:** Steer the Genie prompt stack and CLI toward higher autonomy without losing human oversight.
-- **Power Users / Partner Teams:** Pilot emerging self-improvement patterns and feed structured evidence back into the core templates.
+- **Developers**: Install Genie templates into any repo and orchestrate planning → implementation with evidence-first workflows.
+- **Enterprise teams**: Standardize agentic workflows (plan/wish/forge/review/commit) with auditability and guardrails across multiple projects.
 
 ### User Personas
 
-**Meta-Orchestrator**
-- **Role:** Maintains Genie agents and safeguards guardrails
-- **Context:** Needs rapid iteration on prompts, policies, and diagnostics without destabilizing downstream repos
-- **Pain Points:** Slow feedback loops, fragmented experiments, weak traceability when agents evolve themselves
-- **Goals:** Tighten validation loops, capture every change rationale, and publish upgrade paths that downstream repos can adopt deliberately
+**Independent Developer**
+- **Role:** Developer / technical lead
+- **Context:** Building and maintaining {{DOMAIN}} applications
+- **Pain Points:** Fragmented workflows, inconsistent code quality, lack of evidence trails
+- **Goals:** Streamlined development, consistent quality, trackable decisions
 
-**Pilot Squad Lead**
-- **Role:** Early adopter embedding Genie into complex delivery environments
-- **Context:** Validates new meta-agent behaviours before they ship broadly
-- **Pain Points:** Unclear upgrade guidance, lack of proof that automation changes are safe, difficulty reporting outcomes
-- **Goals:** Receive pre-baked playbooks, evidence kits, and rollback guidance for every self-improvement release
+**Enterprise Team Lead**
+- **Role:** Engineering manager or architect
+- **Context:** Managing multiple {{PROJECT_NAME}} codebases with compliance requirements
+- **Pain Points:** Inconsistent practices across teams, difficult auditing, knowledge silos
+- **Goals:** Standardized workflows, evidence-based decisions, clear accountability
 
 ## The Problem
 
-### Self-Evolving Agents Need Structure
-Genie’s templates must improve themselves without eroding trust or breaking installs across diverse projects.
+### Fragmented Agent Workflows
+Teams duplicate prompt scaffolding and orchestration patterns across repos, causing drift and inconsistent results.
 
-**Our Approach:** Codify meta-agent upgrades as wishes with verifiable evidence, ensuring every prompt or workflow change is paired with metrics and rollback hooks.
+**Our Solution:** A shared, installable template that unifies prompts, guardrails, and evidence capture without imposing domain specifics.
 
-### Feedback Loops Are Opaque
-Learnings often stay buried in session transcripts, delaying improvements to prompts and guardrails.
+### Hard-to-Audit Changes
+Lack of consistent evidence and report structures slows review and erodes trust.
 
-**Our Approach:** Promote learnings into persistent documentation, align them with experiments, and surface them in done reports so humans can audit evolution.
+**Our Solution:** Death/Done Testaments, standardized logs, and validation hooks across all agents.
 
-### Downstream Risk Management
-Branch experimentation can create surprises for adopters if success criteria are not explicit.
+### No Unified Testing & Experimentation
+Teams lack a consistent framework to test strategies, measure outcomes, and iterate systematically.
 
-**Our Approach:** Treat this branch as the proving ground for phased releases, publish adoption kits, and require validation evidence before merging into the canonical template.
+**Our Solution:** An experiment framework with plug-and-play strategies, A/B testing support, and evaluator metrics for {{METRICS}}.
 
 ## Differentiators
 
-### Meta-Agent Feedback Harness
-Purpose-built to let Genie run experiments on itself, capture the outcomes, and decide what ships.
+### Framework-Agnostic Design
+Works with any {{TECH_STACK}}, any {{DOMAIN}}, any repository structure - just copy and customize.
 
-### Evidence-First Governance
-Every change must tie back to a wish, a forge plan, validation commands, and a done report stored under `.genie/reports/`.
+### Evidence-First Orchestration
+Every decision, implementation, and validation captured with full audit trail.
 
-### Human-in-the-Loop Control
-Automation never bypasses human approval gates; new capabilities arrive with clear opt-in guidance and rollback instructions.
+### Flexible Performance Options
+Supports multiple runtime strategies via {{TECH_STACK}} with configurable validation and metrics.
 
-## Key Focus Areas
+## Key Features
 
-- **Self-Audit Loops:** Plan → Wish → Forge cycles targeted at the prompt stack, CLAUDE/AGENTS guardrails, and CLI behaviours.
-- **Learning Propagation:** Promote validated learnings into `.genie/instructions/` and specialist briefs so changes stick.
-- **Tooling Diagnostics:** Expand test harnesses and smoke commands that ensure the CLI behaves before releases.
-- **Adoption Playbooks:** Provide branch-to-main migration guides, change logs, and decision records for every improvement wave.
+### Core Features
+
+- **Agent Orchestration:** Plan → Wish → Forge → Review → Commit workflow with full evidence trail
+- **Specialist Agents:** Template implementor, QA, quality, tests, self-learn, bug-reporter
+- **CLI Management:** Background execution, session persistence, log viewing
+- **Evidence Capture:** Done Reports, validation hooks, metrics tracking
+- **Flexible Storage:** Wish-defined evidence paths, no hardcoded structure
+- **Safety Guardrails:** Approval gates, non-destructive defaults, blocker protocols
+
+### Collaboration/Operations Features
+
+- **Experiment Framework:** A/B testing support for {{DOMAIN}}-specific strategies
+- **Evaluator Integration:** Pluggable metrics and scoring for {{METRICS}}
+- **Observability:** Structured logs, session tracking, command history
+- **Templates:** Installable into any {{TECH_STACK}} codebase with placeholders
