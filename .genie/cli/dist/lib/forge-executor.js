@@ -18,7 +18,6 @@ exports.createForgeExecutor = createForgeExecutor;
 exports.handleForgeBackgroundLaunch = handleForgeBackgroundLaunch;
 const session_store_1 = require("../session-store");
 // Import ForgeClient from root
-// @ts-ignore - forge.js is a compiled JS file without type declarations
 const forge_js_1 = require("../../../../forge.js");
 /**
  * ForgeExecutor - Main class for Forge backend integration
