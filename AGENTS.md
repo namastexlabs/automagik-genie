@@ -62,7 +62,11 @@ See `.genie/` directory for comprehensive documentation:
 - `@.genie/agents/code/skills/missing-context-protocol.md`
 
 ## Universal Workflow Architecture
-**Workflow Pattern:** `Plan → Wish → Forge → Review`
+**Workflow Pattern:** `Wish → Forge → Review`
+
+**Wish workflow structure:**
+- Main: `.genie/agents/neurons/wish.md` (discovery & planning orchestrator)
+- Delegates to: `.genie/agents/code/neurons/wish/blueprint.md` (wish document creation)
 
 ### Core Workflow Variants
 - **Code:** Implementation, tests, documentation
@@ -70,10 +74,10 @@ See `.genie/` directory for comprehensive documentation:
 - **NL:** Process improvements, decision frameworks
 
 ### Workflow Components
-- `@.genie/agents/workflows/plan.md`
-- `@.genie/agents/workflows/wish.md`
-- `@.genie/agents/workflows/forge.md`
-- `@.genie/agents/workflows/review.md`
+- `@.genie/agents/neurons/wish.md` (main orchestrator, delegates to blueprint)
+- `@.genie/agents/code/neurons/wish/blueprint.md` (wish document creation)
+- `@.genie/agents/neurons/forge.md`
+- `@.genie/agents/neurons/review.md`
 
 ## @ Tool Semantics
 **Critical:** @ is a lightweight path reference, NOT a content loader.
