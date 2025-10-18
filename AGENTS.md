@@ -100,19 +100,19 @@ See `@.genie/docs/mcp-interface.md` for complete documentation.
 
 ## Neural Graph Architecture (Auto-Generated)
 <!-- AUTO-GENERATED-START: Do not edit manually -->
-**Last Updated:** 2025-10-18 16:52:34 UTC
-**Total Tokens:** 34,969 (baseline for efficiency validation)
+**Last Updated:** 2025-10-18 16:53:34 UTC
+**Total Tokens:** 35,977 (baseline for efficiency validation)
 
 **Distribution:**
-- Skills: 19,381 tokens (55.4%)
-- Universal Neurons: 10,633 tokens (30.4%)
-- Other: 3,276 tokens (9.4%)
-- Core Framework: 1,034 tokens (3.0%)
+- Skills: 19,381 tokens (53.9%)
+- Universal Neurons: 10,633 tokens (29.6%)
+- Other: 3,276 tokens (9.1%)
+- Core Framework: 2,042 tokens (5.7%)
 - Code Neurons: 645 tokens (1.8%)
 
 **Hierarchy:**
 
-- **AGENTS.md** (1,034 tokens, +33,935 from 40 refs)
+- **AGENTS.md** (2,042 tokens, +33,935 from 40 refs)
   - **.genie/product/mission.md** (684 tokens)
   - **.genie/product/tech-stack.md** (546 tokens)
   - **.genie/product/roadmap.md** (594 tokens)
