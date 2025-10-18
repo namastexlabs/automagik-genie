@@ -100,7 +100,7 @@ See `@.genie/docs/mcp-interface.md` for complete documentation.
 
 ## Neural Graph Architecture (Auto-Generated)
 <!-- AUTO-GENERATED-START: Do not edit manually -->
-**Last Updated:** 2025-10-18 17:09:08 UTC
+**Last Updated:** 2025-10-18 17:11:38 UTC
 **Total Tokens:** 24,519 (baseline for efficiency validation)
 
 **Distribution:**
