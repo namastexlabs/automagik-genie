@@ -1,4 +1,10 @@
+---
+name: Orchestration Protocols
+description: Enforce TDD: RED → GREEN → REFACTOR with explicit approval gates
+---
+
 # Orchestration Protocols
+
 **Last Updated:** !`date -u +"%Y-%m-%d %H:%M:%S UTC"`
 **Execution patterns governing sequencing and validation:**
 
