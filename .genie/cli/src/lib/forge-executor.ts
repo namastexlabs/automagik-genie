@@ -16,8 +16,8 @@ import type { SessionEntry, SessionStore } from '../session-store';
 import type { GenieConfig, ConfigPaths } from './types';
 import { saveSessions } from '../session-store';
 
-// Import ForgeClient from root (adjust path as needed)
-import { ForgeClient } from '../../../forge';
+// Import ForgeClient from root
+import { ForgeClient } from '../../../../forge';
 
 export interface ForgeExecutorConfig {
   forgeBaseUrl: string;
