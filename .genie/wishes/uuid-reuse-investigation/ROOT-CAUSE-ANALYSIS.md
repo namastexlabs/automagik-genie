@@ -1,5 +1,5 @@
 # UUID Reuse & Stale Build Artifacts - Root Cause Analysis
-
+**Last Updated:** !`date -u +"%Y-%m-%d %H:%M:%S UTC"`
 **Investigation Date:** 2025-10-18
 **Issue:** #122
 **Reporter:** RC21 QA Process

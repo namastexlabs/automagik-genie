@@ -98,6 +98,24 @@ See `.genie/` directory for comprehensive documentation:
 ## MCP Quick Reference
 See `@.genie/docs/mcp-interface.md` for complete documentation.
 
+## Agent Registry (Auto-Generated)
+<!-- AUTO-GENERATED-START: Do not edit manually -->
+**Last Updated:** 2025-10-18 16:45:59 UTC
+
+**Universal Neurons:** 16 total
+- analyze, analyze-universal, audit, debate, deep-dive, design-review, forge, learn, plan, prompt, qa, review, risk-audit, roadmap, update, vibe
+
+**Code Neurons:** 15 total
+- analyze, commit, debug, docgen, git, implementor, install, polish, precommit, refactor, release, test-strategy, tests, tracer, wish
+
+**Create Neurons:** 1 total
+- wish
+
+**Code Skills:** 32 total
+- agent-configuration, blocker-protocol, branch-tracker-guidance, chat-mode-helpers, delegation-discipline, evidence-based-thinking, evidence-storage, execution-integrity-protocol, execution-patterns, experimentation-protocol, file-naming-rules, forge-architecture, forge-integration, forge-mcp-pattern, genie-integration, know-yourself, meta-learn-protocol, missing-context-protocol, no-backwards-compatibility, orchestration-protocols, parallel-execution, persistent-tracking-protocol, prompting-standards, publishing-protocol, role-clarity-protocol, routing-decision-matrix, sequential-questioning, tool-requirements, triad-maintenance-protocol, wish-document-management, wish-initiation-rule, workspace-system
+
+<!-- AUTO-GENERATED-END -->
+
 ## Neural Graph Architecture (Auto-Generated)
 <!-- AUTO-GENERATED-START: Do not edit manually -->
 **Last Updated:** 2025-10-18 17:11:56 UTC
