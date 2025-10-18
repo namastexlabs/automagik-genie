@@ -12,6 +12,7 @@ export interface CLIOptions {
   executor?: string;
   mode?: string;
   name?: string;  // Friendly session name for run command
+  verbose?: boolean;  // Verbose output for workflow commands
 }
 
 export interface ParsedCommand {

@@ -36,6 +36,7 @@ import { runStatus } from './commands/status';
 import { runCleanup } from './commands/cleanup';
 import { runStatusline } from './commands/statusline';
 import { modelCommand } from './commands/model';
+import { runWorkflowCommand } from './commands/workflow';
 import {
   INTERNAL_BACKGROUND_MARKER_ENV,
   INTERNAL_BACKGROUND_ENV,
@@ -158,6 +159,26 @@ async function main(): Promise<void> {
           return;
         }
         await modelCommand(parsed, config, paths);
+        break;
+      case 'workflow':
+        if (parsed.options.requestHelp) {
+          await emitView(buildInfoView('Genie workflow', [
+            'Usage: genie workflow <subcommand> [options]',
+            '',
+            'Run workflow automation scripts',
+            '',
+            'Subcommands:',
+            '  teach <message>                      - Detect teaching signals',
+            '  blocker <wish-path> <description>    - Log blocker to wish',
+            '  role <role> <action> [session-path]  - Validate role before delegation',
+            '  promise <message> [commands...]      - Track promises and detect say-do gaps',
+            '  help                                 - Show detailed help',
+            '',
+            'Use "genie workflow help" for detailed documentation and examples.'
+          ]), parsed.options);
+          return;
+        }
+        await runWorkflowCommand(parsed, config, paths);
         break;
       case 'resume':
         if (parsed.options.requestHelp) {
