@@ -23,8 +23,6 @@
     ".genie/guides/**/*.md",
     ".genie/templates/**/*.md",
     ".genie/scripts/**/*",
-    "templates/code/**/*",
-    "templates/create/**/*",
     "bin/automagik-genie.js",
     "bin/mcp.js",
     "bin/update.js",
