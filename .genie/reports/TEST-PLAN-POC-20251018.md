@@ -1,4 +1,5 @@
 # Forge Executor POC: Test Plan
+**Last Updated:** !`date -u +"%Y-%m-%d %H:%M:%S UTC"`
 **Date:** 2025-10-18
 **Task:** Issue #120 - Phase 1 POC Validation
 **Status:** Ready for Execution

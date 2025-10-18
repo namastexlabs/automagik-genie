@@ -1,5 +1,5 @@
 # UUID Reuse & Stale Build Artifacts Investigation
-
+**Last Updated:** !`date -u +"%Y-%m-%d %H:%M:%S UTC"`
 **Issue:** #122
 **Date:** 2025-10-18
 **Status:** ✅ Complete

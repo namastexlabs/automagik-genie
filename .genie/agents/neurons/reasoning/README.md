@@ -1,5 +1,5 @@
 # Reasoning Framework
-
+**Last Updated:** !`date -u +"%Y-%m-%d %H:%M:%S UTC"`
 **Purpose:** Persistent reasoning chains with different cognitive modes for problem-solving, analysis, and decision-making.
 
 ## Reasoning Modes

@@ -1,4 +1,5 @@
 # Forge-Genie Integration - Final Decisions
+**Last Updated:** !`date -u +"%Y-%m-%d %H:%M:%S UTC"`
 **Date:** 2025-10-18
 **Status:** Consolidated from voice interview + additional decisions
 **Purpose:** Definitive implementation plan based on Felipe's decisions
