@@ -24,11 +24,11 @@
 - Validate background polling behavior
 
 ## Evidence Checklist
-- [ ] Confirmed single session creation
-- [ ] Unique UUIDs generated correctly
-- [ ] V2 format implemented in background-launcher.ts
-- [ ] All CLI validation tests pass
-- [ ] QA Group B tests pass (see SESSION-STATE.md)
+- [x] Confirmed single session creation
+- [x] Unique UUIDs generated correctly
+- [x] V2 format implemented in background-launcher.ts
+- [x] All CLI validation tests pass
+- [x] QA Group B tests pass (see SESSION-STATE.md)
 
 ## Tracking
 - Forge task: RC21-102
@@ -38,8 +38,19 @@
 - Potential side effects in other parts of session management
 - Need to ensure V2 format doesn't break existing functionality
 
-## Next Steps
-- Create GitHub issue
-- Create feature branch
-- Implement fix
-- Run comprehensive QA
+## Completion Summary
+**Status:** ✅ COMPLETE - RC21 released (2025-10-18)
+**Fix Commit:** `a22dd55` - fix(rc21): one-session-per-run + background polling
+**Release:** v2.4.0-rc.21 published to npm@next
+**QA Evidence:**
+- Group B (QA Validation): reports/done-group-b-20251018.md - PASS
+- Group D (Release): reports/done-group-d-20251018.md - PASS
+- QA artifacts: qa/group-b/ (sessions.json, validation-results.md, etc.)
+- Regression tests: qa/regressions/ (bug-66, bug-90, bug-92)
+
+**Key Changes:**
+- background-launcher.ts:75 - Changed from V1 format (`liveStore.agents?.[agentName]`) to V2 format (`liveStore.sessions?.[entry.sessionId]`)
+- All V1 format references removed from codebase
+- Session creation now produces exactly one session per run
+- Background polling finds session within ~0.5s (no timeout)
+- CLI hints correctly reference `npx automagik-genie` commands
