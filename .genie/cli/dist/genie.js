@@ -24,6 +24,7 @@ const status_1 = require("./commands/status");
 const cleanup_1 = require("./commands/cleanup");
 const statusline_1 = require("./commands/statusline");
 const model_1 = require("./commands/model");
+const workflow_1 = require("./commands/workflow");
 const background_manager_1 = require("./background-manager");
 void main();
 async function main() {
@@ -136,6 +137,26 @@ async function main() {
                     return;
                 }
                 await (0, model_1.modelCommand)(parsed, config, paths);
+                break;
+            case 'workflow':
+                if (parsed.options.requestHelp) {
+                    await (0, view_helpers_1.emitView)((0, common_1.buildInfoView)('Genie workflow', [
+                        'Usage: genie workflow <subcommand> [options]',
+                        '',
+                        'Run workflow automation scripts',
+                        '',
+                        'Subcommands:',
+                        '  teach <message>                      - Detect teaching signals',
+                        '  blocker <wish-path> <description>    - Log blocker to wish',
+                        '  role <role> <action> [session-path]  - Validate role before delegation',
+                        '  promise <message> [commands...]      - Track promises and detect say-do gaps',
+                        '  help                                 - Show detailed help',
+                        '',
+                        'Use "genie workflow help" for detailed documentation and examples.'
+                    ]), parsed.options);
+                    return;
+                }
+                await (0, workflow_1.runWorkflowCommand)(parsed, config, paths);
                 break;
             case 'resume':
                 if (parsed.options.requestHelp) {

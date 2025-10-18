@@ -184,6 +184,18 @@ program
     }
     execGenie(args);
 });
+// Workflow command
+program
+    .command('workflow <subcommand> [args...]')
+    .description('Run workflow automation scripts (teach, blocker, role, promise)')
+    .option('-v, --verbose', 'Show verbose output including script errors')
+    .action((subcommand, args, options) => {
+    const genieArgs = ['workflow', subcommand, ...args];
+    if (options.verbose) {
+        genieArgs.push('--verbose');
+    }
+    execGenie(genieArgs);
+});
 // MCP command
 program
     .command('mcp')

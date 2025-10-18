@@ -33,7 +33,8 @@ function parseArguments(argv) {
         live: false,
         executor: undefined,
         mode: undefined,
-        name: undefined
+        name: undefined,
+        verbose: undefined
     };
     const filtered = [];
     for (let i = 0; i < raw.length; i++) {
@@ -78,6 +79,10 @@ function parseArguments(argv) {
                 i++; // Skip next token
                 continue;
             }
+        }
+        if (token === '--verbose' || token === '-v') {
+            options.verbose = true;
+            continue;
         }
         if (token === '--') {
             filtered.push(...raw.slice(i + 1));
