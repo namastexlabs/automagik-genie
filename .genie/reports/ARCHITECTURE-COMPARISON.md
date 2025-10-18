@@ -1,5 +1,5 @@
 # Genie vs Forge Executor Architecture Comparison
-
+**Last Updated:** !`date -u +"%Y-%m-%d %H:%M:%S UTC"`
 ## Current Architecture (Genie - BUGGY)
 
 ```

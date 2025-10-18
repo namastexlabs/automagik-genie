@@ -1,5 +1,5 @@
 # Stale Build Artifact Detection - Solution Design
-
+**Last Updated:** !`date -u +"%Y-%m-%d %H:%M:%S UTC"`
 **Issue:** #122
 **Target Release:** RC22
 **Priority:** Medium
