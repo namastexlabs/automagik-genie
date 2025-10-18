@@ -98,37 +98,21 @@ See `.genie/` directory for comprehensive documentation:
 ## MCP Quick Reference
 See `@.genie/docs/mcp-interface.md` for complete documentation.
 
-## Agent Registry (Auto-Generated)
-<!-- AUTO-GENERATED-START: Do not edit manually -->
-**Last Updated:** 2025-10-18 16:45:59 UTC
-
-**Universal Neurons:** 16 total
-- analyze, analyze-universal, audit, debate, deep-dive, design-review, forge, learn, plan, prompt, qa, review, risk-audit, roadmap, update, vibe
-
-**Code Neurons:** 15 total
-- analyze, commit, debug, docgen, git, implementor, install, polish, precommit, refactor, release, test-strategy, tests, tracer, wish
-
-**Create Neurons:** 1 total
-- wish
-
-**Code Skills:** 32 total
-- agent-configuration, blocker-protocol, branch-tracker-guidance, chat-mode-helpers, delegation-discipline, evidence-based-thinking, evidence-storage, execution-integrity-protocol, execution-patterns, experimentation-protocol, file-naming-rules, forge-architecture, forge-integration, forge-mcp-pattern, genie-integration, know-yourself, meta-learn-protocol, missing-context-protocol, no-backwards-compatibility, orchestration-protocols, parallel-execution, persistent-tracking-protocol, prompting-standards, publishing-protocol, role-clarity-protocol, routing-decision-matrix, sequential-questioning, tool-requirements, triad-maintenance-protocol, wish-document-management, wish-initiation-rule, workspace-system
-
-<!-- AUTO-GENERATED-END -->
-
 ## Neural Graph Architecture (Auto-Generated)
 <!-- AUTO-GENERATED-START: Do not edit manually -->
-**Last Updated:** 2025-10-18 17:11:56 UTC
-**Total Tokens:** 24,519 (baseline for efficiency validation)
+**Last Updated:** 2025-10-18 16:52:34 UTC
+**Total Tokens:** 34,969 (baseline for efficiency validation)
 
 **Distribution:**
-- Skills: 19,381 tokens (79.0%)
-- Other: 3,276 tokens (13.4%)
-- Core Framework: 1,862 tokens (7.6%)
+- Skills: 19,381 tokens (55.4%)
+- Universal Neurons: 10,633 tokens (30.4%)
+- Other: 3,276 tokens (9.4%)
+- Core Framework: 1,034 tokens (3.0%)
+- Code Neurons: 645 tokens (1.8%)
 
 **Hierarchy:**
 
-- **AGENTS.md** (1,862 tokens, +22,657 from 36 refs)
+- **AGENTS.md** (1,034 tokens, +33,935 from 40 refs)
   - **.genie/product/mission.md** (684 tokens)
   - **.genie/product/tech-stack.md** (546 tokens)
   - **.genie/product/roadmap.md** (594 tokens)
@@ -164,6 +148,10 @@ See `@.genie/docs/mcp-interface.md` for complete documentation.
   - **.genie/agents/code/skills/forge-integration.md** (1,630 tokens)
   - **.genie/agents/code/skills/forge-mcp-pattern.md** (417 tokens)
   - **.genie/agents/code/skills/missing-context-protocol.md** (128 tokens)
+  - **.genie/agents/neurons/wish.md** (1,373 tokens)
+  - **.genie/agents/code/neurons/wish/blueprint.md** (645 tokens)
+  - **.genie/agents/neurons/forge.md** (5,973 tokens)
+  - **.genie/agents/neurons/review.md** (3,287 tokens)
   - **.genie/docs/mcp-interface.md** (758 tokens)
 
 <!-- AUTO-GENERATED-END -->
