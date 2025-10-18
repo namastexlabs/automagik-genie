@@ -6,9 +6,17 @@
 
 ## 🎯 Active Sessions
 
-None - All sessions completed
+### Skills Prioritization & Architecture (SESSION CLOSING)
+**Work:** Genie framework optimization - skills loading, routing, automation
+**Deliverables:**
+- ✅ AGENTS.md reorganized (Priority 1-5 + Reference-only)
+- ✅ routing.md created (orchestrator decision flowchart)
+- ✅ cli-loading-strategy.md created (token efficiency)
+- ⏳ 4 workflow scripts designed (await write permissions)
+**Evidence:** `.genie/wishes/skills-prioritization/skills-prioritization-wish.md`
+**Status:** Ready for closure + next phase
 
-**Latest work:** RC21 Complete + Archive Cleanup (2025-10-18 04:41 UTC)
+**Latest work:** Skills prioritization + automation (2025-10-18 07:30-10:00 UTC)
 
 ---
 

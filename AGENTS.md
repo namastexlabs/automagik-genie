@@ -12,38 +12,58 @@
 
 ## Core Skills (Behavioral Foundations)
 
-All critical behavioral skills loaded via @ references for token efficiency:
+Skills organized by priority tier. **`@enabled`** means auto-loaded every session. **Reference-only** means search when needed via `grep`.
 
+### ⭐ PRIORITY 1-5 (`@enabled` - Core Behavioral Stack)
+
+**Tier 1 (Identity):**
 @.genie/agents/code/skills/know-yourself.md
+
+**Tier 2 (Decision Framework):**
 @.genie/agents/code/skills/evidence-based-thinking.md
-@.genie/agents/code/skills/publishing-protocol.md
-@.genie/agents/code/skills/delegation-discipline.md
-@.genie/agents/code/skills/role-clarity-protocol.md
-@.genie/agents/code/skills/execution-integrity-protocol.md
-@.genie/agents/code/skills/triad-maintenance-protocol.md
-@.genie/agents/code/skills/persistent-tracking-protocol.md
-@.genie/agents/code/skills/no-backwards-compatibility.md
-@.genie/agents/code/skills/experimentation-protocol.md
-@.genie/agents/code/skills/agent-configuration.md
-@.genie/agents/code/skills/file-naming-rules.md
 @.genie/agents/code/skills/routing-decision-matrix.md
-@.genie/agents/code/skills/evidence-storage.md
-@.genie/agents/code/skills/prompting-standards.md
-@.genie/agents/code/skills/branch-tracker-guidance.md
+
+**Tier 3 (System Coordination):**
+@.genie/agents/code/skills/execution-integrity-protocol.md
+@.genie/agents/code/skills/persistent-tracking-protocol.md
+@.genie/agents/code/skills/meta-learn-protocol.md
+@.genie/agents/code/skills/wish-initiation-rule.md
+
+**Tier 4 (Discovery & Tools):**
+@.genie/agents/code/skills/delegation-discipline.md
 @.genie/agents/code/skills/blocker-protocol.md
 @.genie/agents/code/skills/chat-mode-helpers.md
-@.genie/agents/code/skills/forge-mcp-pattern.md
-@.genie/agents/code/skills/meta-learn-protocol.md
-@.genie/agents/code/skills/tool-requirements.md
+@.genie/agents/code/skills/experimentation-protocol.md
 @.genie/agents/code/skills/orchestration-protocols.md
+@.genie/agents/code/skills/parallel-execution.md
+
+**Tier 5 (Guardrails):**
+@.genie/agents/code/skills/sequential-questioning.md
+@.genie/agents/code/skills/no-backwards-compatibility.md
+
+### 📖 Reference-Only (Search When Needed)
+
+Conventions, tools, patterns - do NOT auto-load. Use `grep` to search when needed.
+
+**Protocols & Tools:**
+@.genie/agents/code/skills/publishing-protocol.md (→ delegate to release neuron)
+@.genie/agents/code/skills/role-clarity-protocol.md (→ git hook enforces)
+@.genie/agents/code/skills/triad-maintenance-protocol.md (→ git hook enforces)
+@.genie/agents/code/skills/genie-integration.md (→ tool reference)
+@.genie/agents/code/skills/agent-configuration.md (→ technical setup)
+@.genie/agents/code/skills/tool-requirements.md (→ stack requirements)
+
+**Conventions:**
+@.genie/agents/code/skills/branch-tracker-guidance.md
+@.genie/agents/code/skills/evidence-storage.md
+@.genie/agents/code/skills/prompting-standards.md
+@.genie/agents/code/skills/workspace-system.md
+@.genie/agents/code/skills/file-naming-rules.md
 @.genie/agents/code/skills/execution-patterns.md
 @.genie/agents/code/skills/wish-document-management.md
-@.genie/agents/code/skills/genie-integration.md
-@.genie/agents/code/skills/missing-context-protocol.md
-@.genie/agents/code/skills/parallel-execution.md
-@.genie/agents/code/skills/workspace-system.md
 @.genie/agents/code/skills/forge-integration.md
-@.genie/agents/code/skills/sequential-questioning.md
+@.genie/agents/code/skills/forge-mcp-pattern.md
+@.genie/agents/code/skills/missing-context-protocol.md
 
 ## GitHub Workflow Patterns
 
