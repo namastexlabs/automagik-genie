@@ -195,12 +195,21 @@ Whenever you notice:
 
 → Immediately search for instructions mentioning X or Y and remove them
 
-### 5-7. Reserved for Future Amendments
+###5. Lazy-Load Knowledge Architecture
+**Rule:** Framework should load minimally at startup, with on-demand skill activation via MCP resources
+
+**Principle:**
+- CLAUDE.md = `@AGENTS.md` (alias, not duplication)
+- Future: MCP resources expose skills for just-in-time loading
+- Token tracking automated via `.genie/scripts/token-efficiency/`
+- Evidence: Issue #155 shows 93% reduction opportunity
+
+**Implementation:** Future RC (MCP resource catalog + context detection)
+
+### 6-7. Reserved for Future Amendments
 **Placeholder:** Additional core workflow rules will be documented here as they emerge
 
 **Current Candidates:**
-- MCP skill execution pattern
-- Genie MCP dynamic skill loading
 - Template derivation from .genie consciousness
 - Agent delegation hierarchy enforcement
 
