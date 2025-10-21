@@ -78,128 +78,35 @@ See `.genie/` directory for comprehensive documentation:
 ### 1. No Wish Without Issue 🔴 CRITICAL
 **Rule:** Every wish execution MUST be linked to a GitHub issue
 
-**Process:**
-1. User requests work → Check for GitHub issue
-2. No issue? → Create issue first (requires discovery)
-3. Issue created → Create Forge task linked to issue
-4. Forge task → Execute wish workflow
+**Flow:** User request → GitHub issue → Forge task → PR → Close issue
 
-**Routing:**
-- New work without issue → Route to discovery skill
-- Discovery complete → Create GitHub issue
-- Issue exists → Create Forge task with issue reference
-
-**Enforcement:**
-- Genie checks for issue before creating wish task
-- Forge tasks must reference GitHub issue number
-- SESSION-STATE.md tracks issue↔task mapping
-
-**Why:**
-- Single source of truth (GitHub issues)
-- Prevents duplicate/orphaned work
-- Enables community visibility
-- Links wish→task→PR→issue lifecycle
+✅ **Do:** Check for issue first, create if missing, link to task
+❌ **Never:** Start work without GitHub issue reference
 
 ### 2. File Organization Pattern
-**Rule:** Root AGENTS.md contains full content, .genie/AGENTS.md is alias
-
-**Structure:**
-```
-/AGENTS.md              # Full framework documentation (source)
-/.genie/AGENTS.md       # @AGENTS.md (alias reference)
-```
-
-**Reason:**
-- Root file = primary discovery point
-- .genie/ = implementation details
-- Alias pattern established, documented
-
-**Maintenance:**
-- Update root AGENTS.md (source of truth)
-- .genie/AGENTS.md stays as @/AGENTS.md
-- Both patterns valid, this is our choice
+**Rule:** Root AGENTS.md is source, .genie/AGENTS.md and CLAUDE.md are `@AGENTS.md` aliases
 
 ### 3. Real-Time State Awareness
-**Rule:** SESSION-STATE.md must reflect live Forge Kanban state
+**Rule:** SESSION-STATE.md auto-syncs with Forge Kanban (git hooks + MCP startup)
 
-**Implementation:**
-- MCP startup sync (query all projects)
-- Git hook auto-update (pre-commit)
-- Optional: Polling loop (30s intervals)
-- Future: Forge MCP resources (push-based)
-
-**Schema:**
-```markdown
-## 📊 PROJECT: Name (id)
-### 🔥 In Progress (N)
-- task_id | Title | attempt: xxx
-### 👀 In Review (N)
-### 📝 Todo (N)
-
-## 🔗 GITHUB ISSUES MAPPING
-- #NNN → task_id, task_id
-```
-
-**Benefits:**
-- Genie always knows current state
-- Zero "what are you working on?" questions
-- Automatic orchestration awareness
-- Multi-project coordination
+✅ **Result:** Zero "what are you working on?" questions
+❌ **Never:** Manually update SESSION-STATE.md
 
 ### 4. Automation Through Removal 🔴 CRITICAL
 **Rule:** When features become automatic, remove instructions—don't document the automation
 
-**Core Principle:**
-Genie reduces its own cognitive load by:
-1. **Dividing work into the collective** (delegate to specialized agents)
-2. **Removing instructions when automation makes them obsolete**
-3. **NOT documenting automation** - absence of instructions IS the documentation
+**Pattern:** Feature automated → DELETE all related instructions (not "this is now automatic")
 
-**Pattern:**
-- Feature becomes automatic → REMOVE all related instructions
-- Don't replace with "this is now automatic" notes
-- Just eliminate the cognitive load entirely
-- Instructions about "how to set X" disappear when X auto-configures
+✅ **Keep:** Concepts for mental model, implementation code, historical reports
+❌ **Remove:** "How to set X" instructions when X auto-configures
 
-**Example: Base Branch Auto-Configuration**
+**Example:** Base branch auto-discovery → Removed all "set base_branch" instructions from 4 files
 
-**What changed:**
-- Forge MCP now has `default_base_branch` setting that auto-syncs with repository
-- Forge MCP now has `getOrCreateGenieProject()` that auto-discovers project by repo path
-- Agents no longer need to know/set/think about base branch or project ID
-- forge-executor.ts reads current git branch and updates Forge project automatically
-- forge-executor.ts matches `git_repo_path` to auto-find/create projects
-
-**What we removed:**
-- ✅ forge-architecture.md:23 - Removed "base_branch (main)" from API parameter documentation
-- ✅ git.md:221,271 - Removed "base branch" from project customization mentions (2 locations)
-- ✅ pr.md:42 - Removed "Use wrong base branch" from Never Do warnings
-- ✅ forge.md:430 - Removed hardcoded project ID UUID and "Confirm project ID" instruction
-
-**What we kept:**
-- ✅ forge.md: Explanations of base branch CONCEPT (where PRs merge) for mental model
-- ✅ Reports: Historical documentation about what base branch represented
-- ✅ Implementation: forge-executor.ts code that does the automation
-
-**Why this matters:**
-- Every removed instruction = reduced cognitive load
-- Automation serves us by making us forget, not remember
-- The goal is continuous self-simplification
-- Best documentation for automatic features = no documentation
-
-**Active opportunity scanning:**
-Whenever you notice:
-- "This used to require manual X, now it's automatic"
-- "We handle this automatically in the background"
-- "No need to configure Y anymore"
-
-→ Immediately search for instructions mentioning X or Y and remove them
-
-###5. Lazy-Load Knowledge Architecture
+### 5. Lazy-Load Knowledge Architecture
 **Rule:** Framework should load minimally at startup, with on-demand skill activation via MCP resources
 
 **Principle:**
-- Future: MCP resources expose skills for just-in-time loading
+- MCP resources expose skills for just-in-time loading
 - Token tracking automated via `.genie/scripts/token-efficiency/`
 - Evidence: Issue #155 shows 93% reduction opportunity
 
@@ -256,68 +163,3 @@ Whenever you notice:
 
 ## MCP Quick Reference
 See `@.genie/product/docs/mcp-interface.md` for complete documentation.
-
-## Knowledge Graph (Auto-Generated)
-<!-- AUTO-GENERATED-START: Do not edit manually -->
-**Last Updated:** !`date -u +"%Y-%m-%d %H:%M:%S UTC"`
-**Note:** Paths updated for new architecture (Genie → Collectives → Entities)
-**Total Tokens:** 43,560 (baseline for efficiency validation)
-
-**Distribution:**
-- Code Skills: 11,622 tokens (26.7%)
-- Universal Skills: 10,203 tokens (23.4%)
-- Advisory Teams: 8,643 tokens (19.8%)
-- Code Workflows: 7,328 tokens (16.8%)
-- Product Docs: 2,518 tokens (5.8%)
-- Core Framework: 1,843 tokens (4.2%)
-- Documentation: 758 tokens (1.7%)
-- Code Agents: 645 tokens (1.5%)
-
-**Hierarchy:**
-
-- **AGENTS.md** (1,843 tokens, +41,717 from 44 refs)
-  - **.genie/product/mission.md** (684 tokens)
-  - **.genie/product/tech-stack.md** (546 tokens)
-  - **.genie/product/roadmap.md** (594 tokens)
-  - **.genie/product/environment.md** (694 tokens)
-  - **.genie/skills/know-yourself.md** (1,392 tokens)
-  - **.genie/skills/evidence-based-thinking.md** (748 tokens)
-  - **.genie/skills/routing-decision-matrix.md** (1,251 tokens)
-  - **.genie/skills/execution-integrity-protocol.md** (643 tokens)
-  - **.genie/skills/persistent-tracking-protocol.md** (1,066 tokens)
-  - **.genie/skills/meta-learn-protocol.md** (648 tokens)
-  - **.genie/skills/delegation-discipline.md** (1,729 tokens)
-  - **.genie/skills/blocker-protocol.md** (97 tokens)
-  - **.genie/skills/chat-mode-helpers.md** (248 tokens)
-  - **.genie/skills/experimentation-protocol.md** (499 tokens)
-  - **.genie/skills/orchestration-protocols.md** (219 tokens)
-  - **.genie/skills/parallel-execution.md** (93 tokens)
-  - **.genie/skills/sequential-questioning.md** (1,275 tokens)
-  - **.genie/skills/no-backwards-compatibility.md** (295 tokens)
-  - **.genie/skills/role-clarity-protocol.md** (732 tokens)
-  - **.genie/skills/triad-maintenance-protocol.md** (1,315 tokens)
-  - **.genie/skills/wish-initiation-rule.md** (1,210 tokens)
-  - **.genie/skills/wish-document-management.md** (791 tokens)
-  - **.genie/skills/workspace-system.md** (104 tokens)
-  - **.genie/skills/execution-patterns.md** (110 tokens)
-  - **.genie/skills/missing-context-protocol.md** (128 tokens)
-  - **.genie/code/skills/publishing-protocol.md** (565 tokens)
-  - **.genie/code/skills/team-consultation-protocol.md** (1,858 tokens)
-  - **.genie/code/skills/genie-integration.md** (1,202 tokens)
-  - **.genie/code/skills/agent-configuration.md** (535 tokens)
-  - **.genie/code/skills/tool-requirements.md** (116 tokens)
-  - **.genie/code/skills/branch-tracker-guidance.md** (164 tokens)
-  - **.genie/code/skills/evidence-storage.md** (286 tokens)
-  - **.genie/code/skills/file-naming-rules.md** (293 tokens)
-  - **.genie/code/skills/forge-integration.md** (1,627 tokens)
-  - **.genie/code/skills/forge-mcp-pattern.md** (417 tokens)
-  - **.genie/code/workflows/wish.md** (1,373 tokens)
-  - **.genie/code/workflows/forge.md** (5,955 tokens)
-  - **.genie/code/agents/wish/blueprint.md** (645 tokens)
-  - **.genie/code/teams/tech-council/council.md** (2,235 tokens)
-  - **.genie/code/teams/tech-council/nayr.md** (2,013 tokens)
-  - **.genie/code/teams/tech-council/oettam.md** (2,489 tokens)
-  - **.genie/code/teams/tech-council/jt.md** (1,906 tokens)
-  - **.genie/docs/mcp-interface.md** (758 tokens)
-
-<!-- AUTO-GENERATED-END -->
