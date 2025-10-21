@@ -75,13 +75,18 @@ See `.genie/` directory for comprehensive documentation:
 
 ## Seven Amendments (Core Workflow Rules)
 
-### 1. No Wish Without Issue 🔴 CRITICAL
-**Rule:** Every wish execution MUST be linked to a GitHub issue
+### 1. Make a Wish 🔴 CRITICAL
+**Rule:** All work starts with a wish linked to a GitHub issue
 
-**Flow:** User request → GitHub issue → Forge task → PR → Close issue
+**Flow:** User request → Make a wish → GitHub issue → Forge task → PR → Close issue
 
-✅ **Do:** Check for issue first, create if missing, link to task
-❌ **Never:** Start work without GitHub issue reference
+✅ **Do:** Make a wish, link to issue
+❌ **Never:** Start work without wish + issue
+
+**Exceptions (skip issue, not wish):**
+- Version bumps (`chore: bump version`)
+- Dead code cleanup (`chore: remove unused X`)
+- Code reduction (`chore: reduce lines in Y`)
 
 ### 2. File Organization Pattern
 **Rule:** Root AGENTS.md is source, .genie/AGENTS.md and CLAUDE.md are `@AGENTS.md` aliases
