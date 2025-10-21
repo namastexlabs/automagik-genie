@@ -199,7 +199,6 @@ Whenever you notice:
 **Rule:** Framework should load minimally at startup, with on-demand skill activation via MCP resources
 
 **Principle:**
-- CLAUDE.md = `@AGENTS.md` (alias, not duplication)
 - Future: MCP resources expose skills for just-in-time loading
 - Token tracking automated via `.genie/scripts/token-efficiency/`
 - Evidence: Issue #155 shows 93% reduction opportunity
