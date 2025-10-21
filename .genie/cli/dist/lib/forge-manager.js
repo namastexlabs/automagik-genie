@@ -3,11 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.isForgeRunning = isForgeRunning;
-exports.waitForForgeReady = waitForForgeReady;
-exports.startForgeInBackground = startForgeInBackground;
-exports.stopForge = stopForge;
-exports.restartForge = restartForge;
+exports.restartForge = exports.stopForge = exports.startForgeInBackground = exports.waitForForgeReady = exports.isForgeRunning = void 0;
 const child_process_1 = require("child_process");
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
@@ -24,6 +20,7 @@ async function isForgeRunning(baseUrl = DEFAULT_BASE_URL) {
         return false;
     }
 }
+exports.isForgeRunning = isForgeRunning;
 async function waitForForgeReady(baseUrl = DEFAULT_BASE_URL, timeoutMs = 15000, intervalMs = 500) {
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
@@ -33,6 +30,7 @@ async function waitForForgeReady(baseUrl = DEFAULT_BASE_URL, timeoutMs = 15000, 
     }
     return false;
 }
+exports.waitForForgeReady = waitForForgeReady;
 function startForgeInBackground(opts) {
     const baseUrl = opts.baseUrl || DEFAULT_BASE_URL;
     const logDir = opts.logDir;
@@ -55,6 +53,7 @@ function startForgeInBackground(opts) {
     catch { }
     return { childPid: child.pid ?? -1 };
 }
+exports.startForgeInBackground = startForgeInBackground;
 function stopForge(logDir) {
     const pidPath = path_1.default.join(logDir, 'forge.pid');
     try {
@@ -72,6 +71,7 @@ function stopForge(logDir) {
     catch { }
     return false;
 }
+exports.stopForge = stopForge;
 async function restartForge(opts) {
     const baseUrl = opts.baseUrl || DEFAULT_BASE_URL;
     const logDir = opts.logDir;
@@ -83,3 +83,4 @@ async function restartForge(opts) {
     startForgeInBackground({ baseUrl, token: opts.token, logDir });
     return waitForForgeReady(baseUrl, 20000, 500);
 }
+exports.restartForge = restartForge;

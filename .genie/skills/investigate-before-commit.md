@@ -32,7 +32,7 @@ description: Pause and investigate before committing to any technical decision
 **Pattern:** Investigate first, commit later
 
 **For simple tasks:** Quick validation (read existing code, check patterns)
-**For complex features:** Multi-stage investigation (see @.genie/skills/wish-document-management.md)
+**For complex features:** Multi-stage investigation (see @.genie/skills/wish-lifecycle.md)
 
 ### Investigation Discipline
 

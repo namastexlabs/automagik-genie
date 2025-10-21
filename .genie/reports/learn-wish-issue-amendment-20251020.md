@@ -339,7 +339,7 @@ mcp__genie__run with agent="issue-check"
 **Add to AGENTS.md:**
 ```markdown
 ### Tier 6 (Workflow & State Management):
-- `@.genie/skills/wish-issue-linkage-rule.md` (NEW)
+- `@.genie/skills/wish-issue-linkage.md` (NEW)
 ```
 
 **New file:** `.genie/skills/wish-issue-linkage-rule.md`

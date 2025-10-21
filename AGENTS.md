@@ -116,7 +116,7 @@ See `.genie/` directory for comprehensive documentation:
 
 **Maintenance:**
 - Update root AGENTS.md (source of truth)
-- .genie/AGENTS.md stays as @reference
+- .genie/AGENTS.md stays as @/AGENTS.md
 - Both patterns valid, this is our choice
 
 ### 3. Real-Time State Awareness

@@ -167,18 +167,18 @@ ONLY mandatory skills auto-loaded in base prompt
 - `@.genie/skills/know-yourself.md`
 
 **Tier 2 (Decision Framework):**
-- `@.genie/skills/evidence-based-thinking.md`
+- `@.genie/skills/investigate-before-commit.md`
 - `@.genie/skills/routing-decision-matrix.md`
 
 **Tier 4 (Orchestration):**
-- `@.genie/skills/delegation-discipline.md`
+- `@.genie/skills/delegate-dont-do.md`
 
 **Tier 6 (Role Clarity):**
-- `@.genie/skills/role-clarity-protocol.md`
+- `@.genie/skills/orchestrator-not-implementor.md`
 
 **Tier 5 (Guardrails - Optional):**
-- `@.genie/skills/sequential-questioning.md` (behavioral guideline)
-- `@.genie/skills/no-backwards-compatibility.md` (behavioral guideline)
+- `@.genie/skills/ask-one-at-a-time.md` (behavioral guideline)
+- `@.genie/skills/break-things-move-fast.md` (behavioral guideline)
 
 ### EXECUTABLE (On-Demand via MCP)
 

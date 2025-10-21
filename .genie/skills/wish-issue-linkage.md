@@ -289,9 +289,9 @@ Genie: [No issue link in wish]  <-- VIOLATION!
 **Enforced by:** wish.md orchestrator, review.md validator
 **Violation handling:** BLOCK wish creation, route to issue-creation
 **Related skills:**
-- Rule #2: Wish Initiation (`@.genie/skills/wish-initiation-rule.md`)
-- Wish Document Management (`@.genie/skills/wish-document-management.md`)
-- Persistent Tracking Protocol (`@.genie/skills/persistent-tracking-protocol.md`)
+- Rule #2: Wish Initiation (`@.genie/skills/wish-initiation.md`)
+- Wish Document Management (`@.genie/skills/wish-lifecycle.md`)
+- Persistent Tracking Protocol (`@.genie/skills/track-long-running-tasks.md`)
 
 ---
 
@@ -357,7 +357,7 @@ echo "Rule #6 violation: Retroactively linked issue #$ISSUE_NUM" >> \
 // In wish.md orchestrator
 async function ensureIssueExists(userRequest: string) {
   // Load skill dynamically
-  const skill = await loadSkill('@.genie/skills/wish-issue-linkage-rule.md');
+  const skill = await loadSkill('@.genie/skills/wish-issue-linkage.md');
 
   // Execute skill logic
   const validation = await skill.validateIssue(userRequest);

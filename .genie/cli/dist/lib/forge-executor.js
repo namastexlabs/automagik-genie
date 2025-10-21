@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ForgeExecutor = void 0;
-exports.createForgeExecutor = createForgeExecutor;
+exports.createForgeExecutor = exports.ForgeExecutor = void 0;
 // @ts-ignore - forge.js is compiled JS without type declarations
 const forge_js_1 = require("../../../../forge.js");
 class ForgeExecutor {
@@ -123,3 +122,4 @@ function createForgeExecutor(config = {}) {
     };
     return new ForgeExecutor({ ...defaultConfig, ...config });
 }
+exports.createForgeExecutor = createForgeExecutor;

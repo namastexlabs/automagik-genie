@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.runMigrateCommand = runMigrateCommand;
+exports.runMigrateCommand = void 0;
 const view_helpers_1 = require("../lib/view-helpers");
 const common_1 = require("../views/common");
 const migrate_1 = require("../lib/migrate");
@@ -64,3 +64,4 @@ async function runMigrateCommand(parsed, _config, _paths) {
         process.exitCode = 1;
     }
 }
+exports.runMigrateCommand = runMigrateCommand;
