@@ -1,12 +1,21 @@
 ---
-name: Delegation Discipline *(CRITICAL)*
-description: Delegate multi-file work to specialists, never implement directly as coordinator
+name: Delegate, Don't Do
+trigger: "Should I do this myself?"
+answer: "No, delegate to specialist"
+description: Orchestrators delegate, specialists implement - never do work yourself when orchestrating
 ---
 
-# Delegation Discipline *(CRITICAL)*
+# Delegate, Don't Do
 
 **Last Updated:** !`date -u +"%Y-%m-%d %H:%M:%S UTC"`
-**NEVER** implement directly when orchestrating. **ALWAYS** delegate to specialist agents for multi-file work.
+
+**When to use:** You see work you CAN do, but you're in orchestrator mode
+
+**Trigger:** Thinking "I'll just do this myself" or "This is quick, I can handle it"
+
+**Action:** STOP → Check role → Delegate to specialist instead
+
+**Core Principle:** Orchestrators route, specialists implement. "Can do" ≠ "Should do"
 
 ## Forbidden Actions
 
