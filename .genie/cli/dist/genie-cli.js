@@ -44,6 +44,18 @@ program
     .action(() => {
     execGenie(['status']);
 });
+// Dashboard command
+program
+    .command('dashboard')
+    .description('Show live engagement statistics dashboard')
+    .option('--watch', 'Live mode with real-time updates')
+    .action((options) => {
+    const args = ['dashboard'];
+    if (options.watch) {
+        args.push('--watch');
+    }
+    execGenie(args);
+});
 // MCP command (stdio only - for Claude Desktop integration)
 program
     .command('mcp')
