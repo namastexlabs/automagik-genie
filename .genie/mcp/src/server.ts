@@ -32,10 +32,12 @@ import { promptToolSchema, executePromptTool } from './tools/prompt-tool.js';
 
 // Import Stats Service (Dashboard integration)
 import { StatsService } from './services/stats-service.js';
+import { DashboardServer, statsEventEmitter } from './dashboard-server.js';
 
 const execFileAsync = promisify(execFile);
 
 const PORT = process.env.MCP_PORT ? parseInt(process.env.MCP_PORT) : 8885;
+const DASHBOARD_PORT = process.env.DASHBOARD_PORT ? parseInt(process.env.DASHBOARD_PORT) : 8886;
 const TRANSPORT = process.env.MCP_TRANSPORT || 'stdio';
 
 // Find actual workspace root by searching upward for .genie/ directory
@@ -841,6 +843,19 @@ console.error('WebSocket: Real-time streaming enabled');
 console.error('');
 console.error('🔄 Syncing agent profiles to Forge...');
 
+// Initialize Dashboard Server (HTTP + WebSocket for stats)
+const dashboardServer = new DashboardServer({
+  port: DASHBOARD_PORT,
+  statsService,
+  enableCors: true
+});
+
+// Connect stats event emitter to dashboard server
+statsEventEmitter.setDashboardServer(dashboardServer);
+
+// Start dashboard server
+dashboardServer.start();
+
 // Sync agents before starting server (async but non-blocking)
 syncAgentProfilesToForge().catch(err => {
   console.warn(`⚠️  Background agent sync failed: ${err.message}`);
@@ -867,6 +882,19 @@ if (TRANSPORT === 'stdio') {
   console.error('Valid options: stdio (default), httpStream, http');
   process.exit(1);
 }
+
+// Graceful shutdown handling for dashboard server
+process.on('SIGINT', () => {
+  console.error('\nReceived SIGINT, shutting down...');
+  dashboardServer.stop();
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  console.error('\nReceived SIGTERM, shutting down...');
+  dashboardServer.stop();
+  process.exit(0);
+});
 function resolveCliInvocation(): CliInvocation {
   const distEntry = path.join(WORKSPACE_ROOT, '.genie/cli/dist/genie-cli.js');
   if (fs.existsSync(distEntry)) {
