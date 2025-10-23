@@ -30,6 +30,9 @@ import { forgeToolSchema, executeForgeTool } from './tools/forge-tool.js';
 import { reviewToolSchema, executeReviewTool } from './tools/review-tool.js';
 import { promptToolSchema, executePromptTool } from './tools/prompt-tool.js';
 
+// Import Stats Service (Dashboard integration)
+import { StatsService } from './services/stats-service.js';
+
 const execFileAsync = promisify(execFile);
 
 const PORT = process.env.MCP_PORT ? parseInt(process.env.MCP_PORT) : 8885;
@@ -49,6 +52,26 @@ function findWorkspaceRoot(): string {
 }
 
 const WORKSPACE_ROOT = findWorkspaceRoot();
+
+// Initialize Stats Service
+const statsService = new StatsService(WORKSPACE_ROOT);
+
+// Session tracking for stats
+let currentMcpSessionId: string | null = null;
+
+function getOrCreateMcpSession(): string {
+  if (!currentMcpSessionId) {
+    // Generate session ID: mcp-YYYYMMDD-HHMM-random
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0, 16).replace(/[-:T]/g, '');
+    const random = Math.random().toString(36).substring(2, 6);
+    currentMcpSessionId = `mcp-${dateStr}-${random}`;
+
+    // Record session start (project ID will be updated when we know it)
+    statsService.recordSessionStart(currentMcpSessionId, 'mcp-server');
+  }
+  return currentMcpSessionId;
+}
 
 interface CliInvocation {
   command: string;
@@ -442,6 +465,10 @@ server.addTool({
       }
       const { stdout, stderr } = await runCliCommand(cliArgs, 120000);
       const output = stdout + (stderr ? `\n\nStderr:\n${stderr}` : '');
+
+      // Track agent invocation in stats
+      const sessionId = getOrCreateMcpSession();
+      statsService.recordAgentInvocation(sessionId, resolvedAgent);
 
       const { displayId } = transformDisplayPath(resolvedAgent);
       const aliasNote = AGENT_ALIASES[args.agent] ? ` (alias: ${args.agent} → ${resolvedAgent})` : '';
