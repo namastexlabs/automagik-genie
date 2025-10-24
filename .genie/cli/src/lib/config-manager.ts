@@ -1,8 +1,9 @@
 /**
  * Configuration Manager for Genie MCP Server
  *
- * Handles loading and saving of ~/.genie/config.yaml with support for:
- * - MCP auth tokens
+ * Handles loading and saving of ~/.genie/config.yaml with OAuth2.1 support:
+ * - OAuth2 client credentials (client_id, client_secret)
+ * - JWT signing keys (RSA key pair)
  * - Tunnel configuration
  * - Server settings
  */
@@ -12,20 +13,18 @@ import path from 'path';
 import YAML from 'yaml';
 import os from 'os';
 
-export interface AuthConfig {
-  token: string;
-  created: string;
-  oauth2?: OAuth2Config;
-}
-
 export interface OAuth2Config {
-  enabled: boolean;
   clientId: string;
   clientSecret: string;
   signingKey: string; // Private key for signing JWTs (PEM format)
   publicKey: string;  // Public key for verification (PEM format)
   tokenExpiry: number; // Token expiry in seconds (default: 3600)
   issuer: string;      // Token issuer (e.g., 'genie-mcp-server')
+}
+
+export interface AuthConfig {
+  oauth2: OAuth2Config;
+  created: string;
 }
 
 export interface TunnelConfig {
@@ -74,9 +73,9 @@ export function loadConfig(): GenieConfig | null {
     const content = fs.readFileSync(CONFIG_FILE, 'utf8');
     const config = YAML.parse(content) as GenieConfig;
 
-    // Validate required structure
-    if (!config.mcp || !config.mcp.auth || !config.mcp.auth.token) {
-      throw new Error('Invalid config: missing mcp.auth.token');
+    // Validate required OAuth2 structure
+    if (!config.mcp?.auth?.oauth2?.clientId) {
+      throw new Error('Invalid config: missing OAuth2 configuration');
     }
 
     return config;
@@ -86,12 +85,13 @@ export function loadConfig(): GenieConfig | null {
 }
 
 /**
- * Load auth token from config, or return null if not configured
+ * Load OAuth2 config from config file
+ * Returns null if not configured
  */
-export function loadAuthToken(): string | null {
+export function loadOAuth2Config(): OAuth2Config | null {
   try {
     const config = loadConfig();
-    return config?.mcp?.auth?.token || null;
+    return config?.mcp?.auth?.oauth2 || null;
   } catch {
     return null;
   }
@@ -116,15 +116,24 @@ export function saveConfig(config: GenieConfig): void {
 }
 
 /**
- * Create default configuration with generated auth token
+ * Create default configuration with OAuth2.1 credentials (async)
  */
-export function createDefaultConfig(ngrokToken?: string, enableOAuth2?: boolean): GenieConfig {
-  const { generateToken } = require('./auth-token');
+export async function createDefaultConfig(ngrokToken?: string): Promise<GenieConfig> {
+  const oauth2Utils = require('./oauth2-utils');
+  const { clientId, clientSecret } = oauth2Utils.generateClientCredentials();
+  const { privateKey, publicKey } = await oauth2Utils.generateKeyPair();
 
-  const config: GenieConfig = {
+  return {
     mcp: {
       auth: {
-        token: generateToken(),
+        oauth2: {
+          clientId,
+          clientSecret,
+          signingKey: privateKey,
+          publicKey: publicKey,
+          tokenExpiry: 3600, // 1 hour
+          issuer: 'genie-mcp-server'
+        },
         created: new Date().toISOString()
       },
       tunnel: {
@@ -138,85 +147,13 @@ export function createDefaultConfig(ngrokToken?: string, enableOAuth2?: boolean)
       }
     }
   };
-
-  // Add OAuth2 configuration if requested
-  if (enableOAuth2) {
-    const oauth2Utils = require('./oauth2-utils');
-    const { clientId, clientSecret } = oauth2Utils.generateClientCredentials();
-
-    // Generate keys synchronously using promise wrapper
-    let privateKey: string;
-    let publicKey: string;
-
-    // Note: This is a workaround for sync context - in real usage this should be async
-    const keyPair = oauth2Utils.generateKeyPair();
-    if (keyPair instanceof Promise) {
-      throw new Error('Cannot generate OAuth2 keys synchronously. Use createDefaultConfigAsync instead.');
-    }
-
-    config.mcp.auth.oauth2 = {
-      enabled: true,
-      clientId,
-      clientSecret,
-      signingKey: '', // Will be set by async version
-      publicKey: '', // Will be set by async version
-      tokenExpiry: 3600, // 1 hour
-      issuer: 'genie-mcp-server'
-    };
-  }
-
-  return config;
 }
 
 /**
- * Create default configuration with OAuth2 support (async version)
- */
-export async function createDefaultConfigAsync(ngrokToken?: string, enableOAuth2?: boolean): Promise<GenieConfig> {
-  const { generateToken } = require('./auth-token');
-
-  const config: GenieConfig = {
-    mcp: {
-      auth: {
-        token: generateToken(),
-        created: new Date().toISOString()
-      },
-      tunnel: {
-        enabled: !!ngrokToken,
-        provider: 'ngrok',
-        token: ngrokToken || null
-      },
-      server: {
-        port: 8885,
-        transport: 'httpStream'
-      }
-    }
-  };
-
-  // Add OAuth2 configuration if requested
-  if (enableOAuth2) {
-    const oauth2Utils = require('./oauth2-utils');
-    const { clientId, clientSecret } = oauth2Utils.generateClientCredentials();
-    const { privateKey, publicKey } = await oauth2Utils.generateKeyPair();
-
-    config.mcp.auth.oauth2 = {
-      enabled: true,
-      clientId,
-      clientSecret,
-      signingKey: privateKey,
-      publicKey: publicKey,
-      tokenExpiry: 3600, // 1 hour
-      issuer: 'genie-mcp-server'
-    };
-  }
-
-  return config;
-}
-
-/**
- * Load or create config
+ * Load or create config (async)
  * Returns existing config if present, creates default if missing
  */
-export function loadOrCreateConfig(ngrokToken?: string): GenieConfig {
+export async function loadOrCreateConfig(ngrokToken?: string): Promise<GenieConfig> {
   try {
     const existing = loadConfig();
     if (existing) {
@@ -226,7 +163,7 @@ export function loadOrCreateConfig(ngrokToken?: string): GenieConfig {
     // Config exists but is invalid, create new
   }
 
-  const config = createDefaultConfig(ngrokToken);
+  const config = await createDefaultConfig(ngrokToken);
   saveConfig(config);
   return config;
 }

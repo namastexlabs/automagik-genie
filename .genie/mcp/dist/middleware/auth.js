@@ -2,58 +2,35 @@
 /**
  * Authentication Middleware for Genie MCP Server
  *
- * Supports dual authentication modes:
- * 1. Legacy Bearer tokens (simple token comparison)
- * 2. OAuth2.1 JWT tokens (signed JWT with verification)
+ * OAuth2.1 JWT token validation (RFC 6749, RFC 9728)
+ * - Validates JWT access tokens with RS256 signatures
+ * - Checks issuer, audience, and expiration
+ * - Returns 401 Unauthorized with WWW-Authenticate header per RFC 6750
  *
- * Allows /health and OAuth2 endpoints without authentication
- * Returns 401 Unauthorized for missing or invalid tokens
+ * Public endpoints (no auth required):
+ * - /health - Health check
+ * - /.well-known/oauth-protected-resource - Resource metadata
+ * - /oauth/token - Token endpoint
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createAuthMiddleware = createAuthMiddleware;
-exports.attachAuthMiddleware = attachAuthMiddleware;
 exports.validateHttpAuth = validateHttpAuth;
-const oauth2_utils_js_1 = require("../lib/oauth2-utils.js");
-/**
- * Validate token (supports both legacy Bearer and OAuth2 JWT)
- * Returns true if valid, false otherwise
- */
-async function validateToken(token, storedToken, oauth2Config, serverUrl) {
-    // Check if token is a JWT
-    if ((0, oauth2_utils_js_1.isJWT)(token)) {
-        // OAuth2 JWT token validation
-        if (!oauth2Config || !oauth2Config.enabled || !serverUrl) {
-            // OAuth2 not configured, reject JWT tokens
-            return false;
-        }
-        try {
-            const payload = await (0, oauth2_utils_js_1.verifyAccessToken)(token, oauth2Config.publicKey, oauth2Config.issuer, `${serverUrl}/mcp` // Expected audience
-            );
-            return payload !== null; // Valid if payload decoded successfully
-        }
-        catch {
-            return false;
-        }
+// Import verification function at runtime (dynamic to avoid TypeScript cross-project issues)
+let verifyAccessToken;
+// Initialize the verification function lazily
+function getVerifyAccessToken() {
+    if (!verifyAccessToken) {
+        const oauth2Utils = require('../../../cli/dist/lib/oauth2-utils.js');
+        verifyAccessToken = oauth2Utils.verifyAccessToken;
     }
-    // Legacy Bearer token validation (constant-time comparison)
-    try {
-        if (token.length === storedToken.length) {
-            const crypto = require('crypto');
-            return crypto.timingSafeEqual(Buffer.from(token), Buffer.from(storedToken));
-        }
-    }
-    catch {
-        return false;
-    }
-    return false;
+    return verifyAccessToken;
 }
 /**
- * Create authentication middleware
- * Validates Bearer token on all requests except public paths
- * Supports both legacy tokens and OAuth2 JWTs
+ * Create OAuth2 authentication middleware
+ * Validates JWT Bearer tokens on all requests except public paths
  */
 function createAuthMiddleware(options) {
-    const { storedToken, publicPaths = ['/health', '/.well-known/oauth-protected-resource', '/oauth/token'], oauth2Config, serverUrl } = options;
+    const { oauth2Config, serverUrl, publicPaths = ['/health', '/.well-known/oauth-protected-resource', '/oauth/token'] } = options;
     return async function authMiddleware(req, res, next) {
         // Check if path is public (no auth required)
         const pathname = req.url?.split('?')[0] || '';
@@ -66,92 +43,94 @@ function createAuthMiddleware(options) {
         const authHeader = req.headers.authorization;
         // Check if Authorization header exists
         if (!authHeader) {
-            const wwwAuth = oauth2Config?.enabled
-                ? `Bearer realm="Genie MCP Server", error="invalid_token", error_description="Missing Authorization header"`
-                : undefined;
             res.writeHead(401, {
                 'Content-Type': 'application/json',
-                ...(wwwAuth && { 'WWW-Authenticate': wwwAuth }),
+                'WWW-Authenticate': `Bearer realm="Genie MCP Server", error="invalid_token", error_description="Missing Authorization header"`
             });
             res.end(JSON.stringify({ error: 'Unauthorized: Missing Authorization header' }));
             return;
         }
         // Check if it's a Bearer token
         if (!authHeader.startsWith('Bearer ')) {
-            res.writeHead(401, { 'Content-Type': 'application/json' });
+            res.writeHead(401, {
+                'Content-Type': 'application/json',
+                'WWW-Authenticate': `Bearer realm="Genie MCP Server", error="invalid_token", error_description="Invalid Authorization scheme (must be Bearer)"`
+            });
             res.end(JSON.stringify({ error: 'Unauthorized: Invalid Authorization scheme' }));
             return;
         }
-        // Extract token
-        const token = authHeader.slice(7);
-        // Validate token (supports both legacy and OAuth2 JWT)
-        const isValid = await validateToken(token, storedToken, oauth2Config, serverUrl);
-        if (!isValid) {
-            const wwwAuth = oauth2Config?.enabled
-                ? `Bearer realm="Genie MCP Server", error="invalid_token", error_description="Token validation failed"`
-                : undefined;
+        // Extract JWT token
+        const token = authHeader.slice(7); // Remove 'Bearer ' prefix
+        // Verify JWT token
+        try {
+            const verify = getVerifyAccessToken();
+            const payload = await verify(token, oauth2Config.publicKey, oauth2Config.issuer, `${serverUrl}/mcp` // Expected audience
+            );
+            if (!payload) {
+                // Token verification failed
+                res.writeHead(401, {
+                    'Content-Type': 'application/json',
+                    'WWW-Authenticate': `Bearer realm="Genie MCP Server", error="invalid_token", error_description="Token validation failed"`
+                });
+                res.end(JSON.stringify({ error: 'Unauthorized: Invalid token' }));
+                return;
+            }
+            // Token is valid, proceed
+            if (next)
+                next();
+        }
+        catch (error) {
+            // Token verification threw an error
             res.writeHead(401, {
                 'Content-Type': 'application/json',
-                ...(wwwAuth && { 'WWW-Authenticate': wwwAuth }),
+                'WWW-Authenticate': `Bearer realm="Genie MCP Server", error="invalid_token", error_description="Token verification error"`
             });
-            res.end(JSON.stringify({ error: 'Unauthorized: Invalid token' }));
-            return;
+            res.end(JSON.stringify({ error: 'Unauthorized: Token verification error' }));
         }
-        // Token is valid, proceed
-        if (next)
-            next();
     };
 }
 /**
- * Attach auth middleware to Express-like router/app
- */
-function attachAuthMiddleware(app, options) {
-    const middleware = createAuthMiddleware(options);
-    // For Express-like apps
-    if (app.use && typeof app.use === 'function') {
-        app.use((req, res, next) => {
-            middleware(req, res, next);
-        });
-    }
-}
-/**
- * Create a simple HTTP request handler that validates auth
+ * Validate HTTP request authentication
  * Returns true if auth is valid, false otherwise
  * Automatically sends 401 response if auth fails
- * Supports both legacy Bearer tokens and OAuth2 JWTs
  */
-async function validateHttpAuth(req, res, storedToken, publicPaths = ['/health', '/.well-known/oauth-protected-resource', '/oauth/token'], oauth2Config, serverUrl) {
+async function validateHttpAuth(req, res, oauth2Config, serverUrl, publicPaths = ['/health', '/.well-known/oauth-protected-resource', '/oauth/token']) {
     const pathname = req.url?.split('?')[0] || '';
     // Public paths bypass auth
     if (publicPaths.includes(pathname)) {
         return true;
     }
-    // Extract and validate token
+    // Extract Authorization header
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        const wwwAuth = oauth2Config?.enabled
-            ? `Bearer realm="Genie MCP Server", error="invalid_token", error_description="Missing or invalid Authorization header"`
-            : undefined;
         res.writeHead(401, {
             'Content-Type': 'application/json',
-            ...(wwwAuth && { 'WWW-Authenticate': wwwAuth }),
+            'WWW-Authenticate': `Bearer realm="Genie MCP Server", error="invalid_token", error_description="Missing or invalid Authorization header"`
         });
         res.end(JSON.stringify({ error: 'Unauthorized: Missing or invalid Authorization header' }));
         return false;
     }
     const token = authHeader.slice(7);
-    // Validate token (supports both legacy and OAuth2 JWT)
-    const isValid = await validateToken(token, storedToken, oauth2Config, serverUrl);
-    if (!isValid) {
-        const wwwAuth = oauth2Config?.enabled
-            ? `Bearer realm="Genie MCP Server", error="invalid_token", error_description="Token validation failed"`
-            : undefined;
+    // Verify JWT token
+    try {
+        const verify = getVerifyAccessToken();
+        const payload = await verify(token, oauth2Config.publicKey, oauth2Config.issuer, `${serverUrl}/mcp`);
+        if (!payload) {
+            res.writeHead(401, {
+                'Content-Type': 'application/json',
+                'WWW-Authenticate': `Bearer realm="Genie MCP Server", error="invalid_token", error_description="Token validation failed"`
+            });
+            res.end(JSON.stringify({ error: 'Unauthorized: Invalid token' }));
+            return false;
+        }
+        return true;
+    }
+    catch (error) {
         res.writeHead(401, {
             'Content-Type': 'application/json',
-            ...(wwwAuth && { 'WWW-Authenticate': wwwAuth }),
+            'WWW-Authenticate': `Bearer realm="Genie MCP Server", error="invalid_token", error_description="Token verification error"`
         });
-        res.end(JSON.stringify({ error: 'Unauthorized: Invalid token' }));
+        res.end(JSON.stringify({ error: 'Unauthorized: Token verification error' }));
         return false;
     }
-    return true;
 }

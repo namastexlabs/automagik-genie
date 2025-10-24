@@ -57,6 +57,7 @@ const jose = __importStar(require("jose"));
 async function generateKeyPair() {
     const { privateKey, publicKey } = await jose.generateKeyPair('RS256', {
         modulusLength: 2048,
+        extractable: true, // Allow key export for PEM format
     });
     const privateKeyPem = await jose.exportPKCS8(privateKey);
     const publicKeyPem = await jose.exportSPKI(publicKey);

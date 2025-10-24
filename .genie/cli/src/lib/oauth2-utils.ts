@@ -15,6 +15,7 @@ import * as jose from 'jose';
 export async function generateKeyPair(): Promise<{ privateKey: string; publicKey: string }> {
   const { privateKey, publicKey } = await jose.generateKeyPair('RS256', {
     modulusLength: 2048,
+    extractable: true, // Allow key export for PEM format
   });
 
   const privateKeyPem = await jose.exportPKCS8(privateKey);

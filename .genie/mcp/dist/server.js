@@ -739,38 +739,36 @@ if (TRANSPORT === 'stdio') {
     console.error('Ready for Claude Desktop or MCP Inspector connections');
 }
 else if (TRANSPORT === 'httpStream' || TRANSPORT === 'http') {
-    // Load auth token from config for HTTP stream validation
-    // Note: Auth validation is applied at the HTTP transport level by FastMCP
-    // Token is loaded but FastMCP handles the actual validation in its HTTP middleware
-    let authToken = null;
+    // Load OAuth2 config for HTTP stream validation
+    let oauth2Configured = false;
     try {
-        // Try to load auth token from config
-        // Path: Try to load from CLI lib (it's in same repo)
         const configModPath = path_1.default.join(WORKSPACE_ROOT, '.genie', 'cli', 'dist', 'lib', 'config-manager.js');
         if (fs_1.default.existsSync(configModPath)) {
-            const { loadAuthToken } = require(configModPath);
-            authToken = loadAuthToken();
+            const { loadOAuth2Config } = require(configModPath);
+            const oauth2Config = loadOAuth2Config();
+            oauth2Configured = !!oauth2Config;
         }
     }
     catch (error) {
-        console.warn('⚠️  Failed to load auth token, running without auth');
+        console.warn('⚠️  Failed to load OAuth2 config, running without auth');
     }
     server.start({
         transportType: 'httpStream',
         httpStream: {
             port: PORT,
-            // Optional: Add auth middleware if available via FastMCP
-            // This requires FastMCP support for custom middleware
+            // OAuth2 validation handled by FastMCP or custom middleware
         }
     });
     console.error(`✅ Server started successfully (HTTP Stream)`);
     console.error(`HTTP Stream: http://localhost:${PORT}/mcp`);
     console.error(`SSE: http://localhost:${PORT}/sse`);
-    if (authToken) {
-        console.error(`🔑 Auth: Bearer token required (✓ configured)`);
+    console.error(`OAuth Token Endpoint: http://localhost:${PORT}/oauth/token`);
+    console.error(`Metadata: http://localhost:${PORT}/.well-known/oauth-protected-resource`);
+    if (oauth2Configured) {
+        console.error(`🔐 Auth: OAuth2.1 configured (JWT tokens required)`);
     }
     else {
-        console.error(`⚠️  Auth: No token configured - running in open mode`);
+        console.error(`⚠️  Auth: No OAuth2 configured - running in open mode`);
     }
 }
 else {
