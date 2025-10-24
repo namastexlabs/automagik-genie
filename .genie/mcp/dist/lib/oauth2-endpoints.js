@@ -5,12 +5,25 @@
  * Implements:
  * - /.well-known/oauth-protected-resource (RFC 9728)
  * - /oauth/token (client_credentials flow)
+ *
+ * Note: We implement our own token endpoint because the MCP SDK doesn't support
+ * client_credentials grant type yet (it only supports authorization_code and refresh_token).
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateResourceMetadata = generateResourceMetadata;
-exports.handleWellKnownEndpoint = handleWellKnownEndpoint;
+exports.handleProtectedResourceMetadata = handleProtectedResourceMetadata;
 exports.handleTokenEndpoint = handleTokenEndpoint;
-const oauth2_utils_js_1 = require("./oauth2-utils.js");
+// Dynamic import of OAuth2 utilities
+let generateAccessTokenFn;
+let validateClientCredentialsFn;
+function loadOAuth2Utils() {
+    if (!generateAccessTokenFn) {
+        const oauth2Utils = require('../../../cli/dist/lib/oauth2-utils.js');
+        generateAccessTokenFn = oauth2Utils.generateAccessToken;
+        validateClientCredentialsFn = oauth2Utils.validateClientCredentials;
+    }
+    return { generateAccessTokenFn, validateClientCredentialsFn };
+}
 /**
  * Generate protected resource metadata
  *
@@ -30,13 +43,11 @@ function generateResourceMetadata(serverUrl) {
  * Handle /.well-known/oauth-protected-resource endpoint
  * Returns metadata as JSON per RFC 9728
  */
-function handleWellKnownEndpoint(req, res, serverUrl) {
+function handleProtectedResourceMetadata(req, res, serverUrl) {
     const metadata = generateResourceMetadata(serverUrl);
-    res.writeHead(200, {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
-    });
-    res.end(JSON.stringify(metadata, null, 2));
+    res.status(200)
+        .set('Cache-Control', 'public, max-age=3600') // Cache for 1 hour
+        .json(metadata);
 }
 /**
  * Parse Basic authentication header
@@ -59,49 +70,15 @@ function parseBasicAuth(authHeader) {
         return null;
     }
 }
-/**
- * Parse request body (application/x-www-form-urlencoded)
- * Returns parsed parameters or null if invalid
- */
-async function parseFormBody(req) {
-    return new Promise((resolve) => {
-        let body = '';
-        req.on('data', (chunk) => {
-            body += chunk.toString();
-        });
-        req.on('end', () => {
-            try {
-                const params = new URLSearchParams(body);
-                const result = {};
-                params.forEach((value, key) => {
-                    result[key] = value;
-                });
-                resolve(result);
-            }
-            catch {
-                resolve(null);
-            }
-        });
-        req.on('error', () => {
-            resolve(null);
-        });
-    });
-}
+// parseFormBody removed - Express handles body parsing via express.json() and express.urlencoded()
 /**
  * Handle /oauth/token endpoint (client_credentials flow)
  * Implements RFC 6749 Section 4.4
+ *
+ * Express middleware - body is already parsed by express.json() / express.urlencoded()
  */
 async function handleTokenEndpoint(req, res, oauth2Config, serverUrl) {
-    // Only accept POST requests
-    if (req.method !== 'POST') {
-        const errorResponse = {
-            error: 'invalid_request',
-            error_description: 'Token endpoint only accepts POST requests',
-        };
-        res.writeHead(405, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(errorResponse));
-        return;
-    }
+    const { generateAccessTokenFn, validateClientCredentialsFn } = loadOAuth2Utils();
     // Parse client credentials from Authorization header OR request body
     let clientId = null;
     let clientSecret = null;
@@ -113,53 +90,41 @@ async function handleTokenEndpoint(req, res, oauth2Config, serverUrl) {
     }
     else {
         // Fall back to request body (RFC 6749 Section 2.3.1 - not recommended but allowed)
-        const body = await parseFormBody(req);
-        if (body) {
-            clientId = body.client_id || null;
-            clientSecret = body.client_secret || null;
-        }
+        clientId = req.body.client_id || null;
+        clientSecret = req.body.client_secret || null;
     }
-    // Validate client credentials
+    // Validate client credentials presence
     if (!clientId || !clientSecret) {
-        const errorResponse = {
+        res.status(401)
+            .set('WWW-Authenticate', 'Basic realm="Genie MCP Server"')
+            .json({
             error: 'invalid_client',
             error_description: 'Client authentication failed: missing credentials',
-        };
-        res.writeHead(401, {
-            'Content-Type': 'application/json',
-            'WWW-Authenticate': 'Basic realm="Genie MCP Server"',
         });
-        res.end(JSON.stringify(errorResponse));
         return;
     }
     // Verify client credentials against config
-    const validCredentials = (0, oauth2_utils_js_1.validateClientCredentials)(clientId, clientSecret, oauth2Config.clientId, oauth2Config.clientSecret);
+    const validCredentials = validateClientCredentialsFn(clientId, clientSecret, oauth2Config.clientId, oauth2Config.clientSecret);
     if (!validCredentials) {
-        const errorResponse = {
+        res.status(401)
+            .set('WWW-Authenticate', 'Basic realm="Genie MCP Server"')
+            .json({
             error: 'invalid_client',
             error_description: 'Client authentication failed: invalid credentials',
-        };
-        res.writeHead(401, {
-            'Content-Type': 'application/json',
-            'WWW-Authenticate': 'Basic realm="Genie MCP Server"',
         });
-        res.end(JSON.stringify(errorResponse));
         return;
     }
-    // Parse request body for grant_type validation
-    const body = await parseFormBody(req);
-    if (!body || body.grant_type !== 'client_credentials') {
-        const errorResponse = {
+    // Validate grant_type
+    if (req.body.grant_type !== 'client_credentials') {
+        res.status(400).json({
             error: 'unsupported_grant_type',
             error_description: 'Only client_credentials grant type is supported',
-        };
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(errorResponse));
+        });
         return;
     }
     try {
         // Generate JWT access token
-        const accessToken = await (0, oauth2_utils_js_1.generateAccessToken)(oauth2Config.signingKey, oauth2Config.issuer, `${serverUrl}/mcp`, // Audience = resource identifier
+        const accessToken = await generateAccessTokenFn(oauth2Config.signingKey, oauth2Config.issuer, `${serverUrl}/mcp`, // Audience = resource identifier
         clientId, oauth2Config.tokenExpiry);
         const tokenResponse = {
             access_token: accessToken,
@@ -167,19 +132,16 @@ async function handleTokenEndpoint(req, res, oauth2Config, serverUrl) {
             expires_in: oauth2Config.tokenExpiry,
             scope: 'mcp:read mcp:write',
         };
-        res.writeHead(200, {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-store',
-            Pragma: 'no-cache',
-        });
-        res.end(JSON.stringify(tokenResponse));
+        res.status(200)
+            .set('Cache-Control', 'no-store')
+            .set('Pragma', 'no-cache')
+            .json(tokenResponse);
     }
     catch (error) {
-        const errorResponse = {
+        console.error('Token generation error:', error);
+        res.status(500).json({
             error: 'server_error',
             error_description: 'Failed to generate access token',
-        };
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(errorResponse));
+        });
     }
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Genie MCP Server - MVP Implementation
+ * Genie MCP Server - Official SDK Implementation
  *
  * Provides Model Context Protocol access to Genie agent orchestration.
  * Tools integrate with CLI via subprocess execution (shell-out pattern).
@@ -16,7 +16,12 @@
  * Build status: ✅ CLI compiles (0 errors), ✅ MCP compiles (0 errors)
  */
 
-import { FastMCP } from 'fastmcp';
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+} from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import fs from 'fs';
 import path from 'path';
@@ -30,10 +35,9 @@ import { forgeToolSchema, executeForgeTool } from './tools/forge-tool.js';
 import { reviewToolSchema, executeReviewTool } from './tools/review-tool.js';
 import { promptToolSchema, executePromptTool } from './tools/prompt-tool.js';
 
-// Import OAuth2 types (type-only to avoid cross-project compilation issues)
-import type { OAuth2Config } from './types/oauth2.js';
-import { handleTokenEndpoint } from './lib/oauth2-endpoints.js';
-import http from 'http';
+// Import HTTP server for OAuth2 transport
+import { startHttpServer } from './lib/http-server.js';
+import { OAuth2Config } from './lib/oauth-provider.js';
 
 const execFileAsync = promisify(execFile);
 
