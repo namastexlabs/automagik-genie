@@ -32,12 +32,8 @@ const wish_tool_js_1 = require("./tools/wish-tool.js");
 const forge_tool_js_1 = require("./tools/forge-tool.js");
 const review_tool_js_1 = require("./tools/review-tool.js");
 const prompt_tool_js_1 = require("./tools/prompt-tool.js");
-// Import Stats Service (Dashboard integration)
-const stats_service_js_1 = require("./services/stats-service.js");
-const dashboard_server_js_1 = require("./dashboard-server.js");
 const execFileAsync = (0, util_1.promisify)(child_process_1.execFile);
 const PORT = process.env.MCP_PORT ? parseInt(process.env.MCP_PORT) : 8885;
-const DASHBOARD_PORT = process.env.DASHBOARD_PORT ? parseInt(process.env.DASHBOARD_PORT) : 8886;
 const TRANSPORT = process.env.MCP_TRANSPORT || 'stdio';
 // Find actual workspace root by searching upward for .genie/ directory
 function findWorkspaceRoot() {
@@ -52,22 +48,6 @@ function findWorkspaceRoot() {
     return process.cwd();
 }
 const WORKSPACE_ROOT = findWorkspaceRoot();
-// Initialize Stats Service
-const statsService = new stats_service_js_1.StatsService(WORKSPACE_ROOT);
-// Session tracking for stats
-let currentMcpSessionId = null;
-function getOrCreateMcpSession() {
-    if (!currentMcpSessionId) {
-        // Generate session ID: mcp-YYYYMMDD-HHMM-random
-        const now = new Date();
-        const dateStr = now.toISOString().slice(0, 16).replace(/[-:T]/g, '');
-        const random = Math.random().toString(36).substring(2, 6);
-        currentMcpSessionId = `mcp-${dateStr}-${random}`;
-        // Record session start (project ID will be updated when we know it)
-        statsService.recordSessionStart(currentMcpSessionId, 'mcp-server');
-    }
-    return currentMcpSessionId;
-}
 // transformDisplayPath imported from ./lib/display-transform (single source of truth)
 // Helper: List available agents from all collectives
 function listAgents() {
@@ -415,9 +395,6 @@ server.addTool({
             }
             const { stdout, stderr } = await runCliCommand(cliArgs, 120000);
             const output = stdout + (stderr ? `\n\nStderr:\n${stderr}` : '');
-            // Track agent invocation in stats
-            const sessionId = getOrCreateMcpSession();
-            statsService.recordAgentInvocation(sessionId, resolvedAgent);
             const { displayId } = (0, display_transform_js_1.transformDisplayPath)(resolvedAgent);
             const aliasNote = AGENT_ALIASES[args.agent] ? ` (alias: ${args.agent} → ${resolvedAgent})` : '';
             return getVersionHeader() + `Started agent session:\nAgent: ${displayId}${aliasNote}\n\n${output}\n\nUse list_sessions to see the session ID, then use view/resume/stop as needed.`;
@@ -750,16 +727,6 @@ console.error(`  - ${wsTools.length} WebSocket-native (create_wish, run_forge, r
 console.error('WebSocket: Real-time streaming enabled');
 console.error('');
 console.error('🔄 Syncing agent profiles to Forge...');
-// Initialize Dashboard Server (HTTP + WebSocket for stats)
-const dashboardServer = new dashboard_server_js_1.DashboardServer({
-    port: DASHBOARD_PORT,
-    statsService,
-    enableCors: true
-});
-// Connect stats event emitter to dashboard server
-dashboard_server_js_1.statsEventEmitter.setDashboardServer(dashboardServer);
-// Start dashboard server
-dashboardServer.start();
 // Sync agents before starting server (async but non-blocking)
 syncAgentProfilesToForge().catch(err => {
     console.warn(`⚠️  Background agent sync failed: ${err.message}`);
@@ -787,17 +754,6 @@ else {
     console.error('Valid options: stdio (default), httpStream, http');
     process.exit(1);
 }
-// Graceful shutdown handling for dashboard server
-process.on('SIGINT', () => {
-    console.error('\nReceived SIGINT, shutting down...');
-    dashboardServer.stop();
-    process.exit(0);
-});
-process.on('SIGTERM', () => {
-    console.error('\nReceived SIGTERM, shutting down...');
-    dashboardServer.stop();
-    process.exit(0);
-});
 function resolveCliInvocation() {
     const distEntry = path_1.default.join(WORKSPACE_ROOT, '.genie/cli/dist/genie-cli.js');
     if (fs_1.default.existsSync(distEntry)) {

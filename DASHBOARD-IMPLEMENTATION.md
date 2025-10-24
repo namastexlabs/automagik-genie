@@ -146,6 +146,26 @@ genie dashboard --live
 
 Real-time updating dashboard (refreshes every 1 second). Press Ctrl+C to exit.
 
+### Smart Access When Forge Running
+
+When you run `genie` (or `npx automagik-genie`) and Forge is already running, you'll see:
+
+```
+📦 Forge:  http://localhost:8887 ✓ (already running)
+
+💡 Options:
+   [Enter] Start Genie MCP server (continue)
+   d       Launch dashboard
+   k       Kill Forge and restart server
+
+Your choice:
+```
+
+**Options:**
+- **[Enter]** - Continue to start MCP server normally (default)
+- **d** - Launch dashboard in live mode (`genie dashboard --live`)
+- **k** - Kill Forge and restart server (with confirmation and running task check)
+
 ## Dashboard Output
 
 ```

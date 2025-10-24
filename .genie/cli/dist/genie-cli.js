@@ -984,8 +984,72 @@ async function startGenieServer() {
         console.log(successGradient(`📦 Forge:  ${baseUrl} ✓`));
     }
     else {
+        // Forge already running - offer dashboard or kill option
         console.log(successGradient(`📦 Forge:  ${baseUrl} ✓ (already running)`));
-        timings.forgeReady = 0; // Already running
+        console.log('');
+        console.log('💡 Options:');
+        console.log('   [Enter] Start Genie MCP server (continue)');
+        console.log('   d       Launch dashboard');
+        console.log('   k       Kill Forge and restart server');
+        console.log('');
+        const readline = require('readline').createInterface({
+            input: process.stdin,
+            output: process.stdout
+        });
+        const choice = await new Promise((resolve) => {
+            readline.question('Your choice: ', resolve);
+        });
+        readline.close();
+        if (choice.toLowerCase() === 'd') {
+            // Launch dashboard
+            console.log('');
+            console.log(genieGradient('📊 Launching dashboard...'));
+            console.log('');
+            execGenie(['dashboard', '--live']);
+            process.exit(0);
+        }
+        else if (choice.toLowerCase() === 'k') {
+            // Kill Forge with confirmation
+            console.log('');
+            console.log(performanceGradient('⚠️  WARNING: This will stop all running tasks!'));
+            console.log('');
+            // Check for running tasks
+            const runningTasks = await (0, forge_manager_1.getRunningTasks)(baseUrl);
+            if (runningTasks.length > 0) {
+                console.log(`${runningTasks.length} task(s) currently running:`);
+                runningTasks.forEach((task, i) => {
+                    console.log(`   ${i + 1}. ${task.projectName} → ${task.taskTitle}`);
+                });
+                console.log('');
+            }
+            const readline2 = require('readline').createInterface({
+                input: process.stdin,
+                output: process.stdout
+            });
+            const confirm = await new Promise((resolve) => {
+                readline2.question('Kill Forge and restart server? [y/N]: ', resolve);
+            });
+            readline2.close();
+            if (confirm.toLowerCase() === 'y' || confirm.toLowerCase() === 'yes') {
+                console.log('');
+                console.log('🔪 Killing Forge...');
+                const stopped = await (0, forge_manager_1.stopForge)(logDir);
+                if (stopped) {
+                    console.log('✅ Forge stopped');
+                }
+                // Wait for port to be released
+                await new Promise(r => setTimeout(r, 2000));
+                console.log('');
+                console.log('📦 Restarting Forge...');
+                // Continue to normal startup below
+            }
+            else {
+                console.log('');
+                console.log('❌ Cancelled');
+                process.exit(0);
+            }
+        }
+        timings.forgeReady = 0; // Already running (or just killed and restarting)
     }
     // Phase 2: Start MCP server with SSE transport
     const mcpPort = process.env.MCP_PORT || '8885';
