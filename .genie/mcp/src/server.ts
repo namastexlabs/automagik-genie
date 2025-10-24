@@ -696,14 +696,39 @@ server.tool('get_workspace_info', 'Get Genie workspace information including mis
   github_issue: z.number().describe('GitHub issue number (required per Amendment 1)')
 }, {
   streamingHint: true
-}, async (args: any) => {
-  // Note: Official SDK doesn't provide streamContent/reportProgress
-  // WebSocket streaming is handled internally by the tool via wsManager
+}, async (args: any, extra: any) => {
+  // Use official MCP SDK logging for real-time streaming
   await executeWishTool(args, {
-    streamContent: async (chunk: any) => { /* No-op: WebSocket handles streaming */ },
-    reportProgress: async (current: number, total: number) => { /* No-op: WebSocket handles progress */ }
+    streamContent: async (chunk: string) => {
+      // Stream content via MCP logging notifications
+      await server.sendLoggingMessage({
+        level: "info",
+        data: chunk
+      }, extra.sessionId);
+    },
+    reportProgress: async (current: number, total: number) => {
+      // Report progress via MCP logging notifications
+      const message = `Progress: ${current}/${total}`;
+      await server.sendLoggingMessage({
+        level: "info",
+        data: message
+      }, extra.sessionId);
+
+      // Also send MCP progress notification if client provided progressToken
+      if (extra._meta?.progressToken) {
+        await extra.sendNotification({
+          method: "notifications/progress",
+          params: {
+            progressToken: extra._meta.progressToken,
+            progress: current,
+            total: total,
+            message: message
+          }
+        });
+      }
+    }
   });
-  return { content: [{ type: 'text', text: 'Wish creation completed.' }] };
+  return { content: [{ type: 'text', text: 'Wish creation completed. Check the logs above for details.' }] };
 });
 
 // Tool: run_forge - Run Forge task with agent and stream execution (WebSocket diff streaming)
@@ -713,12 +738,39 @@ server.tool('get_workspace_info', 'Get Genie workspace information including mis
   project_id: z.string().optional().describe('Project ID (defaults to current Genie project)')
 }, {
   streamingHint: true
-}, async (args: any) => {
+}, async (args: any, extra: any) => {
+  // Use official MCP SDK logging for real-time streaming
   await executeForgeTool(args, {
-    streamContent: async (chunk: any) => { /* No-op: WebSocket handles streaming */ },
-    reportProgress: async (current: number, total: number) => { /* No-op: WebSocket handles progress */ }
+    streamContent: async (chunk: string) => {
+      // Stream content via MCP logging notifications
+      await server.sendLoggingMessage({
+        level: "info",
+        data: chunk
+      }, extra.sessionId);
+    },
+    reportProgress: async (current: number, total: number) => {
+      // Report progress via MCP logging notifications
+      const message = `Progress: ${current}/${total}`;
+      await server.sendLoggingMessage({
+        level: "info",
+        data: message
+      }, extra.sessionId);
+
+      // Also send MCP progress notification if client provided progressToken
+      if (extra._meta?.progressToken) {
+        await extra.sendNotification({
+          method: "notifications/progress",
+          params: {
+            progressToken: extra._meta.progressToken,
+            progress: current,
+            total: total,
+            message: message
+          }
+        });
+      }
+    }
   });
-  return { content: [{ type: 'text', text: 'Forge task completed.' }] };
+  return { content: [{ type: 'text', text: 'Forge task completed. Check the logs above for details.' }] };
 });
 
 // Tool: run_review - Review wish with agent and stream feedback (WebSocket log streaming)
@@ -728,12 +780,39 @@ server.tool('get_workspace_info', 'Get Genie workspace information including mis
   project_id: z.string().optional().describe('Project ID (defaults to current Genie project)')
 }, {
   streamingHint: true
-}, async (args: any) => {
+}, async (args: any, extra: any) => {
+  // Use official MCP SDK logging for real-time streaming
   await executeReviewTool(args, {
-    streamContent: async (chunk: any) => { /* No-op: WebSocket handles streaming */ },
-    reportProgress: async (current: number, total: number) => { /* No-op: WebSocket handles progress */ }
+    streamContent: async (chunk: string) => {
+      // Stream content via MCP logging notifications
+      await server.sendLoggingMessage({
+        level: "info",
+        data: chunk
+      }, extra.sessionId);
+    },
+    reportProgress: async (current: number, total: number) => {
+      // Report progress via MCP logging notifications
+      const message = `Progress: ${current}/${total}`;
+      await server.sendLoggingMessage({
+        level: "info",
+        data: message
+      }, extra.sessionId);
+
+      // Also send MCP progress notification if client provided progressToken
+      if (extra._meta?.progressToken) {
+        await extra.sendNotification({
+          method: "notifications/progress",
+          params: {
+            progressToken: extra._meta.progressToken,
+            progress: current,
+            total: total,
+            message: message
+          }
+        });
+      }
+    }
   });
-  return { content: [{ type: 'text', text: 'Review completed.' }] };
+  return { content: [{ type: 'text', text: 'Review completed. Check the logs above for details.' }] };
 });
 
 // Tool: transform_prompt - Synchronous prompt transformer (no worktree, no git validation)
@@ -742,11 +821,18 @@ server.tool('get_workspace_info', 'Get Genie workspace information including mis
   agent: z.string().optional().default('prompt').describe('Agent to use for transformation (default: "prompt")')
 }, {
   readOnlyHint: true
-}, async (args: any) => {
+}, async (args: any, extra: any) => {
+  // Use official MCP SDK logging for real-time streaming
   await executePromptTool(args, {
-    streamContent: async (chunk: any) => { /* No-op: WebSocket handles streaming */ }
+    streamContent: async (chunk: string) => {
+      // Stream content via MCP logging notifications
+      await server.sendLoggingMessage({
+        level: "info",
+        data: chunk
+      }, extra.sessionId);
+    }
   });
-  return { content: [{ type: 'text', text: 'Prompt transformation completed.' }] };
+  return { content: [{ type: 'text', text: 'Prompt transformation completed. Check the logs above for details.' }] };
 });
 
 // ============================================================================

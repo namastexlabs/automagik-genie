@@ -614,14 +614,38 @@ server.tool('create_wish', 'Create a wish with GitHub issue enforcement (Amendme
     github_issue: zod_1.z.number().describe('GitHub issue number (required per Amendment 1)')
 }, {
     streamingHint: true
-}, async (args) => {
-    // Note: Official SDK doesn't provide streamContent/reportProgress
-    // WebSocket streaming is handled internally by the tool via wsManager
+}, async (args, extra) => {
+    // Use official MCP SDK logging for real-time streaming
     await (0, wish_tool_js_1.executeWishTool)(args, {
-        streamContent: async (chunk) => { },
-        reportProgress: async (current, total) => { }
+        streamContent: async (chunk) => {
+            // Stream content via MCP logging notifications
+            await server.sendLoggingMessage({
+                level: "info",
+                data: chunk
+            }, extra.sessionId);
+        },
+        reportProgress: async (current, total) => {
+            // Report progress via MCP logging notifications
+            const message = `Progress: ${current}/${total}`;
+            await server.sendLoggingMessage({
+                level: "info",
+                data: message
+            }, extra.sessionId);
+            // Also send MCP progress notification if client provided progressToken
+            if (extra._meta?.progressToken) {
+                await extra.sendNotification({
+                    method: "notifications/progress",
+                    params: {
+                        progressToken: extra._meta.progressToken,
+                        progress: current,
+                        total: total,
+                        message: message
+                    }
+                });
+            }
+        }
     });
-    return { content: [{ type: 'text', text: 'Wish creation completed.' }] };
+    return { content: [{ type: 'text', text: 'Wish creation completed. Check the logs above for details.' }] };
 });
 // Tool: run_forge - Run Forge task with agent and stream execution (WebSocket diff streaming)
 server.tool('run_forge', 'Kick off a Forge task with specified agent and stream live code changes via WebSocket. Git working tree must be clean and pushed.', {
@@ -630,12 +654,38 @@ server.tool('run_forge', 'Kick off a Forge task with specified agent and stream 
     project_id: zod_1.z.string().optional().describe('Project ID (defaults to current Genie project)')
 }, {
     streamingHint: true
-}, async (args) => {
+}, async (args, extra) => {
+    // Use official MCP SDK logging for real-time streaming
     await (0, forge_tool_js_1.executeForgeTool)(args, {
-        streamContent: async (chunk) => { },
-        reportProgress: async (current, total) => { }
+        streamContent: async (chunk) => {
+            // Stream content via MCP logging notifications
+            await server.sendLoggingMessage({
+                level: "info",
+                data: chunk
+            }, extra.sessionId);
+        },
+        reportProgress: async (current, total) => {
+            // Report progress via MCP logging notifications
+            const message = `Progress: ${current}/${total}`;
+            await server.sendLoggingMessage({
+                level: "info",
+                data: message
+            }, extra.sessionId);
+            // Also send MCP progress notification if client provided progressToken
+            if (extra._meta?.progressToken) {
+                await extra.sendNotification({
+                    method: "notifications/progress",
+                    params: {
+                        progressToken: extra._meta.progressToken,
+                        progress: current,
+                        total: total,
+                        message: message
+                    }
+                });
+            }
+        }
     });
-    return { content: [{ type: 'text', text: 'Forge task completed.' }] };
+    return { content: [{ type: 'text', text: 'Forge task completed. Check the logs above for details.' }] };
 });
 // Tool: run_review - Review wish with agent and stream feedback (WebSocket log streaming)
 server.tool('run_review', 'Review a wish document with an agent and stream live feedback via WebSocket. Git working tree must be clean and pushed.', {
@@ -644,12 +694,38 @@ server.tool('run_review', 'Review a wish document with an agent and stream live 
     project_id: zod_1.z.string().optional().describe('Project ID (defaults to current Genie project)')
 }, {
     streamingHint: true
-}, async (args) => {
+}, async (args, extra) => {
+    // Use official MCP SDK logging for real-time streaming
     await (0, review_tool_js_1.executeReviewTool)(args, {
-        streamContent: async (chunk) => { },
-        reportProgress: async (current, total) => { }
+        streamContent: async (chunk) => {
+            // Stream content via MCP logging notifications
+            await server.sendLoggingMessage({
+                level: "info",
+                data: chunk
+            }, extra.sessionId);
+        },
+        reportProgress: async (current, total) => {
+            // Report progress via MCP logging notifications
+            const message = `Progress: ${current}/${total}`;
+            await server.sendLoggingMessage({
+                level: "info",
+                data: message
+            }, extra.sessionId);
+            // Also send MCP progress notification if client provided progressToken
+            if (extra._meta?.progressToken) {
+                await extra.sendNotification({
+                    method: "notifications/progress",
+                    params: {
+                        progressToken: extra._meta.progressToken,
+                        progress: current,
+                        total: total,
+                        message: message
+                    }
+                });
+            }
+        }
     });
-    return { content: [{ type: 'text', text: 'Review completed.' }] };
+    return { content: [{ type: 'text', text: 'Review completed. Check the logs above for details.' }] };
 });
 // Tool: transform_prompt - Synchronous prompt transformer (no worktree, no git validation)
 server.tool('transform_prompt', 'Transform/enhance a prompt using an agent synchronously. Runs in current workspace (no worktree). Modern equivalent of old "background off" mode.', {
@@ -657,11 +733,18 @@ server.tool('transform_prompt', 'Transform/enhance a prompt using an agent synch
     agent: zod_1.z.string().optional().default('prompt').describe('Agent to use for transformation (default: "prompt")')
 }, {
     readOnlyHint: true
-}, async (args) => {
+}, async (args, extra) => {
+    // Use official MCP SDK logging for real-time streaming
     await (0, prompt_tool_js_1.executePromptTool)(args, {
-        streamContent: async (chunk) => { }
+        streamContent: async (chunk) => {
+            // Stream content via MCP logging notifications
+            await server.sendLoggingMessage({
+                level: "info",
+                data: chunk
+            }, extra.sessionId);
+        }
     });
-    return { content: [{ type: 'text', text: 'Prompt transformation completed.' }] };
+    return { content: [{ type: 'text', text: 'Prompt transformation completed. Check the logs above for details.' }] };
 });
 // ============================================================================
 // DEPRECATED PROMPTS - Removed per Amendment: No Backwards Compatibility
