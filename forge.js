@@ -113,12 +113,29 @@ class ForgeClient {
         return this.request('PUT', '/config', { body: config });
     }
     /**
-     * GET /api/profiles
+     * GET /api/info
      * Get executor profiles configuration (Claude, Gemini, etc)
-     * @returns All executor profile configurations
+     * Fetches from system info endpoint which has properly structured data
+     * @returns All executor profile configurations with executors key
      */
     async getExecutorProfiles() {
-        return this.request('GET', '/profiles');
+        try {
+            const systemInfo = await this.request('GET', '/info');
+            // Extract executor profiles from system info
+            // /api/info returns { executors: {...}, capabilities: {...}, ... }
+            if (systemInfo && typeof systemInfo === 'object' && systemInfo.executors) {
+                return { executors: systemInfo.executors };
+            }
+            // Fallback: if executors is at root level
+            if (systemInfo && systemInfo.executors) {
+                return systemInfo;
+            }
+            // Return empty profiles if not found
+            return { executors: {} };
+        } catch (error) {
+            console.warn(`Failed to fetch executor profiles from /api/info: ${error.message}, returning empty profiles`);
+            return { executors: {} };
+        }
     }
     /**
      * PUT /api/profiles

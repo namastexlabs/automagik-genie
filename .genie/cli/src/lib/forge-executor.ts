@@ -61,24 +61,26 @@ export class ForgeExecutor {
 
       // Get current Forge profiles to merge with
       const currentProfiles = await this.forge.getExecutorProfiles();
-      let current: any = {};
+      let current: any = { executors: {} };
 
-      try {
-        if (typeof currentProfiles === 'string') {
-          current = JSON.parse(currentProfiles);
-        } else if (currentProfiles && typeof currentProfiles.content === 'string') {
-          current = JSON.parse(currentProfiles.content);
-        } else if (currentProfiles && typeof currentProfiles === 'object') {
-          current = currentProfiles.content || currentProfiles;
+      // Handle response - /api/info endpoint now returns { executors: {...} }
+      if (currentProfiles) {
+        if (typeof currentProfiles === 'object' && currentProfiles.executors) {
+          current = currentProfiles;
+        } else if (typeof currentProfiles === 'string') {
+          try {
+            const parsed = JSON.parse(currentProfiles);
+            if (parsed && typeof parsed === 'object' && parsed.executors) {
+              current = parsed;
+            }
+          } catch {
+            // Use default empty executors
+          }
         }
+      }
 
-        // Validate structure - must have executors object
-        if (!current.executors || typeof current.executors !== 'object') {
-          console.warn('⚠️  Current executor profiles missing "executors" field, starting fresh');
-          current = { executors: {} };
-        }
-      } catch (parseError: any) {
-        console.warn(`⚠️  Failed to parse current executor profiles: ${parseError.message}, starting fresh`);
+      // Validate structure - must have executors object
+      if (!current.executors || typeof current.executors !== 'object') {
         current = { executors: {} };
       }
 

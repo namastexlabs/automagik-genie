@@ -24,25 +24,26 @@ class ForgeExecutor {
             const agentProfiles = await registry.generateForgeProfiles(this.forge);
             // Get current Forge profiles to merge with
             const currentProfiles = await this.forge.getExecutorProfiles();
-            let current = {};
-            try {
-                if (typeof currentProfiles === 'string') {
-                    current = JSON.parse(currentProfiles);
+            let current = { executors: {} };
+            // Handle response - /api/info endpoint now returns { executors: {...} }
+            if (currentProfiles) {
+                if (typeof currentProfiles === 'object' && currentProfiles.executors) {
+                    current = currentProfiles;
                 }
-                else if (currentProfiles && typeof currentProfiles.content === 'string') {
-                    current = JSON.parse(currentProfiles.content);
-                }
-                else if (currentProfiles && typeof currentProfiles === 'object') {
-                    current = currentProfiles.content || currentProfiles;
-                }
-                // Validate structure - must have executors object
-                if (!current.executors || typeof current.executors !== 'object') {
-                    console.warn('⚠️  Current executor profiles missing "executors" field, starting fresh');
-                    current = { executors: {} };
+                else if (typeof currentProfiles === 'string') {
+                    try {
+                        const parsed = JSON.parse(currentProfiles);
+                        if (parsed && typeof parsed === 'object' && parsed.executors) {
+                            current = parsed;
+                        }
+                    }
+                    catch {
+                        // Use default empty executors
+                    }
                 }
             }
-            catch (parseError) {
-                console.warn(`⚠️  Failed to parse current executor profiles: ${parseError.message}, starting fresh`);
+            // Validate structure - must have executors object
+            if (!current.executors || typeof current.executors !== 'object') {
                 current = { executors: {} };
             }
             // Merge agent profiles with existing profiles
