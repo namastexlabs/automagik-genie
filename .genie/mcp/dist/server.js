@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 "use strict";
 /**
- * Genie MCP Server - MVP Implementation
+ * Genie MCP Server - Official SDK Implementation
  *
  * Provides Model Context Protocol access to Genie agent orchestration.
  * Tools integrate with CLI via subprocess execution (shell-out pattern).
@@ -20,7 +20,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const fastmcp_1 = require("fastmcp");
+const mcp_js_1 = require("@modelcontextprotocol/sdk/server/mcp.js");
 const zod_1 = require("zod");
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
@@ -35,20 +35,6 @@ const prompt_tool_js_1 = require("./tools/prompt-tool.js");
 const execFileAsync = (0, util_1.promisify)(child_process_1.execFile);
 const PORT = process.env.MCP_PORT ? parseInt(process.env.MCP_PORT) : 8885;
 const TRANSPORT = process.env.MCP_TRANSPORT || 'stdio';
-// Dynamic import for OAuth2 utilities (loaded at runtime from compiled CLI)
-let verifyAccessToken;
-function getOAuth2Utils() {
-    if (!verifyAccessToken) {
-        try {
-            const oauth2Utils = require('../../cli/dist/lib/oauth2-utils.js');
-            verifyAccessToken = oauth2Utils.verifyAccessToken;
-        }
-        catch (error) {
-            throw new Error('OAuth2 utilities not available - did you build the CLI?');
-        }
-    }
-    return { verifyAccessToken };
-}
 // Find actual workspace root by searching upward for .genie/ directory
 function findWorkspaceRoot() {
     let dir = process.cwd();
@@ -287,266 +273,171 @@ function loadOAuth2Config() {
     }
     return null;
 }
-// Create authentication function for FastMCP
-function createAuthenticator(oauth2Config, serverUrl) {
-    // Public paths that don't require authentication
-    const publicPaths = [
-        '/health',
-        '/.well-known/oauth-protected-resource',
-        '/.well-known/oauth-authorization-server',
-        '/oauth/token'
-    ];
-    return async (req) => {
-        // Check if path is public (no auth required)
-        const pathname = req.url?.split('?')[0] || '';
-        if (publicPaths.includes(pathname)) {
-            return undefined; // No auth required for public endpoints
-        }
-        // Extract Authorization header
-        const authHeader = req.headers.authorization;
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            throw new Error('Missing or invalid Authorization header');
-        }
-        // Extract and verify JWT token
-        const token = authHeader.slice(7); // Remove 'Bearer ' prefix
-        const { verifyAccessToken } = getOAuth2Utils();
-        const payload = await verifyAccessToken(token, oauth2Config.publicKey, oauth2Config.issuer, `${serverUrl}/mcp`);
-        if (!payload) {
-            throw new Error('Invalid or expired token');
-        }
-        // Return session auth data (client ID from token subject)
-        return { clientId: payload.sub };
-    };
-}
 // Load OAuth2 config for HTTP transport
 const oauth2Config = loadOAuth2Config();
 const serverUrl = `http://localhost:${PORT}`;
-// Initialize FastMCP server
-const server = new fastmcp_1.FastMCP({
+// Initialize MCP Server using official SDK
+const server = new mcp_js_1.McpServer({
     name: 'genie',
     version: getGenieVersion(),
-    // Add authentication for HTTP transport only
-    ...(TRANSPORT !== 'stdio' && oauth2Config ? {
-        authenticate: createAuthenticator(oauth2Config, serverUrl)
-    } : {}),
-    // Configure OAuth2 discovery metadata (RFC 9728)
-    ...(TRANSPORT !== 'stdio' && oauth2Config ? {
-        oauth: {
-            enabled: true,
-            protectedResource: {
-                resource: `${serverUrl}/mcp`,
-                authorizationServers: [serverUrl],
-                bearerMethodsSupported: ['header'],
-                scopesSupported: ['mcp:read', 'mcp:write'],
-                resourceSigningAlgValuesSupported: ['RS256']
-            }
-        }
-    } : {}),
-    instructions: `Genie is an agent orchestration system for managing AI agents that help with software development tasks.
-
-**Core Capabilities:**
-- **Agent Orchestration**: Run specialized agents (plan, forge, implementor, review, etc.) with custom prompts
-- **Session Management**: Resume conversations, view transcripts, stop running agents
-- **Knowledge Discovery**: Browse spells (reusable patterns), wishes (planned work), workflows (processes)
-- **Workspace Context**: Access project mission, tech stack, roadmap, and environment details
-
-**Typical Workflow:**
-1. Use 'list_agents' to discover available agents and their capabilities
-2. Use 'run' to start an agent with a specific task
-3. Use 'list_sessions' to see active/recent sessions
-4. Use 'view' to inspect agent output
-5. Use 'resume' to continue conversations with follow-up questions
-6. Use 'stop' to terminate long-running agents
-
-**Knowledge Discovery:**
-- 'list_spells' / 'read_spell' - Reusable knowledge patterns
-- 'list_workflows' / 'read_workflow' - Development processes
-- 'get_workspace_info' - Project context and metadata
-
-**Agent Types:**
-- **Workflow Agents**: plan, wish, forge, review (structured development process)
-- **Tactical Agents**: implementor, tests, polish (feature delivery)
-- **Strategic Agents**: genie, analyze, debug (deep analysis)
-- **Utility Agents**: commit, refactor (code quality)
-
-Use agents for planning features, implementing code, reviewing changes, debugging issues, and managing development workflows.`
+}, {
+    capabilities: {
+        logging: {},
+        tools: {}
+    }
 });
 // Tool: list_agents - Discover available agents
-server.addTool({
-    name: 'list_agents',
-    description: 'List all available Genie agents with their capabilities and descriptions. Use this first to discover which agents can help with your task.',
-    parameters: zod_1.z.object({}),
-    execute: async () => {
-        const agents = listAgents();
-        if (agents.length === 0) {
-            return getVersionHeader() + 'No agents found in .genie/code/agents or .genie/create/agents directories.';
-        }
-        let response = getVersionHeader() + `Found ${agents.length} available agents:\n\n`;
-        // Group by folder
-        const grouped = {};
-        agents.forEach(agent => {
-            const key = agent.folder || 'core';
-            if (!grouped[key])
-                grouped[key] = [];
-            grouped[key].push(agent);
-        });
-        Object.entries(grouped).forEach(([folder, folderAgents]) => {
-            response += `**${folder}:**\n`;
-            folderAgents.forEach(agent => {
-                response += `  • ${agent.displayId}`;
-                if (agent.name !== agent.displayId)
-                    response += ` (${agent.name})`;
-                if (agent.description)
-                    response += ` - ${agent.description}`;
-                response += '\n';
-            });
+server.tool('list_agents', 'List all available Genie agents with their capabilities and descriptions. Use this first to discover which agents can help with your task.', async () => {
+    const agents = listAgents();
+    if (agents.length === 0) {
+        return { content: [{ type: 'text', text: getVersionHeader() + 'No agents found in .genie/code/agents or .genie/create/agents directories.' }] };
+    }
+    let response = getVersionHeader() + `Found ${agents.length} available agents:\n\n`;
+    // Group by folder
+    const grouped = {};
+    agents.forEach(agent => {
+        const key = agent.folder || 'core';
+        if (!grouped[key])
+            grouped[key] = [];
+        grouped[key].push(agent);
+    });
+    Object.entries(grouped).forEach(([folder, folderAgents]) => {
+        response += `**${folder}:**\n`;
+        folderAgents.forEach(agent => {
+            response += `  • ${agent.displayId}`;
+            if (agent.name !== agent.displayId)
+                response += ` (${agent.name})`;
+            if (agent.description)
+                response += ` - ${agent.description}`;
             response += '\n';
         });
-        response += '\nUse the "run" tool with an agent id and prompt to start an agent session.';
-        return response;
-    }
+        response += '\n';
+    });
+    response += '\nUse the "run" tool with an agent id and prompt to start an agent session.';
+    return { content: [{ type: 'text', text: response }] };
 });
 // Tool: list_sessions - View active and recent sessions
-server.addTool({
-    name: 'list_sessions',
-    description: 'List active and recent Genie agent sessions. Shows session names, agents, status, and timing. Use this to find sessions to resume or view.',
-    parameters: zod_1.z.object({}),
-    execute: async () => {
-        const sessions = await listSessions();
-        if (sessions.length === 0) {
-            return getVersionHeader() + 'No sessions found. Start a new session with the "run" tool.';
-        }
-        let response = getVersionHeader() + `Found ${sessions.length} session(s):\n\n`;
-        sessions.forEach((session, index) => {
-            const { displayId } = (0, display_transform_js_1.transformDisplayPath)(session.agent);
-            response += `${index + 1}. **${session.name}**\n`;
-            response += `   Agent: ${displayId}\n`;
-            response += `   Status: ${session.status}\n`;
-            response += `   Created: ${session.created}\n`;
-            response += `   Last Used: ${session.lastUsed}\n\n`;
-        });
-        response += 'Use "view" to see session transcript or "resume" to continue a session.';
-        return response;
+server.tool(name, 'list_sessions', description, 'List active and recent Genie agent sessions. Shows session names, agents, status, and timing. Use this to find sessions to resume or view.', parameters, zod_1.z.object({}), execute, async () => {
+    const sessions = await listSessions();
+    if (sessions.length === 0) {
+        return getVersionHeader() + 'No sessions found. Start a new session with the "run" tool.';
     }
+    let response = getVersionHeader() + `Found ${sessions.length} session(s):\n\n`;
+    sessions.forEach((session, index) => {
+        const { displayId } = (0, display_transform_js_1.transformDisplayPath)(session.agent);
+        response += `${index + 1}. **${session.name}**\n`;
+        response += `   Agent: ${displayId}\n`;
+        response += `   Status: ${session.status}\n`;
+        response += `   Created: ${session.created}\n`;
+        response += `   Last Used: ${session.lastUsed}\n\n`;
+    });
+    response += 'Use "view" to see session transcript or "resume" to continue a session.';
+    return response;
 });
 // Tool: run - Start a new agent session
-server.addTool({
-    name: 'run',
-    description: 'Start a new Genie agent session. Choose an agent (use list_agents first) and provide a detailed prompt describing the task. The agent will analyze, plan, or implement based on its specialization.',
-    parameters: zod_1.z.object({
-        agent: zod_1.z.string().describe('Agent ID to run (e.g., "plan", "implementor", "debug"). Get available agents from list_agents tool.'),
-        prompt: zod_1.z.string().describe('Detailed task description for the agent. Be specific about goals, context, and expected outcomes. Agents work best with clear, actionable prompts.'),
-        name: zod_1.z.string().optional().describe('Friendly session name for easy identification (e.g., "bug-102-fix", "auth-feature"). If omitted, auto-generates: "{agent}-{timestamp}".')
-    }),
-    execute: async (args) => {
-        try {
-            // Agent alias mapping (Fix Bug #1: plan → wish/blueprint)
-            const AGENT_ALIASES = {
-                'plan': 'wish/blueprint',
-                'discover': 'wish/discovery',
-                'requirements': 'wish/requirements',
-                'align': 'wish/alignment'
-            };
-            // Resolve alias if exists
-            const resolvedAgent = AGENT_ALIASES[args.agent] || args.agent;
-            // Early validation: Check if agent exists BEFORE trying to run
-            const availableAgents = listAgents();
-            const agentExists = availableAgents.some(a => a.id === resolvedAgent || a.displayId === resolvedAgent);
-            if (!agentExists) {
-                // Fast fail with helpful error message
-                const suggestions = availableAgents
-                    .filter(a => a.id.includes(args.agent) || a.displayId.includes(args.agent))
-                    .slice(0, 3)
-                    .map(a => `  • ${a.displayId}`)
-                    .join('\n');
-                const errorMsg = `❌ **Agent not found:** '${args.agent}'\n\n` +
-                    (suggestions ? `Did you mean:\n${suggestions}\n\n` : '') +
-                    `💡 Use list_agents tool to see all available agents.`;
-                return getVersionHeader() + errorMsg;
-            }
-            // Use resolved agent for CLI invocation
-            const cliArgs = ['run', resolvedAgent];
-            if (args.name?.length) {
-                cliArgs.push('--name', args.name);
-            }
-            if (args.prompt?.length) {
-                cliArgs.push(args.prompt);
-            }
-            const { stdout, stderr } = await runCliCommand(cliArgs, 120000);
-            const output = stdout + (stderr ? `\n\nStderr:\n${stderr}` : '');
-            const { displayId } = (0, display_transform_js_1.transformDisplayPath)(resolvedAgent);
-            const aliasNote = AGENT_ALIASES[args.agent] ? ` (alias: ${args.agent} → ${resolvedAgent})` : '';
-            return getVersionHeader() + `Started agent session:\nAgent: ${displayId}${aliasNote}\n\n${output}\n\nUse list_sessions to see the session ID, then use view/resume/stop as needed.`;
+server.tool(name, 'run', description, 'Start a new Genie agent session. Choose an agent (use list_agents first) and provide a detailed prompt describing the task. The agent will analyze, plan, or implement based on its specialization.', parameters, zod_1.z.object({
+    agent: zod_1.z.string().describe('Agent ID to run (e.g., "plan", "implementor", "debug"). Get available agents from list_agents tool.'),
+    prompt: zod_1.z.string().describe('Detailed task description for the agent. Be specific about goals, context, and expected outcomes. Agents work best with clear, actionable prompts.'),
+    name: zod_1.z.string().optional().describe('Friendly session name for easy identification (e.g., "bug-102-fix", "auth-feature"). If omitted, auto-generates: "{agent}-{timestamp}".')
+}), execute, async (args) => {
+    try {
+        // Agent alias mapping (Fix Bug #1: plan → wish/blueprint)
+        const AGENT_ALIASES = {
+            'plan': 'wish/blueprint',
+            'discover': 'wish/discovery',
+            'requirements': 'wish/requirements',
+            'align': 'wish/alignment'
+        };
+        // Resolve alias if exists
+        const resolvedAgent = AGENT_ALIASES[args.agent] || args.agent;
+        // Early validation: Check if agent exists BEFORE trying to run
+        const availableAgents = listAgents();
+        const agentExists = availableAgents.some(a => a.id === resolvedAgent || a.displayId === resolvedAgent);
+        if (!agentExists) {
+            // Fast fail with helpful error message
+            const suggestions = availableAgents
+                .filter(a => a.id.includes(args.agent) || a.displayId.includes(args.agent))
+                .slice(0, 3)
+                .map(a => `  • ${a.displayId}`)
+                .join('\n');
+            const errorMsg = `❌ **Agent not found:** '${args.agent}'\n\n` +
+                (suggestions ? `Did you mean:\n${suggestions}\n\n` : '') +
+                `💡 Use list_agents tool to see all available agents.`;
+            return getVersionHeader() + errorMsg;
         }
-        catch (error) {
-            return getVersionHeader() + formatCliFailure('start agent session', error);
+        // Use resolved agent for CLI invocation
+        const cliArgs = ['run', resolvedAgent];
+        if (args.name?.length) {
+            cliArgs.push('--name', args.name);
         }
+        if (args.prompt?.length) {
+            cliArgs.push(args.prompt);
+        }
+        const { stdout, stderr } = await runCliCommand(cliArgs, 120000);
+        const output = stdout + (stderr ? `\n\nStderr:\n${stderr}` : '');
+        const { displayId } = (0, display_transform_js_1.transformDisplayPath)(resolvedAgent);
+        const aliasNote = AGENT_ALIASES[args.agent] ? ` (alias: ${args.agent} → ${resolvedAgent})` : '';
+        return getVersionHeader() + `Started agent session:\nAgent: ${displayId}${aliasNote}\n\n${output}\n\nUse list_sessions to see the session ID, then use view/resume/stop as needed.`;
+    }
+    catch (error) {
+        return getVersionHeader() + formatCliFailure('start agent session', error);
     }
 });
 // Tool: resume - Continue an existing session
-server.addTool({
-    name: 'resume',
-    description: 'Resume an existing agent session with a follow-up prompt. Use this to continue conversations, provide additional context, or ask follow-up questions to an agent.',
-    parameters: zod_1.z.object({
-        sessionId: zod_1.z.string().describe('Session name to resume (get from list_sessions tool). Example: "146-session-name-architecture"'),
-        prompt: zod_1.z.string().describe('Follow-up message or question for the agent. Build on the previous conversation context.')
-    }),
-    execute: async (args) => {
-        try {
-            const cliArgs = ['resume', args.sessionId];
-            if (args.prompt?.length) {
-                cliArgs.push(args.prompt);
-            }
-            const { stdout, stderr } = await runCliCommand(cliArgs, 120000);
-            const output = stdout + (stderr ? `\n\nStderr:\n${stderr}` : '');
-            return getVersionHeader() + `Resumed session ${args.sessionId}:\n\n${output}`;
+server.tool('resume', 'Resume an existing agent session with a follow-up prompt. Use this to continue conversations, provide additional context, or ask follow-up questions to an agent.', zod_1.z.object({
+    sessionId: zod_1.z.string().describe('Session name to resume (get from list_sessions tool). Example: "146-session-name-architecture"'),
+    prompt: zod_1.z.string().describe('Follow-up message or question for the agent. Build on the previous conversation context.')
+}), async (args) => {
+    try {
+        const cliArgs = ['resume', args.sessionId];
+        if (args.prompt?.length) {
+            cliArgs.push(args.prompt);
         }
-        catch (error) {
-            return getVersionHeader() + formatCliFailure('resume session', error);
-        }
+        const { stdout, stderr } = await runCliCommand(cliArgs, 120000);
+        const output = stdout + (stderr ? `\n\nStderr:\n${stderr}` : '');
+        return getVersionHeader() + `Resumed session ${args.sessionId}:\n\n${output}`;
     }
-});
+    catch (error) {
+        return getVersionHeader() + formatCliFailure('resume session', error);
+    }
+}
 // Tool: view - View session transcript
-server.addTool({
-    name: 'view',
-    description: 'View the transcript of an agent session. Shows the conversation history, agent outputs, and any artifacts generated. Use full=true for complete transcript or false for recent messages only.',
-    parameters: zod_1.z.object({
-        sessionId: zod_1.z.string().describe('Session name to view (get from list_sessions tool). Example: "146-session-name-architecture"'),
-        full: zod_1.z.boolean().optional().default(false).describe('Show full transcript (true) or recent messages only (false). Default: false.')
-    }),
-    execute: async (args) => {
-        try {
-            const cliArgs = ['view', args.sessionId];
-            if (args.full) {
-                cliArgs.push('--full');
-            }
-            const { stdout, stderr } = await runCliCommand(cliArgs, 30000);
-            const output = stdout + (stderr ? `\n\nStderr:\n${stderr}` : '');
-            return getVersionHeader() + `Session ${args.sessionId} transcript:\n\n${output}`;
+, 
+// Tool: view - View session transcript
+server.tool('view', 'View the transcript of an agent session. Shows the conversation history, agent outputs, and any artifacts generated. Use full=true for complete transcript or false for recent messages only.', zod_1.z.object({
+    sessionId: zod_1.z.string().describe('Session name to view (get from list_sessions tool). Example: "146-session-name-architecture"'),
+    full: zod_1.z.boolean().optional().default(false).describe('Show full transcript (true) or recent messages only (false). Default: false.')
+}), async (args) => {
+    try {
+        const cliArgs = ['view', args.sessionId];
+        if (args.full) {
+            cliArgs.push('--full');
         }
-        catch (error) {
-            return getVersionHeader() + formatCliFailure('view session', error);
-        }
+        const { stdout, stderr } = await runCliCommand(cliArgs, 30000);
+        const output = stdout + (stderr ? `\n\nStderr:\n${stderr}` : '');
+        return getVersionHeader() + `Session ${args.sessionId} transcript:\n\n${output}`;
     }
-});
+    catch (error) {
+        return getVersionHeader() + formatCliFailure('view session', error);
+    }
+}
 // Tool: stop - Terminate a running session
-server.addTool({
-    name: 'stop',
-    description: 'Stop a running agent session. Use this to terminate long-running agents or cancel sessions that are no longer needed. The session state is preserved for later viewing.',
-    parameters: zod_1.z.object({
-        sessionId: zod_1.z.string().describe('Session name to stop (get from list_sessions tool). Example: "146-session-name-architecture"')
-    }),
-    execute: async (args) => {
-        try {
-            const { stdout, stderr } = await runCliCommand(['stop', args.sessionId], 30000);
-            const output = stdout + (stderr ? `\n\nStderr:\n${stderr}` : '');
-            return getVersionHeader() + `Stopped session ${args.sessionId}:\n\n${output}`;
-        }
-        catch (error) {
-            return getVersionHeader() + formatCliFailure('stop session', error);
-        }
+, 
+// Tool: stop - Terminate a running session
+server.tool('stop', 'Stop a running agent session. Use this to terminate long-running agents or cancel sessions that are no longer needed. The session state is preserved for later viewing.', zod_1.z.object({
+    sessionId: zod_1.z.string().describe('Session name to stop (get from list_sessions tool). Example: "146-session-name-architecture"')
+}), async (args) => {
+    try {
+        const { stdout, stderr } = await runCliCommand(['stop', args.sessionId], 30000);
+        const output = stdout + (stderr ? `\n\nStderr:\n${stderr}` : '');
+        return getVersionHeader() + `Stopped session ${args.sessionId}:\n\n${output}`;
     }
-});
+    catch (error) {
+        return getVersionHeader() + formatCliFailure('stop session', error);
+    }
+}
+// Helper: List all spell files in a directory recursively
+, 
 // Helper: List all spell files in a directory recursively
 function listSpellsInDir(dir, basePath = '') {
     const spells = [];
@@ -579,6 +470,8 @@ function listSpellsInDir(dir, basePath = '') {
     return spells;
 }
 // Helper: Read spell content and extract everything after frontmatter
+, 
+// Helper: Read spell content and extract everything after frontmatter
 function readSpellContent(spellPath) {
     try {
         const content = fs_1.default.readFileSync(spellPath, 'utf-8');
@@ -596,61 +489,60 @@ function readSpellContent(spellPath) {
     }
 }
 // Tool: list_spells - Discover available spells
-server.addTool({
-    name: 'list_spells',
-    description: 'List all available Genie spells (reusable knowledge patterns). Returns spells from .genie/spells/ (global), .genie/code/spells/ (code-specific), and .genie/create/spells/ (create-specific).',
-    parameters: zod_1.z.object({
-        scope: zod_1.z.enum(['all', 'global', 'code', 'create']).optional().describe('Filter spells by scope. Default: all')
-    }),
-    execute: async (args) => {
-        const scope = args.scope || 'all';
-        const result = {};
-        // Global spells
-        if (scope === 'all' || scope === 'global') {
-            const globalSpellsDir = path_1.default.join(WORKSPACE_ROOT, '.genie', 'spells');
-            result.global = listSpellsInDir(globalSpellsDir);
-        }
-        // Code spells
-        if (scope === 'all' || scope === 'code') {
-            const codeSpellsDir = path_1.default.join(WORKSPACE_ROOT, '.genie', 'code', 'spells');
-            result.code = listSpellsInDir(codeSpellsDir);
-        }
-        // Create spells
-        if (scope === 'all' || scope === 'create') {
-            const createSpellsDir = path_1.default.join(WORKSPACE_ROOT, '.genie', 'create', 'spells');
-            result.create = listSpellsInDir(createSpellsDir);
-        }
-        // Format output
-        let output = getVersionHeader() + '# Genie Spells\n\n';
-        if (result.global) {
-            output += `## Global Spells (.genie/spells/) - ${result.global.length} spells\n`;
-            output += 'Universal patterns applicable to all collectives:\n\n';
-            for (const spell of result.global) {
-                output += `- **${spell.name}** - \`${spell.path}\`\n`;
-            }
-            output += '\n';
-        }
-        if (result.code) {
-            output += `## Code Spells (.genie/code/spells/) - ${result.code.length} spells\n`;
-            output += 'Code-specific patterns for technical execution:\n\n';
-            for (const spell of result.code) {
-                output += `- **${spell.name}** - \`${spell.path}\`\n`;
-            }
-            output += '\n';
-        }
-        if (result.create) {
-            output += `## Create Spells (.genie/create/spells/) - ${result.create.length} spells\n`;
-            output += 'Create-specific patterns for creative work:\n\n';
-            for (const spell of result.create) {
-                output += `- **${spell.name}** - \`${spell.path}\`\n`;
-            }
-            output += '\n';
-        }
-        const totalCount = (result.global?.length || 0) + (result.code?.length || 0) + (result.create?.length || 0);
-        output += `\n**Total:** ${totalCount} spells\n`;
-        return output;
+, 
+// Tool: list_spells - Discover available spells
+server.tool('list_spells', 'List all available Genie spells (reusable knowledge patterns). Returns spells from .genie/spells/ (global), .genie/code/spells/ (code-specific), and .genie/create/spells/ (create-specific).', zod_1.z.object({
+    scope: zod_1.z.enum(['all', 'global', 'code', 'create']).optional().describe('Filter spells by scope. Default: all')
+}), async (args) => {
+    const scope = args.scope || 'all';
+    const result = {};
+    // Global spells
+    if (scope === 'all' || scope === 'global') {
+        const globalSpellsDir = path_1.default.join(WORKSPACE_ROOT, '.genie', 'spells');
+        result.global = listSpellsInDir(globalSpellsDir);
     }
-});
+    // Code spells
+    if (scope === 'all' || scope === 'code') {
+        const codeSpellsDir = path_1.default.join(WORKSPACE_ROOT, '.genie', 'code', 'spells');
+        result.code = listSpellsInDir(codeSpellsDir);
+    }
+    // Create spells
+    if (scope === 'all' || scope === 'create') {
+        const createSpellsDir = path_1.default.join(WORKSPACE_ROOT, '.genie', 'create', 'spells');
+        result.create = listSpellsInDir(createSpellsDir);
+    }
+    // Format output
+    let output = getVersionHeader() + '# Genie Spells\n\n';
+    if (result.global) {
+        output += `## Global Spells (.genie/spells/) - ${result.global.length} spells\n`;
+        output += 'Universal patterns applicable to all collectives:\n\n';
+        for (const spell of result.global) {
+            output += `- **${spell.name}** - \`${spell.path}\`\n`;
+        }
+        output += '\n';
+    }
+    if (result.code) {
+        output += `## Code Spells (.genie/code/spells/) - ${result.code.length} spells\n`;
+        output += 'Code-specific patterns for technical execution:\n\n';
+        for (const spell of result.code) {
+            output += `- **${spell.name}** - \`${spell.path}\`\n`;
+        }
+        output += '\n';
+    }
+    if (result.create) {
+        output += `## Create Spells (.genie/create/spells/) - ${result.create.length} spells\n`;
+        output += 'Create-specific patterns for creative work:\n\n';
+        for (const spell of result.create) {
+            output += `- **${spell.name}** - \`${spell.path}\`\n`;
+        }
+        output += '\n';
+    }
+    const totalCount = (result.global?.length || 0) + (result.code?.length || 0) + (result.create?.length || 0);
+    output += `\n**Total:** ${totalCount} spells\n`;
+    return output;
+}
+// Helper: Normalize spell path (strip leading .genie/, add directory if missing, add .md if missing)
+, 
 // Helper: Normalize spell path (strip leading .genie/, add directory if missing, add .md if missing)
 function normalizeSpellPath(userPath) {
     // Strip leading .genie/ if present (prevents double prefix)
@@ -678,110 +570,81 @@ function normalizeSpellPath(userPath) {
     return normalized;
 }
 // Tool: read_spell - Read specific spell content
-server.addTool({
-    name: 'read_spell',
-    description: 'Read the full content of a specific spell. Returns the spell content after the frontmatter (---). Use list_spells first to see available spells. Supports multiple path formats: "spells/learn.md", ".genie/spells/learn.md", "code/spells/debug.md", or just "learn" (searches all directories).',
-    parameters: zod_1.z.object({
-        spell_path: zod_1.z.string().describe('Path to spell file. Flexible formats supported: "spells/learn.md" (recommended), ".genie/spells/learn.md" (auto-strips .genie/), "code/spells/debug.md", or just "learn" (auto-searches and adds .md extension)')
-    }),
-    execute: async (args) => {
-        const normalizedPath = normalizeSpellPath(args.spell_path);
-        const fullPath = path_1.default.join(WORKSPACE_ROOT, '.genie', normalizedPath);
-        try {
-            const content = readSpellContent(fullPath);
-            return getVersionHeader() + `# Spell: ${normalizedPath}\n\n${content}`;
-        }
-        catch (error) {
-            return getVersionHeader() + `Error reading spell: ${error.message}`;
-        }
+, 
+// Tool: read_spell - Read specific spell content
+server.tool('read_spell', 'Read the full content of a specific spell. Returns the spell content after the frontmatter (---). Use list_spells first to see available spells. Supports multiple path formats: "spells/learn.md", ".genie/spells/learn.md", "code/spells/debug.md", or just "learn" (searches all directories).', zod_1.z.object({
+    spell_path: zod_1.z.string().describe('Path to spell file. Flexible formats supported: "spells/learn.md" (recommended), ".genie/spells/learn.md" (auto-strips .genie/), "code/spells/debug.md", or just "learn" (auto-searches and adds .md extension)')
+}), async (args) => {
+    const normalizedPath = normalizeSpellPath(args.spell_path);
+    const fullPath = path_1.default.join(WORKSPACE_ROOT, '.genie', normalizedPath);
+    try {
+        const content = readSpellContent(fullPath);
+        return getVersionHeader() + `# Spell: ${normalizedPath}\n\n${content}`;
     }
-});
+    catch (error) {
+        return getVersionHeader() + `Error reading spell: ${error.message}`;
+    }
+}
 // Workflows have been merged into spells - no separate workflow tools needed
 // Tool: get_workspace_info - Get workspace metadata
-server.addTool({
-    name: 'get_workspace_info',
-    description: 'Get Genie workspace information including mission, tech stack, roadmap, and environment details. Aggregates data from .genie/product/ directory.',
-    parameters: zod_1.z.object({}),
-    execute: async () => {
-        const productDir = path_1.default.join(WORKSPACE_ROOT, '.genie', 'product');
-        let output = getVersionHeader() + '# Workspace Information\n\n';
-        // Read mission
-        const missionPath = path_1.default.join(productDir, 'mission.md');
-        if (fs_1.default.existsSync(missionPath)) {
-            const mission = fs_1.default.readFileSync(missionPath, 'utf-8');
-            output += '## Mission\n\n' + mission + '\n\n';
-        }
-        // Read tech stack
-        const techStackPath = path_1.default.join(productDir, 'tech-stack.md');
-        if (fs_1.default.existsSync(techStackPath)) {
-            const techStack = fs_1.default.readFileSync(techStackPath, 'utf-8');
-            output += '## Tech Stack\n\n' + techStack + '\n\n';
-        }
-        // Read roadmap
-        const roadmapPath = path_1.default.join(productDir, 'roadmap.md');
-        if (fs_1.default.existsSync(roadmapPath)) {
-            const roadmap = fs_1.default.readFileSync(roadmapPath, 'utf-8');
-            output += '## Roadmap\n\n' + roadmap + '\n\n';
-        }
-        // Read environment
-        const environmentPath = path_1.default.join(productDir, 'environment.md');
-        if (fs_1.default.existsSync(environmentPath)) {
-            const environment = fs_1.default.readFileSync(environmentPath, 'utf-8');
-            output += '## Environment\n\n' + environment + '\n\n';
-        }
-        return output;
+, 
+// Workflows have been merged into spells - no separate workflow tools needed
+// Tool: get_workspace_info - Get workspace metadata
+server.tool(name, 'get_workspace_info', description, 'Get Genie workspace information including mission, tech stack, roadmap, and environment details. Aggregates data from .genie/product/ directory.', parameters, zod_1.z.object({}), execute, async () => {
+    const productDir = path_1.default.join(WORKSPACE_ROOT, '.genie', 'product');
+    let output = getVersionHeader() + '# Workspace Information\n\n';
+    // Read mission
+    const missionPath = path_1.default.join(productDir, 'mission.md');
+    if (fs_1.default.existsSync(missionPath)) {
+        const mission = fs_1.default.readFileSync(missionPath, 'utf-8');
+        output += '## Mission\n\n' + mission + '\n\n';
     }
-});
+    // Read tech stack
+    const techStackPath = path_1.default.join(productDir, 'tech-stack.md');
+    if (fs_1.default.existsSync(techStackPath)) {
+        const techStack = fs_1.default.readFileSync(techStackPath, 'utf-8');
+        output += '## Tech Stack\n\n' + techStack + '\n\n';
+    }
+    // Read roadmap
+    const roadmapPath = path_1.default.join(productDir, 'roadmap.md');
+    if (fs_1.default.existsSync(roadmapPath)) {
+        const roadmap = fs_1.default.readFileSync(roadmapPath, 'utf-8');
+        output += '## Roadmap\n\n' + roadmap + '\n\n';
+    }
+    // Read environment
+    const environmentPath = path_1.default.join(productDir, 'environment.md');
+    if (fs_1.default.existsSync(environmentPath)) {
+        const environment = fs_1.default.readFileSync(environmentPath, 'utf-8');
+        output += '## Environment\n\n' + environment + '\n\n';
+    }
+    return output;
+}))))));
 // ============================================================================
 // WEBSOCKET-NATIVE TOOLS (MVP Phase 6) - Real-time streaming + git validation
 // ============================================================================
 // Tool: create_wish - Create wish with GitHub issue enforcement (WebSocket streaming)
-server.addTool({
-    name: 'create_wish',
-    description: 'Create a wish with GitHub issue enforcement (Amendment 1) and real-time progress via WebSocket. Git working tree must be clean and pushed.',
-    parameters: wish_tool_js_1.wishToolSchema,
-    annotations: {
-        streamingHint: true
-    },
-    execute: async (args, { streamContent, reportProgress }) => {
-        await (0, wish_tool_js_1.executeWishTool)(args, { streamContent, reportProgress });
-    }
+server.tool(name, 'create_wish', description, 'Create a wish with GitHub issue enforcement (Amendment 1) and real-time progress via WebSocket. Git working tree must be clean and pushed.', parameters, wish_tool_js_1.wishToolSchema, annotations, {
+    streamingHint: true
+}, execute, async (args, { streamContent, reportProgress }) => {
+    await (0, wish_tool_js_1.executeWishTool)(args, { streamContent, reportProgress });
 });
 // Tool: run_forge - Run Forge task with agent and stream execution (WebSocket diff streaming)
-server.addTool({
-    name: 'run_forge',
-    description: 'Kick off a Forge task with specified agent and stream live code changes via WebSocket. Git working tree must be clean and pushed.',
-    parameters: forge_tool_js_1.forgeToolSchema,
-    annotations: {
-        streamingHint: true
-    },
-    execute: async (args, { streamContent, reportProgress }) => {
-        await (0, forge_tool_js_1.executeForgeTool)(args, { streamContent, reportProgress });
-    }
+server.tool(name, 'run_forge', description, 'Kick off a Forge task with specified agent and stream live code changes via WebSocket. Git working tree must be clean and pushed.', parameters, forge_tool_js_1.forgeToolSchema, annotations, {
+    streamingHint: true
+}, execute, async (args, { streamContent, reportProgress }) => {
+    await (0, forge_tool_js_1.executeForgeTool)(args, { streamContent, reportProgress });
 });
 // Tool: run_review - Review wish with agent and stream feedback (WebSocket log streaming)
-server.addTool({
-    name: 'run_review',
-    description: 'Review a wish document with an agent and stream live feedback via WebSocket. Git working tree must be clean and pushed.',
-    parameters: review_tool_js_1.reviewToolSchema,
-    annotations: {
-        streamingHint: true
-    },
-    execute: async (args, { streamContent, reportProgress }) => {
-        await (0, review_tool_js_1.executeReviewTool)(args, { streamContent, reportProgress });
-    }
+server.tool(name, 'run_review', description, 'Review a wish document with an agent and stream live feedback via WebSocket. Git working tree must be clean and pushed.', parameters, review_tool_js_1.reviewToolSchema, annotations, {
+    streamingHint: true
+}, execute, async (args, { streamContent, reportProgress }) => {
+    await (0, review_tool_js_1.executeReviewTool)(args, { streamContent, reportProgress });
 });
 // Tool: transform_prompt - Synchronous prompt transformer (no worktree, no git validation)
-server.addTool({
-    name: 'transform_prompt',
-    description: 'Transform/enhance a prompt using an agent synchronously. Runs in current workspace (no worktree). Modern equivalent of old "background off" mode.',
-    parameters: prompt_tool_js_1.promptToolSchema,
-    annotations: {
-        readOnlyHint: true
-    },
-    execute: async (args, { streamContent }) => {
-        await (0, prompt_tool_js_1.executePromptTool)(args, { streamContent });
-    }
+server.tool(name, 'transform_prompt', description, 'Transform/enhance a prompt using an agent synchronously. Runs in current workspace (no worktree). Modern equivalent of old "background off" mode.', parameters, prompt_tool_js_1.promptToolSchema, annotations, {
+    readOnlyHint: true
+}, execute, async (args, { streamContent }) => {
+    await (0, prompt_tool_js_1.executePromptTool)(args, { streamContent });
 });
 // ============================================================================
 // DEPRECATED PROMPTS - Removed per Amendment: No Backwards Compatibility
