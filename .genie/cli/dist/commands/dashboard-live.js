@@ -18,10 +18,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.runDashboardLive = runDashboardLive;
 const stats_tracker_1 = require("../lib/stats-tracker");
 const forge_manager_1 = require("../lib/forge-manager");
+const forge_stats_1 = require("../lib/forge-stats");
 async function runDashboardLive(parsed, _config, _paths) {
     const baseUrl = process.env.FORGE_BASE_URL || 'http://localhost:8887';
     const live = parsed.commandArgs.includes('--live');
     const tracker = new stats_tracker_1.StatsTracker(process.cwd());
+    const dashboardStartTime = Date.now(); // Track when dashboard started
     // Check if Forge is running
     const forgeRunning = await (0, forge_manager_1.isForgeRunning)(baseUrl);
     if (!forgeRunning) {
@@ -38,18 +40,18 @@ async function runDashboardLive(parsed, _config, _paths) {
     }
     if (!live) {
         // One-time snapshot
-        const state = await fetchDashboardState(tracker);
+        const state = await fetchDashboardState(tracker, dashboardStartTime);
         renderDashboard(state);
         return;
     }
     // Live mode - updates every second
     console.clear();
-    let state = await fetchDashboardState(tracker);
+    let state = await fetchDashboardState(tracker, dashboardStartTime);
     let sessionStartTime = state.session ? new Date(state.session.startTime).getTime() : null;
     const renderLoop = setInterval(async () => {
         console.clear();
         // Update state
-        state = await fetchDashboardState(tracker);
+        state = await fetchDashboardState(tracker, dashboardStartTime);
         // Update session timer
         if (state.session && sessionStartTime) {
             const elapsed = Date.now() - sessionStartTime;
@@ -67,13 +69,22 @@ async function runDashboardLive(parsed, _config, _paths) {
         process.exit(0);
     });
 }
-async function fetchDashboardState(tracker) {
+async function fetchDashboardState(tracker, dashboardStartTime) {
+    const baseUrl = process.env.FORGE_BASE_URL || 'http://localhost:8887';
     const session = tracker.getCurrentSession();
     const now = new Date();
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const comparison = tracker.getMonthlyComparison(currentMonth);
     const allTime = tracker.getAllTimeStats();
     const streak = tracker.calculateStreak();
+    // Fetch Forge stats
+    let forgeStats = null;
+    try {
+        forgeStats = await (0, forge_stats_1.collectForgeStats)(baseUrl);
+    }
+    catch (error) {
+        // Forge might be unavailable, continue without stats
+    }
     return {
         session,
         monthly: comparison.current,
@@ -81,7 +92,10 @@ async function fetchDashboardState(tracker) {
         allTime,
         streak,
         lastMilestone: null, // TODO: Fetch from tracker
-        lastTask: null
+        lastTask: null,
+        forgeStats,
+        uptime: Date.now() - dashboardStartTime,
+        startTime: dashboardStartTime
     };
 }
 function renderDashboard(state, isLive = false) {
@@ -158,11 +172,28 @@ function renderDashboard(state, isLive = false) {
     lines.push(`│ 📊 Total Sessions: ${state.allTime.totalSessions}`.padEnd(73) + '│');
     lines.push('└──────────────────────────────────────────────────────────────────────┘');
     lines.push('');
+    // ============================================================================
+    // System Health Card
+    // ============================================================================
+    const uptime = formatDuration(state.uptime);
+    lines.push('┌─ 🩺 SYSTEM HEALTH ────────────────────────────────────────────────────┐');
+    lines.push(`│ 📦 Forge Backend: ${state.forgeStats ? '🟢 Online' : '🔴 Offline'}`.padEnd(73) + '│');
+    if (state.forgeStats) {
+        lines.push(`│ 📊 Projects: ${state.forgeStats.projects?.total || 0}${' │'.padStart(57 - ('📊 Projects: ' + (state.forgeStats.projects?.total || 0)).length)} │`);
+        lines.push(`│ 📝 Tasks: ${state.forgeStats.tasks?.total || 0}${' │'.padStart(61 - ('📝 Tasks: ' + (state.forgeStats.tasks?.total || 0)).length)} │`);
+        lines.push(`│ 🔄 Attempts: ${state.forgeStats.attempts?.total || 0} (✅${state.forgeStats.attempts?.completed || 0} ❌${state.forgeStats.attempts?.failed || 0})`.padEnd(73) + '│');
+    }
+    lines.push(`│ ⏱️  Dashboard Uptime: ${uptime}`.padEnd(73) + '│');
+    lines.push('└──────────────────────────────────────────────────────────────────────┘');
+    lines.push('');
     // Footer
     lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     lines.push('💡 Commands:');
     lines.push('   genie dashboard         - Quick snapshot');
     lines.push('   genie dashboard --live  - Live updating dashboard');
+    if (isLive) {
+        lines.push('   Press Ctrl+C to exit');
+    }
     lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log(lines.join('\n'));
 }

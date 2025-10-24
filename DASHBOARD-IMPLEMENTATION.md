@@ -2,8 +2,10 @@
 
 ## Overview
 
-Implemented **ALL MVP features** from Wish #241:
+Implemented **ALL MVP features** from Wish #241 + **Integrated System Health**:
 - ✅ 3 Core Cards (Current Session, This Month, Streak & Records)
+- ✅ Bonus Card (All-Time Summary)
+- ✅ System Health Card (Forge status, projects, tasks, attempts)
 - ✅ Real-time updates (live mode with 1s refresh)
 - ✅ Milestone detection (100k, 500k, 1M, 5M, 10M tokens)
 - ✅ Streak tracking (current + longest)
@@ -11,6 +13,7 @@ Implemented **ALL MVP features** from Wish #241:
 - ✅ **Git notes integration** (stats stored in commit metadata)
 - ✅ Animated token counter (via live updates)
 - ✅ Session timer (live duration display)
+- ✅ **Default startup** - Running `genie` goes straight to dashboard (no more health monitor)
 
 ## Files Created
 
@@ -130,14 +133,26 @@ git notes --ref=genie/stats show <commit-hash>
 - Enables future analytics: "How many tokens did this feature cost?"
 - Token usage control over time
 
-## Commands
+## Commands & Usage
+
+### Default Startup (NEW!)
+```bash
+genie
+```
+
+**Unified Flow:**
+1. Starts Forge backend
+2. Starts MCP server
+3. **Launches live dashboard** (replaced old health monitor)
+4. Shows engagement stats + system health in one view
+5. Press Ctrl+C to shutdown gracefully
 
 ### Quick Snapshot
 ```bash
 genie dashboard
 ```
 
-Shows current state of all 4 cards (one-time fetch).
+Shows current state of all cards (one-time fetch, no live updates).
 
 ### Live Mode
 ```bash
@@ -162,7 +177,7 @@ Your choice:
 ```
 
 **Options:**
-- **[Enter]** - Continue to start MCP server normally (default)
+- **[Enter]** - Continue to start Genie server normally (default)
 - **d** - Launch dashboard in live mode (`genie dashboard --live`)
 - **k** - Kill Forge and restart server (with confirmation and running task check)
 
@@ -203,6 +218,14 @@ Press Ctrl+C to exit
 │ ⏱️  Total Time: 360h 0m 0s                                            │
 │ ✅ Total Tasks: 150                                                    │
 │ 📊 Total Sessions: 75                                                  │
+└──────────────────────────────────────────────────────────────────────┘
+
+┌─ 🩺 SYSTEM HEALTH ────────────────────────────────────────────────────┐
+│ 📦 Forge Backend: 🟢 Online                                            │
+│ 📊 Projects: 12                                                         │
+│ 📝 Tasks: 45                                                            │
+│ 🔄 Attempts: 120 (✅87 ❌8)                                            │
+│ ⏱️  Dashboard Uptime: 2h 15m 30s                                        │
 └──────────────────────────────────────────────────────────────────────┘
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

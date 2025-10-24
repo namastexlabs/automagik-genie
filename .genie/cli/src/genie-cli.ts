@@ -907,106 +907,6 @@ async function updateGeniePackage(checkOnly: boolean): Promise<void> {
 }
 
 /**
- * Display live health monitoring dashboard with executive stats
- * Returns the interval ID for cleanup
- */
-async function startHealthMonitoring(
-  baseUrl: string,
-  mcpPort: string,
-  mcpChild: ReturnType<typeof spawn>,
-  serverStartTime: number,
-  startupTimings: Record<string, number>
-): Promise<NodeJS.Timeout> {
-  const UPDATE_INTERVAL = 5000; // 5 seconds
-  let dashboardLines = 0;
-
-  const updateDashboard = async () => {
-    // Calculate uptime
-    const uptime = Date.now() - serverStartTime;
-    const uptimeStr = formatUptime(uptime);
-
-    // Current time
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString();
-    const dateStr = now.toLocaleDateString();
-
-    // Check Forge health
-    const forgeHealthy = await isForgeRunning(baseUrl);
-    const forgeStatus = forgeHealthy ? '🟢' : '🔴';
-
-    // Check MCP health
-    const mcpHealthy = mcpChild && !mcpChild.killed;
-    const mcpStatus = mcpHealthy ? '🟢' : '🔴';
-
-    // Collect Forge statistics (only if healthy)
-    const forgeStats = forgeHealthy ? await collectForgeStats(baseUrl) : null;
-    const statsDisplay = formatStatsForDashboard(forgeStats);
-
-    // Build executive dashboard with stats
-    const headerLine = '━'.repeat(60);
-    const header = genieGradient(`${headerLine}
-🧞 ✨ GENIE - Your Wish-Granting Dashboard ✨
-${headerLine}`);
-
-    const communityLine = cosmicGradient('💬 Join our community: https://discord.gg/fXs6YjjFpt');
-    const bugReportLine = '🐛 Report bugs:      Ask Genie to report an issue to Master Genie';
-    const featureLine = '💡 Suggest features: Ask Genie to make a wish to Master Genie';
-    const tagline = magicGradient('✨ https://namastex.ai - AI that elevates human potential, not replaces it');
-
-    const footer = genieGradient(`${headerLine}
-Press Ctrl+C when you're done making magik
-${headerLine}`);
-
-    const dashboard = `${header}
-
-📊 **Quick Stats**
-   Real-time: ${timeStr} (${dateStr})
-   Uptime: ${uptimeStr}
-   Startup: ${startupTimings.total || 0}ms (${((startupTimings.total || 0) / 1000).toFixed(1)}s)
-
-${forgeStatus} **Forge Backend**
-   Status: ${forgeHealthy ? 'Running' : 'Down'}
-   URL: ${baseUrl}
-${statsDisplay}
-
-${mcpStatus} **MCP Server**
-   Status: ${mcpHealthy ? 'Running' : 'Down'}
-   URL: http://localhost:${mcpPort}/sse
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${communityLine}
-${bugReportLine}
-${featureLine}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${tagline}
-${footer}`;
-
-    // Clear screen properly before redrawing
-    if (dashboardLines > 0) {
-      // Move cursor to home position (0,0)
-      process.stdout.write('\x1b[H');
-      // Clear from cursor to end of screen
-      process.stdout.write('\x1b[J');
-    } else {
-      // First render - clear entire screen
-      process.stdout.write('\x1b[2J\x1b[H');
-    }
-
-    // Print new dashboard (no extra newline to avoid duplication)
-    process.stdout.write(dashboard);
-
-    // Count lines for next update
-    dashboardLines = dashboard.split('\n').length;
-  };
-
-  // Initial render
-  await updateDashboard();
-
-  // Update every 5 seconds and return the interval ID
-  return setInterval(updateDashboard, UPDATE_INTERVAL);
-}
-
-/**
  * Start Genie server (Forge + MCP with SSE transport on port 8885)
  * This is the main entry point for npx automagik-genie
  */
@@ -1105,7 +1005,7 @@ async function startGenieServer(): Promise<void> {
     console.log(successGradient(`📦 Forge:  ${baseUrl} ✓ (already running)`));
     console.log('');
     console.log('💡 Options:');
-    console.log('   [Enter] Start Genie MCP server (continue)');
+    console.log('   [Enter] Start Genie server (continue)');
     console.log('   d       Launch dashboard');
     console.log('   k       Kill Forge and restart server');
     console.log('');
@@ -1395,9 +1295,12 @@ async function startGenieServer(): Promise<void> {
 
         console.log('');
         console.log(genieGradient('━'.repeat(60)));
-        console.log(genieGradient('🩺 Starting health monitoring...'));
+        console.log(genieGradient('🧞 Starting Genie dashboard...'));
         console.log(genieGradient('━'.repeat(60)));
-        startHealthMonitoring(baseUrl, mcpPort, mcpChild, startTime, timings);
+        console.log('');
+
+        // Launch the engagement dashboard instead of health monitoring
+        execGenie(['dashboard', '--live']);
       }
     }, 1000);
 

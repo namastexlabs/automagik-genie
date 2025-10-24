@@ -18,6 +18,8 @@ import WebSocket from 'ws';
 import type { ParsedCommand, GenieConfig, ConfigPaths } from '../lib/types';
 import { StatsTracker, type SessionStats, type MonthlyStats, type AllTimeStats } from '../lib/stats-tracker';
 import { isForgeRunning } from '../lib/forge-manager';
+import { collectForgeStats } from '../lib/forge-stats';
+import gradient from 'gradient-string';
 
 interface DashboardState {
   session: SessionStats | null;
@@ -27,6 +29,9 @@ interface DashboardState {
   streak: { current: { days: number; start: string }; longest: { days: number; start: string; end: string } };
   lastMilestone: string | null;
   lastTask: string | null;
+  forgeStats: any; // Forge health stats
+  uptime: number; // Server uptime in ms
+  startTime: number; // Server start time
 }
 
 export async function runDashboardLive(
@@ -38,6 +43,7 @@ export async function runDashboardLive(
   const live = parsed.commandArgs.includes('--live');
 
   const tracker = new StatsTracker(process.cwd());
+  const dashboardStartTime = Date.now(); // Track when dashboard started
 
   // Check if Forge is running
   const forgeRunning = await isForgeRunning(baseUrl);
@@ -57,7 +63,7 @@ export async function runDashboardLive(
 
   if (!live) {
     // One-time snapshot
-    const state = await fetchDashboardState(tracker);
+    const state = await fetchDashboardState(tracker, dashboardStartTime);
     renderDashboard(state);
     return;
   }
@@ -65,14 +71,14 @@ export async function runDashboardLive(
   // Live mode - updates every second
   console.clear();
 
-  let state = await fetchDashboardState(tracker);
+  let state = await fetchDashboardState(tracker, dashboardStartTime);
   let sessionStartTime = state.session ? new Date(state.session.startTime).getTime() : null;
 
   const renderLoop = setInterval(async () => {
     console.clear();
 
     // Update state
-    state = await fetchDashboardState(tracker);
+    state = await fetchDashboardState(tracker, dashboardStartTime);
 
     // Update session timer
     if (state.session && sessionStartTime) {
@@ -93,7 +99,8 @@ export async function runDashboardLive(
   });
 }
 
-async function fetchDashboardState(tracker: StatsTracker): Promise<DashboardState> {
+async function fetchDashboardState(tracker: StatsTracker, dashboardStartTime: number): Promise<DashboardState> {
+  const baseUrl = process.env.FORGE_BASE_URL || 'http://localhost:8887';
   const session = tracker.getCurrentSession();
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -102,6 +109,14 @@ async function fetchDashboardState(tracker: StatsTracker): Promise<DashboardStat
   const allTime = tracker.getAllTimeStats();
   const streak = tracker.calculateStreak();
 
+  // Fetch Forge stats
+  let forgeStats = null;
+  try {
+    forgeStats = await collectForgeStats(baseUrl);
+  } catch (error) {
+    // Forge might be unavailable, continue without stats
+  }
+
   return {
     session,
     monthly: comparison.current,
@@ -109,7 +124,10 @@ async function fetchDashboardState(tracker: StatsTracker): Promise<DashboardStat
     allTime,
     streak,
     lastMilestone: null, // TODO: Fetch from tracker
-    lastTask: null
+    lastTask: null,
+    forgeStats,
+    uptime: Date.now() - dashboardStartTime,
+    startTime: dashboardStartTime
   };
 }
 
@@ -211,11 +229,32 @@ function renderDashboard(state: DashboardState, isLive: boolean = false): void {
   lines.push('└──────────────────────────────────────────────────────────────────────┘');
   lines.push('');
 
+  // ============================================================================
+  // System Health Card
+  // ============================================================================
+
+  const uptime = formatDuration(state.uptime);
+  lines.push('┌─ 🩺 SYSTEM HEALTH ────────────────────────────────────────────────────┐');
+  lines.push(`│ 📦 Forge Backend: ${state.forgeStats ? '🟢 Online' : '🔴 Offline'}`.padEnd(73) + '│');
+
+  if (state.forgeStats) {
+    lines.push(`│ 📊 Projects: ${state.forgeStats.projects?.total || 0}${' │'.padStart(57 - ('📊 Projects: ' + (state.forgeStats.projects?.total || 0)).length)} │`);
+    lines.push(`│ 📝 Tasks: ${state.forgeStats.tasks?.total || 0}${' │'.padStart(61 - ('📝 Tasks: ' + (state.forgeStats.tasks?.total || 0)).length)} │`);
+    lines.push(`│ 🔄 Attempts: ${state.forgeStats.attempts?.total || 0} (✅${state.forgeStats.attempts?.completed || 0} ❌${state.forgeStats.attempts?.failed || 0})`.padEnd(73) + '│');
+  }
+
+  lines.push(`│ ⏱️  Dashboard Uptime: ${uptime}`.padEnd(73) + '│');
+  lines.push('└──────────────────────────────────────────────────────────────────────┘');
+  lines.push('');
+
   // Footer
   lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   lines.push('💡 Commands:');
   lines.push('   genie dashboard         - Quick snapshot');
   lines.push('   genie dashboard --live  - Live updating dashboard');
+  if (isLive) {
+    lines.push('   Press Ctrl+C to exit');
+  }
   lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
   console.log(lines.join('\n'));
