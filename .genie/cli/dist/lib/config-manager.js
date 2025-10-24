@@ -15,6 +15,7 @@ exports.loadConfig = loadConfig;
 exports.loadAuthToken = loadAuthToken;
 exports.saveConfig = saveConfig;
 exports.createDefaultConfig = createDefaultConfig;
+exports.createDefaultConfigAsync = createDefaultConfigAsync;
 exports.loadOrCreateConfig = loadOrCreateConfig;
 exports.getConfigPath = getConfigPath;
 const fs_1 = __importDefault(require("fs"));
@@ -83,9 +84,9 @@ function saveConfig(config) {
 /**
  * Create default configuration with generated auth token
  */
-function createDefaultConfig(ngrokToken) {
+function createDefaultConfig(ngrokToken, enableOAuth2) {
     const { generateToken } = require('./auth-token');
-    return {
+    const config = {
         mcp: {
             auth: {
                 token: generateToken(),
@@ -102,6 +103,68 @@ function createDefaultConfig(ngrokToken) {
             }
         }
     };
+    // Add OAuth2 configuration if requested
+    if (enableOAuth2) {
+        const oauth2Utils = require('./oauth2-utils');
+        const { clientId, clientSecret } = oauth2Utils.generateClientCredentials();
+        // Generate keys synchronously using promise wrapper
+        let privateKey;
+        let publicKey;
+        // Note: This is a workaround for sync context - in real usage this should be async
+        const keyPair = oauth2Utils.generateKeyPair();
+        if (keyPair instanceof Promise) {
+            throw new Error('Cannot generate OAuth2 keys synchronously. Use createDefaultConfigAsync instead.');
+        }
+        config.mcp.auth.oauth2 = {
+            enabled: true,
+            clientId,
+            clientSecret,
+            signingKey: '', // Will be set by async version
+            publicKey: '', // Will be set by async version
+            tokenExpiry: 3600, // 1 hour
+            issuer: 'genie-mcp-server'
+        };
+    }
+    return config;
+}
+/**
+ * Create default configuration with OAuth2 support (async version)
+ */
+async function createDefaultConfigAsync(ngrokToken, enableOAuth2) {
+    const { generateToken } = require('./auth-token');
+    const config = {
+        mcp: {
+            auth: {
+                token: generateToken(),
+                created: new Date().toISOString()
+            },
+            tunnel: {
+                enabled: !!ngrokToken,
+                provider: 'ngrok',
+                token: ngrokToken || null
+            },
+            server: {
+                port: 8885,
+                transport: 'httpStream'
+            }
+        }
+    };
+    // Add OAuth2 configuration if requested
+    if (enableOAuth2) {
+        const oauth2Utils = require('./oauth2-utils');
+        const { clientId, clientSecret } = oauth2Utils.generateClientCredentials();
+        const { privateKey, publicKey } = await oauth2Utils.generateKeyPair();
+        config.mcp.auth.oauth2 = {
+            enabled: true,
+            clientId,
+            clientSecret,
+            signingKey: privateKey,
+            publicKey: publicKey,
+            tokenExpiry: 3600, // 1 hour
+            issuer: 'genie-mcp-server'
+        };
+    }
+    return config;
 }
 /**
  * Load or create config
