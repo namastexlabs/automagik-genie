@@ -35,6 +35,20 @@ const prompt_tool_js_1 = require("./tools/prompt-tool.js");
 const execFileAsync = (0, util_1.promisify)(child_process_1.execFile);
 const PORT = process.env.MCP_PORT ? parseInt(process.env.MCP_PORT) : 8885;
 const TRANSPORT = process.env.MCP_TRANSPORT || 'stdio';
+// Dynamic import for OAuth2 utilities (loaded at runtime from compiled CLI)
+let verifyAccessToken;
+function getOAuth2Utils() {
+    if (!verifyAccessToken) {
+        try {
+            const oauth2Utils = require('../../cli/dist/lib/oauth2-utils.js');
+            verifyAccessToken = oauth2Utils.verifyAccessToken;
+        }
+        catch (error) {
+            throw new Error('OAuth2 utilities not available - did you build the CLI?');
+        }
+    }
+    return { verifyAccessToken };
+}
 // Find actual workspace root by searching upward for .genie/ directory
 function findWorkspaceRoot() {
     let dir = process.cwd();
@@ -259,10 +273,75 @@ async function syncAgentProfilesToForge() {
         console.warn(`⚠️  Agent profile sync failed: ${error.message}`);
     }
 }
+// Load OAuth2 configuration (if available)
+function loadOAuth2Config() {
+    try {
+        const configModPath = path_1.default.join(WORKSPACE_ROOT, '.genie', 'cli', 'dist', 'lib', 'config-manager.js');
+        if (fs_1.default.existsSync(configModPath)) {
+            const { loadOAuth2Config } = require(configModPath);
+            return loadOAuth2Config();
+        }
+    }
+    catch (error) {
+        // Config not available (expected for stdio transport)
+    }
+    return null;
+}
+// Create authentication function for FastMCP
+function createAuthenticator(oauth2Config, serverUrl) {
+    // Public paths that don't require authentication
+    const publicPaths = [
+        '/health',
+        '/.well-known/oauth-protected-resource',
+        '/.well-known/oauth-authorization-server',
+        '/oauth/token'
+    ];
+    return async (req) => {
+        // Check if path is public (no auth required)
+        const pathname = req.url?.split('?')[0] || '';
+        if (publicPaths.includes(pathname)) {
+            return undefined; // No auth required for public endpoints
+        }
+        // Extract Authorization header
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            throw new Error('Missing or invalid Authorization header');
+        }
+        // Extract and verify JWT token
+        const token = authHeader.slice(7); // Remove 'Bearer ' prefix
+        const { verifyAccessToken } = getOAuth2Utils();
+        const payload = await verifyAccessToken(token, oauth2Config.publicKey, oauth2Config.issuer, `${serverUrl}/mcp`);
+        if (!payload) {
+            throw new Error('Invalid or expired token');
+        }
+        // Return session auth data (client ID from token subject)
+        return { clientId: payload.sub };
+    };
+}
+// Load OAuth2 config for HTTP transport
+const oauth2Config = loadOAuth2Config();
+const serverUrl = `http://localhost:${PORT}`;
 // Initialize FastMCP server
 const server = new fastmcp_1.FastMCP({
     name: 'genie',
     version: getGenieVersion(),
+    // Add authentication for HTTP transport only
+    ...(TRANSPORT !== 'stdio' && oauth2Config ? {
+        authenticate: createAuthenticator(oauth2Config, serverUrl)
+    } : {}),
+    // Configure OAuth2 discovery metadata (RFC 9728)
+    ...(TRANSPORT !== 'stdio' && oauth2Config ? {
+        oauth: {
+            enabled: true,
+            protectedResource: {
+                resource: `${serverUrl}/mcp`,
+                authorizationServers: [serverUrl],
+                bearerMethodsSupported: ['header'],
+                scopesSupported: ['mcp:read', 'mcp:write'],
+                resourceSigningAlgValuesSupported: ['RS256']
+            }
+        }
+    } : {}),
     instructions: `Genie is an agent orchestration system for managing AI agents that help with software development tasks.
 
 **Core Capabilities:**
@@ -731,51 +810,46 @@ console.error('🔄 Syncing agent profiles to Forge...');
 syncAgentProfilesToForge().catch(err => {
     console.warn(`⚠️  Background agent sync failed: ${err.message}`);
 });
-if (TRANSPORT === 'stdio') {
-    server.start({
-        transportType: 'stdio'
-    });
-    console.error('✅ Server started successfully (stdio)');
-    console.error('Ready for Claude Desktop or MCP Inspector connections');
-}
-else if (TRANSPORT === 'httpStream' || TRANSPORT === 'http') {
-    // Load OAuth2 config for HTTP stream validation
-    let oauth2Configured = false;
-    try {
-        const configModPath = path_1.default.join(WORKSPACE_ROOT, '.genie', 'cli', 'dist', 'lib', 'config-manager.js');
-        if (fs_1.default.existsSync(configModPath)) {
-            const { loadOAuth2Config } = require(configModPath);
-            const oauth2Config = loadOAuth2Config();
-            oauth2Configured = !!oauth2Config;
-        }
+(async () => {
+    if (TRANSPORT === 'stdio') {
+        await server.start({
+            transportType: 'stdio'
+        });
+        console.error('✅ Server started successfully (stdio)');
+        console.error('Ready for Claude Desktop or MCP Inspector connections');
     }
-    catch (error) {
-        console.warn('⚠️  Failed to load OAuth2 config, running without auth');
-    }
-    server.start({
-        transportType: 'httpStream',
-        httpStream: {
-            port: PORT,
-            // OAuth2 validation handled by FastMCP or custom middleware
+    else if (TRANSPORT === 'httpStream' || TRANSPORT === 'http') {
+        // Check if OAuth2 is configured
+        const isOAuth2Configured = !!oauth2Config;
+        // Start FastMCP server (it will handle authentication via the authenticate function)
+        await server.start({
+            transportType: 'httpStream',
+            httpStream: {
+                port: PORT
+            }
+        });
+        console.error(`✅ Server started successfully (HTTP Stream)`);
+        console.error(`HTTP Stream: http://localhost:${PORT}/mcp`);
+        console.error(`SSE: http://localhost:${PORT}/sse`);
+        console.error(`Health: http://localhost:${PORT}/health`);
+        console.error(`OAuth Metadata: http://localhost:${PORT}/.well-known/oauth-protected-resource`);
+        if (isOAuth2Configured) {
+            console.error(`🔐 Auth: OAuth2.1 enabled (JWT Bearer tokens required for MCP requests)`);
+            console.error(`⚠️  Note: /oauth/token endpoint needs wrapper HTTP server (see unified-startup.ts)`);
         }
-    });
-    console.error(`✅ Server started successfully (HTTP Stream)`);
-    console.error(`HTTP Stream: http://localhost:${PORT}/mcp`);
-    console.error(`SSE: http://localhost:${PORT}/sse`);
-    console.error(`OAuth Token Endpoint: http://localhost:${PORT}/oauth/token`);
-    console.error(`Metadata: http://localhost:${PORT}/.well-known/oauth-protected-resource`);
-    if (oauth2Configured) {
-        console.error(`🔐 Auth: OAuth2.1 configured (JWT tokens required)`);
+        else {
+            console.error(`⚠️  Auth: No OAuth2 configured - running in open mode (NOT SECURE)`);
+        }
     }
     else {
-        console.error(`⚠️  Auth: No OAuth2 configured - running in open mode`);
+        console.error(`❌ Unknown transport type: ${TRANSPORT}`);
+        console.error('Valid options: stdio (default), httpStream, http');
+        process.exit(1);
     }
-}
-else {
-    console.error(`❌ Unknown transport type: ${TRANSPORT}`);
-    console.error('Valid options: stdio (default), httpStream, http');
+})().catch((error) => {
+    console.error('❌ Server startup failed:', error);
     process.exit(1);
-}
+});
 function resolveCliInvocation() {
     const distEntry = path_1.default.join(WORKSPACE_ROOT, '.genie/cli/dist/genie-cli.js');
     if (fs_1.default.existsSync(distEntry)) {
