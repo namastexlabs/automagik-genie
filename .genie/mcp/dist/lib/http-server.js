@@ -58,8 +58,8 @@ async function startHttpServer(options) {
         sessionIdGenerator: () => (0, crypto_1.randomUUID)(),
         enableJsonResponse: false // Use SSE streams for real-time updates
     });
-    // Connect MCP server to transport
-    await server.connect(transport);
+    // Connect MCP server to transport (McpServer wraps the underlying Server)
+    await server.server.connect(transport);
     // MCP endpoint - protected by OAuth2 bearer token
     app.post('/mcp', (0, bearerAuth_js_1.requireBearerAuth)({
         verifier: oauthProvider,

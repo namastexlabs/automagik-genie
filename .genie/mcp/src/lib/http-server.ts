@@ -8,7 +8,7 @@
  */
 
 import express, { Request, Response } from 'express';
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { requireBearerAuth } from '@modelcontextprotocol/sdk/server/auth/middleware/bearerAuth.js';
 import { GenieOAuthProvider, OAuth2Config } from './oauth-provider.js';
@@ -16,7 +16,7 @@ import { handleTokenEndpoint, handleProtectedResourceMetadata } from './oauth2-e
 import { randomUUID } from 'crypto';
 
 export interface HttpServerOptions {
-  server: Server;
+  server: McpServer;
   oauth2Config: OAuth2Config;
   port: number;
   onReady?: (url: string) => void;
@@ -71,8 +71,8 @@ export async function startHttpServer(options: HttpServerOptions): Promise<void>
     enableJsonResponse: false // Use SSE streams for real-time updates
   });
 
-  // Connect MCP server to transport
-  await server.connect(transport);
+  // Connect MCP server to transport (McpServer wraps the underlying Server)
+  await server.server.connect(transport);
 
   // MCP endpoint - protected by OAuth2 bearer token
   app.post('/mcp', requireBearerAuth({
