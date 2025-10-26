@@ -470,6 +470,21 @@ async function smartRouter(): Promise<void> {
   const versionPath = path.join(genieDir, 'state', 'version.json');
   const hasGenieConfig = fs.existsSync(genieDir);
 
+  // MASTER GENIE DETECTION: Check if we're in the template repo
+  const workspacePackageJson = path.join(process.cwd(), 'package.json');
+  let isMasterGenie = false;
+
+  if (fs.existsSync(workspacePackageJson)) {
+    try {
+      const workspacePkg = JSON.parse(fs.readFileSync(workspacePackageJson, 'utf8'));
+      if (workspacePkg.name === 'automagik-genie') {
+        isMasterGenie = true;
+      }
+    } catch {
+      // Not master genie if can't read package.json
+    }
+  }
+
   // VERSION CHECK FIRST (optimization) - Don't waste resources starting Forge
   // if we need to run init anyway. Each scenario starts Forge when needed.
 
@@ -709,6 +724,20 @@ async function smartRouter(): Promise<void> {
     const currentVersion = packageJson.version;
 
     if (installedVersion !== currentVersion) {
+      // MASTER GENIE: Skip version mismatch scenario (they manage versions manually)
+      if (isMasterGenie) {
+        console.log('');
+        console.log(performanceGradient('⚠️  Master Genie Detected'));
+        console.log(`   Local version: ${successGradient(installedVersion)}`);
+        console.log(`   Global version: ${performanceGradient(currentVersion)}`);
+        console.log('');
+        console.log('Run ' + performanceGradient('genie update') + ' to install your local build globally');
+        console.log('');
+        // Start server anyway - master genie can run with version mismatch
+        await startGenieServer();
+        return;
+      }
+
       // SCENARIO 3: VERSION MISMATCH - Outdated installation → Run init with backup
       console.log(cosmicGradient('━'.repeat(60)));
       console.log(magicGradient('   🧞 ✨ THE COLLECTIVE HAS GROWN ✨ 🧞   '));
