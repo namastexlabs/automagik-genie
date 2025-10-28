@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "wait": {
+      "command": "uvx",
+      "args": [
+        "automagik-tools@latest",
+        "tool",
+        "wait"
+      ]
+    }
+  }
+}
