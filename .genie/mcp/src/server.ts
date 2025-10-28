@@ -21,8 +21,6 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import fs from 'fs';
 import path from 'path';
-import { execFile, ExecFileOptions } from 'child_process';
-import { promisify } from 'util';
 import { transformDisplayPath } from './lib/display-transform.js';
 
 // Import WebSocket-native tools (MVP Phase 6)
@@ -45,7 +43,8 @@ import { OAuth2Config } from './lib/oauth-provider.js';
 // Import process cleanup utilities
 import { writePidFile, isServerAlreadyRunning, cleanupStaleMcpServers } from './lib/process-cleanup.js';
 
-const execFileAsync = promisify(execFile);
+// Import CLI executor utilities
+import { runCliCommand, formatCliFailure } from './lib/cli-executor.js';
 
 const PORT = process.env.MCP_PORT ? parseInt(process.env.MCP_PORT) : 8885;
 const TRANSPORT = process.env.MCP_TRANSPORT || 'stdio';
@@ -64,17 +63,6 @@ function findWorkspaceRoot(): string {
 }
 
 const WORKSPACE_ROOT = findWorkspaceRoot();
-
-interface CliInvocation {
-  command: string;
-  args: string[];
-}
-
-interface CliResult {
-  stdout: string;
-  stderr: string;
-  commandLine: string;
-}
 
 // transformDisplayPath imported from ./lib/display-transform (single source of truth)
 
@@ -506,7 +494,7 @@ server.tool('run', 'Start a new Genie agent session. Choose an agent (use list_a
     if (args.prompt?.length) {
       cliArgs.push(args.prompt);
     }
-    const { stdout, stderr } = await runCliCommand(cliArgs, 120000);
+    const { stdout, stderr } = await runCliCommand(WORKSPACE_ROOT, cliArgs, 120000);
     const output = stdout + (stderr ? `\n\nStderr:\n${stderr}` : '');
 
     const { displayId } = transformDisplayPath(resolvedAgent);
@@ -527,7 +515,7 @@ server.tool('resume', 'Resume an existing agent session with a follow-up prompt.
     if (args.prompt?.length) {
       cliArgs.push(args.prompt);
     }
-    const { stdout, stderr } = await runCliCommand(cliArgs, 120000);
+    const { stdout, stderr } = await runCliCommand(WORKSPACE_ROOT, cliArgs, 120000);
     const output = stdout + (stderr ? `\n\nStderr:\n${stderr}` : '');
 
     return { content: [{ type: 'text', text: getVersionHeader() + `Resumed session ${args.sessionId}:\n\n${output}` }] };
@@ -571,7 +559,7 @@ server.tool('stop', 'Stop a running agent session. Use this to terminate long-ru
   sessionId: z.string().describe('Session name to stop (get from list_sessions tool). Example: "146-session-name-architecture"')
 }, async (args) => {
   try {
-    const { stdout, stderr } = await runCliCommand(['stop', args.sessionId], 30000);
+    const { stdout, stderr } = await runCliCommand(WORKSPACE_ROOT, ['stop', args.sessionId], 30000);
     const output = stdout + (stderr ? `\n\nStderr:\n${stderr}` : '');
 
     return { content: [{ type: 'text', text: getVersionHeader() + `Stopped session ${args.sessionId}:\n\n${output}` }] };
@@ -1181,73 +1169,3 @@ syncAgentProfilesToForge()
   console.error('❌ Server startup failed:', error);
   process.exit(1);
 });
-function resolveCliInvocation(): CliInvocation {
-  const distEntry = path.join(WORKSPACE_ROOT, '.genie/cli/dist/genie-cli.js');
-  if (fs.existsSync(distEntry)) {
-    return { command: process.execPath, args: [distEntry] };
-  }
-
-  const localScript = path.join(WORKSPACE_ROOT, 'genie');
-  if (fs.existsSync(localScript)) {
-    return { command: localScript, args: [] };
-  }
-
-  return { command: 'npx', args: ['automagik-genie'] };
-}
-
-function quoteArg(value: string): string {
-  if (!value.length) return '""';
-  if (/^[A-Za-z0-9._\-\/]+$/.test(value)) return value;
-  return '"' + value.replace(/"/g, '\\"') + '"';
-}
-
-function normalizeOutput(data: string | Buffer | undefined): string {
-  if (data === undefined || data === null) return '';
-  return typeof data === 'string' ? data : data.toString('utf8');
-}
-
-async function runCliCommand(subArgs: string[], timeoutMs = 120000): Promise<CliResult> {
-  const invocation = resolveCliInvocation();
-  const execArgs = [...invocation.args, ...subArgs];
-  const commandLine = [invocation.command, ...execArgs.map(quoteArg)].join(' ');
-  const options: ExecFileOptions = {
-    cwd: WORKSPACE_ROOT,
-    maxBuffer: 10 * 1024 * 1024,
-    timeout: timeoutMs
-  };
-
-  try {
-    const { stdout, stderr } = await execFileAsync(invocation.command, execArgs, options);
-    return {
-      stdout: normalizeOutput(stdout),
-      stderr: normalizeOutput(stderr),
-      commandLine
-    };
-  } catch (error) {
-    const err = error as NodeJS.ErrnoException & { stdout?: string | Buffer; stderr?: string | Buffer };
-    const wrapped = new Error(err.message || 'CLI execution failed');
-    (wrapped as any).stdout = normalizeOutput(err.stdout);
-    (wrapped as any).stderr = normalizeOutput(err.stderr);
-    (wrapped as any).commandLine = commandLine;
-    throw wrapped;
-  }
-}
-
-function formatCliFailure(action: string, error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
-  const stdout = error && typeof error === 'object' ? (error as any).stdout : '';
-  const stderr = error && typeof error === 'object' ? (error as any).stderr : '';
-  const commandLine = error && typeof error === 'object' ? (error as any).commandLine : '';
-
-  const sections: string[] = [`Failed to ${action}:`, message];
-  if (stdout) {
-    sections.push(`Stdout:\n${stdout}`);
-  }
-  if (stderr) {
-    sections.push(`Stderr:\n${stderr}`);
-  }
-  if (commandLine) {
-    sections.push(`Command: ${commandLine}`);
-  }
-  return sections.join('\n\n');
-}

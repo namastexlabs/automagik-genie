@@ -25,8 +25,6 @@ const stdio_js_1 = require("@modelcontextprotocol/sdk/server/stdio.js");
 const zod_1 = require("zod");
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
-const child_process_1 = require("child_process");
-const util_1 = require("util");
 const display_transform_js_1 = require("./lib/display-transform.js");
 // Import WebSocket-native tools (MVP Phase 6)
 const wish_tool_js_1 = require("./tools/wish-tool.js");
@@ -42,7 +40,8 @@ const role_detector_js_1 = require("./lib/role-detector.js");
 const http_server_js_1 = require("./lib/http-server.js");
 // Import process cleanup utilities
 const process_cleanup_js_1 = require("./lib/process-cleanup.js");
-const execFileAsync = (0, util_1.promisify)(child_process_1.execFile);
+// Import CLI executor utilities
+const cli_executor_js_1 = require("./lib/cli-executor.js");
 const PORT = process.env.MCP_PORT ? parseInt(process.env.MCP_PORT) : 8885;
 const TRANSPORT = process.env.MCP_TRANSPORT || 'stdio';
 // Find actual workspace root by searching upward for .genie/ directory
@@ -442,14 +441,14 @@ server.tool('run', 'Start a new Genie agent session. Choose an agent (use list_a
         if (args.prompt?.length) {
             cliArgs.push(args.prompt);
         }
-        const { stdout, stderr } = await runCliCommand(cliArgs, 120000);
+        const { stdout, stderr } = await (0, cli_executor_js_1.runCliCommand)(WORKSPACE_ROOT, cliArgs, 120000);
         const output = stdout + (stderr ? `\n\nStderr:\n${stderr}` : '');
         const { displayId } = (0, display_transform_js_1.transformDisplayPath)(resolvedAgent);
         const aliasNote = AGENT_ALIASES[args.agent] ? ` (alias: ${args.agent} → ${resolvedAgent})` : '';
         return { content: [{ type: 'text', text: getVersionHeader() + `Started agent session:\nAgent: ${displayId}${aliasNote}\n\n${output}\n\nUse list_sessions to see the session ID, then use view/resume/stop as needed.` }] };
     }
     catch (error) {
-        return { content: [{ type: 'text', text: getVersionHeader() + formatCliFailure('start agent session', error) }] };
+        return { content: [{ type: 'text', text: getVersionHeader() + (0, cli_executor_js_1.formatCliFailure)('start agent session', error) }] };
     }
 });
 // Tool: resume - Continue an existing session
@@ -462,12 +461,12 @@ server.tool('resume', 'Resume an existing agent session with a follow-up prompt.
         if (args.prompt?.length) {
             cliArgs.push(args.prompt);
         }
-        const { stdout, stderr } = await runCliCommand(cliArgs, 120000);
+        const { stdout, stderr } = await (0, cli_executor_js_1.runCliCommand)(WORKSPACE_ROOT, cliArgs, 120000);
         const output = stdout + (stderr ? `\n\nStderr:\n${stderr}` : '');
         return { content: [{ type: 'text', text: getVersionHeader() + `Resumed session ${args.sessionId}:\n\n${output}` }] };
     }
     catch (error) {
-        return { content: [{ type: 'text', text: getVersionHeader() + formatCliFailure('resume session', error) }] };
+        return { content: [{ type: 'text', text: getVersionHeader() + (0, cli_executor_js_1.formatCliFailure)('resume session', error) }] };
     }
 });
 // Tool: view - View session transcript
@@ -502,12 +501,12 @@ server.tool('stop', 'Stop a running agent session. Use this to terminate long-ru
     sessionId: zod_1.z.string().describe('Session name to stop (get from list_sessions tool). Example: "146-session-name-architecture"')
 }, async (args) => {
     try {
-        const { stdout, stderr } = await runCliCommand(['stop', args.sessionId], 30000);
+        const { stdout, stderr } = await (0, cli_executor_js_1.runCliCommand)(WORKSPACE_ROOT, ['stop', args.sessionId], 30000);
         const output = stdout + (stderr ? `\n\nStderr:\n${stderr}` : '');
         return { content: [{ type: 'text', text: getVersionHeader() + `Stopped session ${args.sessionId}:\n\n${output}` }] };
     }
     catch (error) {
-        return { content: [{ type: 'text', text: getVersionHeader() + formatCliFailure('stop session', error) }] };
+        return { content: [{ type: 'text', text: getVersionHeader() + (0, cli_executor_js_1.formatCliFailure)('stop session', error) }] };
     }
 });
 // Helper: List all spell files in a directory recursively
@@ -1055,69 +1054,3 @@ syncAgentProfilesToForge()
     console.error('❌ Server startup failed:', error);
     process.exit(1);
 });
-function resolveCliInvocation() {
-    const distEntry = path_1.default.join(WORKSPACE_ROOT, '.genie/cli/dist/genie-cli.js');
-    if (fs_1.default.existsSync(distEntry)) {
-        return { command: process.execPath, args: [distEntry] };
-    }
-    const localScript = path_1.default.join(WORKSPACE_ROOT, 'genie');
-    if (fs_1.default.existsSync(localScript)) {
-        return { command: localScript, args: [] };
-    }
-    return { command: 'npx', args: ['automagik-genie'] };
-}
-function quoteArg(value) {
-    if (!value.length)
-        return '""';
-    if (/^[A-Za-z0-9._\-\/]+$/.test(value))
-        return value;
-    return '"' + value.replace(/"/g, '\\"') + '"';
-}
-function normalizeOutput(data) {
-    if (data === undefined || data === null)
-        return '';
-    return typeof data === 'string' ? data : data.toString('utf8');
-}
-async function runCliCommand(subArgs, timeoutMs = 120000) {
-    const invocation = resolveCliInvocation();
-    const execArgs = [...invocation.args, ...subArgs];
-    const commandLine = [invocation.command, ...execArgs.map(quoteArg)].join(' ');
-    const options = {
-        cwd: WORKSPACE_ROOT,
-        maxBuffer: 10 * 1024 * 1024,
-        timeout: timeoutMs
-    };
-    try {
-        const { stdout, stderr } = await execFileAsync(invocation.command, execArgs, options);
-        return {
-            stdout: normalizeOutput(stdout),
-            stderr: normalizeOutput(stderr),
-            commandLine
-        };
-    }
-    catch (error) {
-        const err = error;
-        const wrapped = new Error(err.message || 'CLI execution failed');
-        wrapped.stdout = normalizeOutput(err.stdout);
-        wrapped.stderr = normalizeOutput(err.stderr);
-        wrapped.commandLine = commandLine;
-        throw wrapped;
-    }
-}
-function formatCliFailure(action, error) {
-    const message = error instanceof Error ? error.message : String(error);
-    const stdout = error && typeof error === 'object' ? error.stdout : '';
-    const stderr = error && typeof error === 'object' ? error.stderr : '';
-    const commandLine = error && typeof error === 'object' ? error.commandLine : '';
-    const sections = [`Failed to ${action}:`, message];
-    if (stdout) {
-        sections.push(`Stdout:\n${stdout}`);
-    }
-    if (stderr) {
-        sections.push(`Stderr:\n${stderr}`);
-    }
-    if (commandLine) {
-        sections.push(`Command: ${commandLine}`);
-    }
-    return sections.join('\n\n');
-}
