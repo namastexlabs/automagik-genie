@@ -86,6 +86,15 @@ export class ForgeClient {
 
     const response = await fetch(url, options);
 
+    // Check Content-Type to detect HTML responses (wrong endpoint)
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('text/html')) {
+      throw new Error(
+        `Forge API returned HTML instead of JSON. This likely means the endpoint ${path} doesn't exist. ` +
+        `Status: ${response.status}. Check the API documentation in forge.js for correct endpoints.`
+      );
+    }
+
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`Forge API error (${response.status}): ${errorText}`);
@@ -133,30 +142,26 @@ export class ForgeClient {
 
   /**
    * Create task and start attempt (atomic operation)
-   * POST /api/projects/:projectId/tasks
-   * POST /api/tasks/:taskId/attempts/start
+   * POST /api/tasks/create-and-start
    */
   async createAndStartTask(projectId: string, taskData: TaskData): Promise<TaskAttempt> {
-    // Step 1: Create task
-    const taskResult = await this.request('POST', `/api/projects/${projectId}/tasks`, {
-      title: taskData.title,
-      description: taskData.description,
-    });
-
-    const taskId = taskResult.task_id || taskResult.task?.id || taskResult.id;
-    if (!taskId) {
-      throw new Error('Failed to create task: no task_id returned');
-    }
-
-    // Step 2: Start task attempt
-    const attemptResult = await this.request('POST', `/api/tasks/${taskId}/attempts/start`, {
-      executor: taskData.executor_profile_id,
+    // Use atomic endpoint - creates task AND starts attempt in one call
+    const result = await this.request('POST', '/api/tasks/create-and-start', {
+      task: {
+        project_id: projectId,
+        title: taskData.title,
+        description: taskData.description,
+      },
+      executor_profile_id: taskData.executor_profile_id,
       base_branch: taskData.base_branch,
     });
 
-    const attemptId = attemptResult.attempt_id || attemptResult.id;
-    if (!attemptId) {
-      throw new Error('Failed to start task attempt: no attempt_id returned');
+    // Extract IDs from response
+    const taskId = result.task_id || result.task?.id || result.id;
+    const attemptId = result.attempt_id || result.attempt?.id || result.id;
+
+    if (!taskId || !attemptId) {
+      throw new Error('Failed to create task and start attempt: missing task_id or attempt_id');
     }
 
     // Return task attempt object
@@ -171,43 +176,45 @@ export class ForgeClient {
 
   /**
    * Get task attempt details
-   * GET /api/tasks/:taskId
+   * GET /api/task-attempts/:attemptId
    */
   async getTaskAttempt(attemptId: string): Promise<TaskAttempt> {
-    const result = await this.request('GET', `/api/tasks/${attemptId}`);
-    const task = result.task || result;
+    const result = await this.request('GET', `/api/task-attempts/${attemptId}`);
+    const attempt = result.attempt || result;
 
-    if (!task) {
+    if (!attempt) {
       throw new Error(`Task attempt not found: ${attemptId}`);
     }
 
     return {
       id: attemptId,
-      task_id: task.id,
-      status: task.status || 'unknown',
-      created_at: task.created_at,
-      updated_at: task.updated_at,
+      task_id: attempt.task_id,
+      status: attempt.status || 'unknown',
+      executor_profile_id: attempt.executor_profile_id,
+      base_branch: attempt.base_branch,
+      branch_name: attempt.branch_name,
+      worktree_path: attempt.worktree_path,
+      created_at: attempt.created_at,
+      updated_at: attempt.updated_at,
     };
   }
 
   /**
    * Resume task attempt with follow-up prompt
-   * PUT /api/tasks/:taskId
+   * POST /api/task-attempts/:attemptId/follow-up
    */
   async followUpTaskAttempt(attemptId: string, prompt: string): Promise<void> {
-    await this.request('PUT', `/api/tasks/${attemptId}`, {
-      description: prompt, // Send follow-up as description update
+    await this.request('POST', `/api/task-attempts/${attemptId}/follow-up`, {
+      follow_up_prompt: prompt,
     });
   }
 
   /**
    * Stop task attempt execution
-   * PUT /api/tasks/:taskId
+   * POST /api/task-attempts/:attemptId/stop
    */
   async stopTaskAttemptExecution(attemptId: string): Promise<void> {
-    await this.request('PUT', `/api/tasks/${attemptId}`, {
-      status: 'cancelled',
-    });
+    await this.request('POST', `/api/task-attempts/${attemptId}/stop`);
   }
 
   /**
