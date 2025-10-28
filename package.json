@@ -1,6 +1,6 @@
 {
   "name": "automagik-genie",
-  "version": "2.5.5-rc.23",
+  "version": "2.5.5-rc.66",
   "description": "Self-evolving AI agent orchestration framework with Model Context Protocol support",
   "main": ".genie/cli/dist/genie.js",
   "bin": {
@@ -47,7 +47,7 @@
   "scripts": {
     "build": "pnpm run build:genie && pnpm run build:mcp",
     "build:genie": "tsc -p .genie/cli/src/views/tsconfig.json && tsc -p .genie/cli/tsconfig.json",
-    "build:mcp": "tsc -p .genie/mcp/tsconfig.json",
+    "build:mcp": "tsc -p .genie/mcp/tsconfig.json && mkdir -p .genie/mcp/dist/lib/views && cp .genie/mcp/src/lib/views/*.html .genie/mcp/dist/lib/views/",
     "start:mcp": "node .genie/mcp/dist/server.js",
     "start:mcp:stdio": "MCP_TRANSPORT=stdio node .genie/mcp/dist/server.js",
     "start:mcp:http": "MCP_TRANSPORT=httpStream node .genie/mcp/dist/server.js",
@@ -89,7 +89,8 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.18.2",
+    "@modelcontextprotocol/sdk": "^1.20.2",
+    "@ngrok/ngrok": "^1.5.2",
     "@types/express": "^5.0.4",
     "automagik-forge": "latest",
     "commander": "^12.1.0",
@@ -99,7 +100,7 @@
     "prompts": "^2.4.2",
     "ws": "^8.18.3",
     "yaml": "^2.8.1",
-    "zod": "^4.1.11"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/node": "^24.5.2",

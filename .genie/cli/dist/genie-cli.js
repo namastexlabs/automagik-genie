@@ -35,7 +35,8 @@ const packageJson = JSON.parse(fs_1.default.readFileSync(path_1.default.join(__d
 program
     .name('genie')
     .description('Self-evolving AI agent orchestration framework\n\nRun with no arguments to start Genie server (Forge + MCP)')
-    .version(packageJson.version);
+    .version(packageJson.version)
+    .option('--debug', 'Enable debug mode (logs all incoming requests to MCP server)');
 // ==================== SERVER MANAGEMENT ====================
 // Status command
 program
@@ -224,7 +225,7 @@ const args = process.argv.slice(2);
 // Skip version check for these commands (they're safe to run with any version)
 const skipVersionCheck = ['--version', '-V', '--help', '-h', 'update', 'init', 'rollback', 'mcp'];
 // Non-blocking version check for these commands (show warning but continue)
-const nonBlockingCommands = ['list', 'status', 'dashboard', 'view', 'helper'];
+const nonBlockingCommands = ['list', 'status', 'dashboard', 'view', 'helper', 'run', 'talk', 'resume', 'stop'];
 // Skip version check for specific agents/spells that need to run regardless of version
 // WHY: Learn spell loads for self-enhancement, install/update handle versions themselves
 const BYPASS_VERSION_CHECK_AGENTS = ['learn', 'install', 'update', 'upstream-update'];
@@ -278,29 +279,76 @@ if (shouldCheckVersion) {
             const localVersion = versionData.version;
             const runningVersion = packageJson.version;
             if (localVersion !== runningVersion) {
+                // Compare versions to determine which is newer
+                const compareVersions = (a, b) => {
+                    const aParts = a.replace(/^v/, '').split('-');
+                    const bParts = b.replace(/^v/, '').split('-');
+                    const aBase = aParts[0].split('.').map(Number);
+                    const bBase = bParts[0].split('.').map(Number);
+                    for (let i = 0; i < Math.max(aBase.length, bBase.length); i++) {
+                        const aNum = aBase[i] || 0;
+                        const bNum = bBase[i] || 0;
+                        if (aNum > bNum)
+                            return 1;
+                        if (aNum < bNum)
+                            return -1;
+                    }
+                    // If base versions equal, compare prerelease (rc.X)
+                    if (aParts[1] && bParts[1]) {
+                        const aRc = parseInt(aParts[1].replace('rc.', '')) || 0;
+                        const bRc = parseInt(bParts[1].replace('rc.', '')) || 0;
+                        return aRc - bRc;
+                    }
+                    return 0;
+                };
+                const localIsNewer = compareVersions(localVersion, runningVersion) > 0;
                 // Non-blocking commands: show warning but continue
                 if (isNonBlockingCommand) {
-                    console.log('');
-                    console.log(performanceGradient('⚠️  Update available: ') + `${performanceGradient(runningVersion)} → ${successGradient(localVersion)}`);
-                    console.log('   Run ' + performanceGradient('genie update') + ' to install your new build');
-                    console.log('');
+                    if (localIsNewer) {
+                        console.log('');
+                        console.log(performanceGradient('⚠️  Workspace ahead: ') + `${performanceGradient('global ' + runningVersion)} → ${successGradient('workspace ' + localVersion)}`);
+                        console.log('   Run ' + performanceGradient('genie update') + ' to install your new build globally');
+                        console.log('');
+                    }
+                    else {
+                        console.log('');
+                        console.log(performanceGradient('⚠️  Workspace behind: ') + `${performanceGradient('workspace ' + localVersion)} ← ${successGradient('global ' + runningVersion)}`);
+                        console.log('   Run ' + performanceGradient('genie') + ' to sync workspace');
+                        console.log('');
+                    }
                 }
                 else {
-                    // Blocking commands: require update before proceeding
-                    console.log('');
-                    console.log(successGradient('━'.repeat(60)));
-                    console.log(successGradient('   🧞 ✨ NEW VERSION READY! ✨ 🧞   '));
-                    console.log(successGradient('━'.repeat(60)));
-                    console.log('');
-                    console.log(`You bumped to ${successGradient(localVersion)} but your global Genie is still ${performanceGradient(runningVersion)}`);
-                    console.log('');
-                    console.log('Install your new build globally:');
-                    console.log('  ' + performanceGradient('pnpm install -g .'));
-                    console.log('');
-                    console.log('Or use:');
-                    console.log('  ' + performanceGradient('genie update') + '  (detects master genie and installs local build)');
-                    console.log('');
-                    process.exit(0);
+                    // Blocking commands: require sync before proceeding
+                    if (localIsNewer) {
+                        console.log('');
+                        console.log(successGradient('━'.repeat(60)));
+                        console.log(successGradient('   🧞 ✨ NEW VERSION READY! ✨ 🧞   '));
+                        console.log(successGradient('━'.repeat(60)));
+                        console.log('');
+                        console.log(`Your workspace has ${successGradient(localVersion)} but global is ${performanceGradient(runningVersion)}`);
+                        console.log('');
+                        console.log('Install your new build globally:');
+                        console.log('  ' + performanceGradient('pnpm install -g .'));
+                        console.log('');
+                        console.log('Or use:');
+                        console.log('  ' + performanceGradient('genie update') + '  (detects master genie and installs local build)');
+                        console.log('');
+                        process.exit(0);
+                    }
+                    else {
+                        console.log('');
+                        console.log(performanceGradient('━'.repeat(60)));
+                        console.log(performanceGradient('   ⚠️  WORKSPACE OUTDATED'));
+                        console.log(performanceGradient('━'.repeat(60)));
+                        console.log('');
+                        console.log(`Workspace: ${performanceGradient(localVersion)} (old)`);
+                        console.log(`Global:    ${successGradient(runningVersion)} (current)`);
+                        console.log('');
+                        console.log('Sync your workspace with global:');
+                        console.log('  ' + successGradient('genie'));
+                        console.log('');
+                        process.exit(0);
+                    }
                 }
             }
         }
@@ -426,12 +474,16 @@ if (shouldCheckVersion) {
         }
     }
 }
+// Extract global options manually before routing
+const hasDebugFlag = args.includes('--debug');
 // If no command was provided, use smart router
-if (!args.length) {
-    smartRouter();
+if (!args.length || (args.length === 1 && hasDebugFlag)) {
+    // No command (or only --debug flag) → call smartRouter()
+    // Pass debug flag explicitly since program.parse() hasn't been called yet
+    smartRouter(hasDebugFlag);
 }
 else {
-    // Parse arguments for other commands
+    // Command provided → parse with commander
     program.parse(process.argv);
 }
 /**
@@ -447,8 +499,10 @@ else {
  * - version: Current Genie version installed
  * - installedAt: ISO timestamp of first install
  * - updatedAt: ISO timestamp of last update
+ *
+ * @param debug - Enable debug mode (MCP_DEBUG=1)
  */
-async function smartRouter() {
+async function smartRouter(debug = false) {
     const genieDir = path_1.default.join(process.cwd(), '.genie');
     const versionPath = path_1.default.join(genieDir, 'state', 'version.json');
     const hasGenieConfig = fs_1.default.existsSync(genieDir);
@@ -617,8 +671,7 @@ async function smartRouter() {
         // Open browser
         const { execSync: execSyncBrowser } = await import('child_process');
         try {
-            const platform = process.platform;
-            const openCommand = platform === 'darwin' ? 'open' : platform === 'win32' ? 'start' : 'xdg-open';
+            const openCommand = getBrowserOpenCommand();
             execSyncBrowser(`${openCommand} "${shortUrl}"`, { stdio: 'ignore' });
         }
         catch {
@@ -632,7 +685,7 @@ async function smartRouter() {
         console.log(magicGradient('   https://namastex.ai - AI that elevates human potential, not replaces it'));
         console.log('');
         // Start Genie server (MCP + health monitoring)
-        await startGenieServer();
+        await startGenieServer(debug);
         return;
     }
     // .genie exists - check for version.json (instance check file)
@@ -673,7 +726,7 @@ async function smartRouter() {
         };
         await (0, init_1.runInit)(upgradeParsed, upgradeConfig, upgradePaths);
         // After upgrade, start server
-        await startGenieServer();
+        await startGenieServer(debug);
         return;
     }
     // version.json exists - compare versions
@@ -711,7 +764,7 @@ async function smartRouter() {
                 }
                 console.log('');
                 // Start server anyway - master genie can run with version mismatch
-                await startGenieServer();
+                await startGenieServer(debug);
                 return;
             }
             // SCENARIO 3: VERSION MISMATCH - Outdated installation → Run init with backup
@@ -766,11 +819,11 @@ async function smartRouter() {
             };
             await (0, init_1.runInit)(updateParsed, updateConfig, updatePaths);
             // After update, start server
-            await startGenieServer();
+            await startGenieServer(debug);
             return;
         }
         // SCENARIO 4: UP TO DATE - Versions match → Start server
-        await startGenieServer();
+        await startGenieServer(debug);
     }
     catch (error) {
         // Corrupted version.json - treat as needing update
@@ -806,7 +859,7 @@ async function smartRouter() {
         };
         await (0, init_1.runInit)(repairParsed, repairConfig, repairPaths);
         // After repair, start server
-        await startGenieServer();
+        await startGenieServer(debug);
     }
 }
 /**
@@ -865,10 +918,50 @@ function formatUptime(ms) {
     return `${seconds}s`;
 }
 /**
+ * Detect if running in WSL (Windows Subsystem for Linux)
+ */
+function isWSL() {
+    try {
+        // Check environment variables (most reliable)
+        if (process.env.WSL_DISTRO_NAME || process.env.WSLENV) {
+            return true;
+        }
+        // Check /proc/version for "microsoft" or "WSL"
+        if (fs_1.default.existsSync('/proc/version')) {
+            const version = fs_1.default.readFileSync('/proc/version', 'utf8').toLowerCase();
+            if (version.includes('microsoft') || version.includes('wsl')) {
+                return true;
+            }
+        }
+    }
+    catch {
+        // Ignore errors
+    }
+    return false;
+}
+/**
+ * Get the appropriate browser open command for the current OS
+ * Handles WSL by using Windows commands instead of Linux
+ */
+function getBrowserOpenCommand() {
+    const platform = process.platform;
+    // WSL: Use Windows command
+    if (platform === 'linux' && isWSL()) {
+        return 'cmd.exe /c start';
+    }
+    // Regular OS detection
+    if (platform === 'darwin')
+        return 'open';
+    if (platform === 'win32')
+        return 'start';
+    return 'xdg-open'; // Linux (non-WSL)
+}
+/**
  * Start Genie server (Forge + MCP with SSE transport on port 8885)
  * This is the main entry point for npx automagik-genie
+ * @param debug - Enable debug mode (MCP_DEBUG=1)
  */
-async function startGenieServer() {
+async function startGenieServer(debug = false) {
     const startTime = Date.now();
     const timings = {};
     const mcpServer = path_1.default.join(__dirname, '../../mcp/dist/server.js');
@@ -936,16 +1029,248 @@ async function startGenieServer() {
     // Phase 2: Ensure MCP OAuth2 config exists before starting MCP server
     // This auto-generates OAuth2 credentials if ~/.genie/config.yaml is missing
     await (0, config_manager_1.loadOrCreateConfig)();
-    // Phase 3: Start MCP server with SSE transport
+    // Phase 2.5: ChatGPT Tunnel Setup (BEFORE MCP starts)
     const mcpPort = process.env.MCP_PORT || '8885';
-    console.log(successGradient(`📡 MCP:    http://localhost:${mcpPort}/sse ✓`));
-    console.log('');
-    // Set environment variables
+    // Set environment variables (will be used when MCP starts)
     const env = {
         ...process.env,
         MCP_TRANSPORT: 'httpStream',
-        MCP_PORT: mcpPort
+        MCP_PORT: mcpPort,
+        // Enable debug mode if --debug flag was passed
+        ...(debug ? { MCP_DEBUG: '1' } : {})
     };
+    // ChatGPT tunnel setup - check if already configured
+    const readline = require('readline');
+    const { loadConfig: loadGenieConfig, saveConfig: saveGenieConfig } = require('./lib/config-manager');
+    const { startNgrokTunnel } = require('./lib/tunnel-manager');
+    // Load config first to check if tunnel is already set up
+    const genieConfig = loadGenieConfig();
+    // Check if tunnel is already configured
+    const hasSavedTunnel = genieConfig?.mcp?.tunnel?.token;
+    // Create readline interface (needed for all prompts throughout tunnel setup)
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+    });
+    const createQuestion = (query) => {
+        return new Promise(resolve => {
+            rl.question(query, resolve);
+        });
+    };
+    // Only prompt if no saved tunnel configuration
+    let tunnelResponse = 'y'; // Default to yes if already configured
+    if (!hasSavedTunnel) {
+        console.log('');
+        console.log(magicGradient('✨ Would you like to integrate your Genie into ChatGPT?'));
+        console.log('   (more coming soon)');
+        console.log('');
+        tunnelResponse = await createQuestion(performanceGradient('? Connect ChatGPT to Genie? [Y/n]: '));
+    }
+    else {
+        // Tunnel already configured, start it silently
+        console.log('');
+        console.log(successGradient('✓ ChatGPT tunnel configured, starting...'));
+    }
+    // [Y/n] means Y is default, so empty string = yes
+    if (tunnelResponse.toLowerCase() !== 'n') {
+        // User wants tunnel (or already has it configured)
+        if (!genieConfig || !genieConfig.mcp?.auth?.oauth2) {
+            console.log('');
+            console.log('❌ OAuth config not found. This should not happen.');
+            rl.close();
+        }
+        else {
+            const oauth2Conf = genieConfig.mcp.auth.oauth2;
+            // Check if user already has a saved token
+            let ngrokToken = undefined;
+            let isTokenFromSaved = false;
+            if (genieConfig.mcp.tunnel?.token) {
+                ngrokToken = genieConfig.mcp.tunnel.token;
+                isTokenFromSaved = true;
+                console.log('');
+                console.log('✓ Using saved ngrok token');
+            }
+            else {
+                // No saved token - ask if they have an account
+                console.log('');
+                console.log(performanceGradient('━'.repeat(60)));
+                console.log(performanceGradient('📝 ngrok Setup (Free Account Required)'));
+                console.log(performanceGradient('━'.repeat(60)));
+                console.log('');
+                const hasAccountResponse = await createQuestion(performanceGradient('? Do you have an ngrok account? [y/N]: '));
+                if (hasAccountResponse.toLowerCase() === 'y' || hasAccountResponse.toLowerCase() === 'yes') {
+                    // User has account - ask for token
+                    console.log('');
+                    console.log('Great! Let\'s get your authtoken:');
+                    console.log('');
+                    console.log('📍 Step 1: Open ngrok dashboard');
+                    console.log(`   ${successGradient('https://dashboard.ngrok.com/get-started/your-authtoken')}`);
+                    console.log('');
+                    console.log('📍 Step 2: Find the box that says "Your Authtoken"');
+                    console.log('   (There\'s a password field with dots ••••• and a COPY button)');
+                    console.log('');
+                    console.log('📍 Step 3: Click the COPY button');
+                    console.log('');
+                    console.log('📍 Step 4: Paste it below');
+                    console.log('');
+                    const token = await createQuestion(performanceGradient('? Paste your ngrok authtoken here: '));
+                    if (token && token.trim().length > 0) {
+                        ngrokToken = token.trim();
+                    }
+                    else {
+                        console.log('');
+                        console.log('⚠️  No token provided. Skipping tunnel setup.');
+                    }
+                }
+                else {
+                    // User doesn't have account - guide to signup
+                    console.log('');
+                    console.log('No problem! Let\'s create one (takes 30 seconds):');
+                    console.log('');
+                    console.log('📍 Step 1: Sign up for free');
+                    console.log(`   ${successGradient('https://dashboard.ngrok.com/signup')}`);
+                    console.log('');
+                    console.log('📍 Step 2: After signup, you\'ll see your authtoken');
+                    console.log('   (A password field with ••••• and a COPY button)');
+                    console.log('');
+                    console.log('📍 Step 3: Click COPY');
+                    console.log('');
+                    const openBrowserResponse = await createQuestion(performanceGradient('? Open signup page in browser? [Y/n]: '));
+                    if (openBrowserResponse.toLowerCase() !== 'n') {
+                        // Open browser
+                        const { execSync: execSyncBrowser } = await import('child_process');
+                        try {
+                            const openCommand = getBrowserOpenCommand();
+                            execSyncBrowser(`${openCommand} "https://dashboard.ngrok.com/signup"`, { stdio: 'ignore' });
+                            console.log('');
+                            console.log('✓ Browser opened! Come back here after you copy your token.');
+                        }
+                        catch {
+                            console.log('');
+                            console.log('⚠️  Could not open browser automatically.');
+                            console.log(`   Please visit: https://dashboard.ngrok.com/signup`);
+                        }
+                    }
+                    console.log('');
+                    const token = await createQuestion(performanceGradient('? Paste your ngrok authtoken here (or press Enter to skip): '));
+                    if (token && token.trim().length > 0) {
+                        ngrokToken = token.trim();
+                    }
+                    else {
+                        console.log('');
+                        console.log('⚠️  No token provided. Skipping tunnel setup.');
+                    }
+                }
+            }
+            // Start tunnel if we have a token
+            if (ngrokToken) {
+                console.log('');
+                console.log('🌐 Starting secure tunnel...');
+                const tunnelResult = await startNgrokTunnel(parseInt(mcpPort), ngrokToken);
+                if (tunnelResult.url) {
+                    // SUCCESS - Set public URL in env BEFORE starting MCP
+                    env.MCP_PUBLIC_URL = tunnelResult.url;
+                    // Save token to config (only after validation)
+                    try {
+                        genieConfig.mcp.tunnel = {
+                            enabled: true,
+                            provider: 'ngrok',
+                            token: ngrokToken
+                        };
+                        saveGenieConfig(genieConfig);
+                    }
+                    catch (err) {
+                        console.error(`⚠️  Warning: Could not save token (${err.message})`);
+                    }
+                    console.log('');
+                    console.log(successGradient('━'.repeat(60)));
+                    console.log(successGradient('✅ ChatGPT Integration Ready!'));
+                    console.log(successGradient('━'.repeat(60)));
+                    console.log('');
+                    console.log(magicGradient('📋 Connection Details for ChatGPT:'));
+                    console.log('');
+                    console.log(`   ${performanceGradient('SSE Endpoint:')}`);
+                    console.log(`   ${tunnelResult.url}/mcp`);
+                    console.log('');
+                    console.log(`   ${performanceGradient('OAuth Client ID:')}`);
+                    console.log(`   ${oauth2Conf.clientId}`);
+                    console.log('');
+                    console.log(`   ${performanceGradient('OAuth Client Secret:')}`);
+                    console.log(`   ${oauth2Conf.clientSecret}`);
+                    console.log('');
+                    console.log(magicGradient('💡 How to connect ChatGPT:'));
+                    console.log('   1. Go to ChatGPT → Settings → Connectors → Create');
+                    console.log('   2. Fill in: Name, Description, MCP Server URL (SSE endpoint above)');
+                    console.log('   3. Authentication: OAuth → Add Client ID and Client Secret above');
+                    console.log('   4. Accept notice checkbox and create');
+                    console.log('');
+                    console.log(successGradient('━'.repeat(60)));
+                    console.log('');
+                }
+                else {
+                    // FAILURE - Distinguish error types
+                    console.log('');
+                    console.log('❌ Failed to start tunnel');
+                    console.log('');
+                    const errorCode = tunnelResult.errorCode || 'UNKNOWN';
+                    const errorMessage = tunnelResult.error || 'Unknown error';
+                    // Distinguish between stuck endpoint vs authentication errors
+                    if (errorCode === 'ERR_NGROK_334') {
+                        // ERR_NGROK_334 = Endpoint already online (NOT a token problem!)
+                        console.log('   ⚠️  Your ngrok endpoint is stuck from a previous session.');
+                        console.log('   This is NOT a problem with your token.');
+                        console.log('');
+                        console.log('   Quick fixes:');
+                        console.log('   1. Wait 60 seconds and run ' + performanceGradient('genie') + ' again');
+                        console.log('   2. Kill stuck ngrok: ' + performanceGradient('pkill -f ngrok && genie'));
+                        console.log('   3. Or use ngrok dashboard: ' + successGradient('https://dashboard.ngrok.com/tunnels/agents'));
+                        console.log('');
+                        // DO NOT delete token for this error!
+                    }
+                    else if (errorCode.includes('ERR_NGROK_4011') || errorMessage.toLowerCase().includes('authentication') || errorMessage.toLowerCase().includes('unauthorized')) {
+                        // Authentication errors - token is actually invalid
+                        console.log('   ❌ Authentication failed - your token may be invalid.');
+                        console.log('');
+                        if (isTokenFromSaved) {
+                            const clearResponse = await createQuestion(performanceGradient('? Clear saved token and try again? [Y/n]: '));
+                            if (clearResponse.toLowerCase() !== 'n') {
+                                try {
+                                    delete genieConfig.mcp.tunnel;
+                                    saveGenieConfig(genieConfig);
+                                    console.log('');
+                                    console.log(successGradient('✓ Saved token cleared.'));
+                                    console.log('   Run ' + performanceGradient('genie') + ' again to set up a new token.');
+                                }
+                                catch (err) {
+                                    console.log('');
+                                    console.log(`⚠️  Could not clear token: ${err.message}`);
+                                }
+                            }
+                        }
+                        else {
+                            console.log('   Please check your authtoken and try again.');
+                        }
+                        console.log('');
+                    }
+                    else {
+                        // Unknown error
+                        console.log(`   Error: ${errorMessage}`);
+                        console.log('');
+                        if (isTokenFromSaved) {
+                            console.log('   If the problem persists, try clearing your saved token:');
+                            console.log('   Delete ~/.genie/config.yaml and run ' + performanceGradient('genie') + ' again');
+                        }
+                        console.log('');
+                    }
+                }
+            }
+        }
+    }
+    rl.close();
+    // Phase 3: Start MCP server with SSE transport
+    console.log('');
+    console.log(successGradient(`📡 MCP:    http://localhost:${mcpPort}/sse ✓`));
+    console.log('');
     // Track runtime stats for shutdown report
     let requestCount = 0;
     let errorCount = 0;
@@ -1136,12 +1461,21 @@ async function startGenieServer() {
                 console.log('   • Press ' + performanceGradient('k') + ' in dashboard to kill Forge (with confirmation)');
                 console.log('   • Use ' + performanceGradient('Ctrl+C') + ' here to shutdown Genie gracefully');
                 console.log('');
-                console.log(genieGradient('Press Enter to open dashboard...'));
-                // Wait for Enter before launching dashboard
+                // Dashboard prompt
                 (async () => {
-                    await new Promise((resolve) => {
-                        process.stdin.once('data', () => resolve());
+                    const readline = require('readline');
+                    const rl = readline.createInterface({
+                        input: process.stdin,
+                        output: process.stdout
                     });
+                    const createQuestion = (query) => {
+                        return new Promise(resolve => {
+                            rl.question(query, resolve);
+                        });
+                    };
+                    console.log('');
+                    await createQuestion(genieGradient('Press Enter to open dashboard...'));
+                    rl.close();
                     console.log('');
                     console.log(genieGradient('📊 Launching dashboard...'));
                     console.log('');

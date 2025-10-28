@@ -8,6 +8,178 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [2.5.5-rc.66] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.65] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.64] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.63] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.62] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.61] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.60] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.59] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.58] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.57] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.56] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.55] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.54] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.53] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.52] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.51] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.50] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.49] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.48] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.47] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.46] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.45] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.44] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.43] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.42] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.41] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.40] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.39] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.38] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.37] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.36] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.35] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.34] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.33] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.32] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.31] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.30] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.29] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.28] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.27] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.26] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.25] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
+## [2.5.5-rc.24] - 2025-10-27
+
+No changelog entries (packaging-only RC).
+
 ## [2.5.5-rc.23] - 2025-10-27
 
 No changelog entries (packaging-only RC).

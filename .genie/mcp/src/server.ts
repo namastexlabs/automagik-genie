@@ -301,16 +301,26 @@ async function syncAgentProfilesToForge(): Promise<void> {
   }
 }
 
-// Load OAuth2 configuration (if available)
+// Load OAuth2 configuration from ~/.genie/config.yaml
 function loadOAuth2Config(): OAuth2Config | null {
   try {
-    const configModPath = path.join(WORKSPACE_ROOT, '.genie', 'cli', 'dist', 'lib', 'config-manager.js');
-    if (fs.existsSync(configModPath)) {
-      const { loadOAuth2Config } = require(configModPath);
-      return loadOAuth2Config();
+    const os = require('os');
+    const YAML = require('yaml');
+    const configPath = path.join(os.homedir(), '.genie', 'config.yaml');
+
+    if (!fs.existsSync(configPath)) {
+      return null;
+    }
+
+    const content = fs.readFileSync(configPath, 'utf8');
+    const config = YAML.parse(content);
+
+    // Validate and return OAuth2 config
+    if (config?.mcp?.auth?.oauth2?.clientId) {
+      return config.mcp.auth.oauth2;
     }
   } catch (error) {
-    // Config not available (expected for stdio transport)
+    // Config not available or invalid
   }
   return null;
 }
@@ -934,39 +944,53 @@ server.tool('get_workspace_info', 'Get essential workspace info for agent self-a
 const roleInfo = detectGenieRole();
 const readOnly = isReadOnlyFilesystem(roleInfo.role);
 
-// Start server with configured transport
-console.error('Starting Genie MCP Server (MVP)...');
-console.error(`Version: ${getGenieVersion()}`);
-console.error(`Transport: ${TRANSPORT}`);
-console.error(`Role: ${roleInfo.role} (${roleInfo.confidence} confidence, method: ${roleInfo.method})`);
-if (readOnly) {
-  console.error('🔒 Filesystem: READ-ONLY (master orchestrator)');
-}
-if (roleInfo.branch) {
-  console.error(`Branch: ${roleInfo.branch}`);
-}
-if (roleInfo.worktree) {
-  console.error(`Worktree: ${roleInfo.worktree}`);
+// Debug mode detection
+const debugMode = process.env.MCP_DEBUG === '1' || process.env.DEBUG === '1';
+
+// Start server with configured transport (only log in debug mode)
+if (debugMode) {
+  // Verbose startup logs (debug mode only)
+  console.error('Starting Genie MCP Server (MVP)...');
+  console.error(`Version: ${getGenieVersion()}`);
+  console.error(`Transport: ${TRANSPORT}`);
+  console.error(`Role: ${roleInfo.role} (${roleInfo.confidence} confidence, method: ${roleInfo.method})`);
+  if (readOnly) {
+    console.error('🔒 Filesystem: READ-ONLY (master orchestrator)');
+  }
+  if (roleInfo.branch) {
+    console.error(`Branch: ${roleInfo.branch}`);
+  }
+  if (roleInfo.worktree) {
+    console.error(`Worktree: ${roleInfo.worktree}`);
+  }
+
+  // Dynamically count tools instead of hardcoding
+  const coreTools = ['list_agents', 'list_sessions', 'run', 'resume', 'view', 'stop', 'list_spells', 'read_spell', 'get_workspace_info'];
+  const wsTools = ['create_wish', 'run_forge', 'run_review', 'transform_prompt'];
+  const neuronTools = ['continue_task', 'create_subtask'];
+  const totalTools = coreTools.length + wsTools.length + neuronTools.length;
+
+  console.error(`Tools: ${totalTools} total`);
+  console.error(`  - ${coreTools.length} core (agents, sessions, spells, workspace)`);
+  console.error(`  - ${wsTools.length} WebSocket-native (create_wish, run_forge, run_review, transform_prompt)`);
+  console.error(`  - ${neuronTools.length} neuron (continue_task, create_subtask)`);
+  console.error('WebSocket: Real-time streaming enabled');
+  console.error('');
 }
 
-// Dynamically count tools instead of hardcoding
-const coreTools = ['list_agents', 'list_sessions', 'run', 'resume', 'view', 'stop', 'list_spells', 'read_spell', 'get_workspace_info'];
-const wsTools = ['create_wish', 'run_forge', 'run_review', 'transform_prompt'];
-const neuronTools = ['continue_task', 'create_subtask'];
-const totalTools = coreTools.length + wsTools.length + neuronTools.length;
-
-console.error(`Tools: ${totalTools} total`);
-console.error(`  - ${coreTools.length} core (agents, sessions, spells, workspace)`);
-console.error(`  - ${wsTools.length} WebSocket-native (create_wish, run_forge, run_review, transform_prompt)`);
-console.error(`  - ${neuronTools.length} neuron (continue_task, create_subtask)`);
-console.error('WebSocket: Real-time streaming enabled');
-console.error('');
-console.error('🔄 Syncing agent profiles to Forge...');
+// Forge sync (always show, one line)
+process.stderr.write('🔄 Syncing agent profiles...');
 
 // Sync agents before starting server (async but non-blocking)
-syncAgentProfilesToForge().catch(err => {
-  console.warn(`⚠️  Background agent sync failed: ${err.message}`);
-});
+// Note: forge-executor.ts handles the completion message, so we don't print anything here
+syncAgentProfilesToForge()
+  .then(() => {
+    // forge-executor.ts already printed the completion message
+    // No additional output needed (prevents duplicate checkmarks)
+  })
+  .catch(err => {
+    console.warn(`\n⚠️  Agent sync failed: ${err.message}`);
+  });
 
 (async () => {
   if (TRANSPORT === 'stdio') {
@@ -982,8 +1006,10 @@ syncAgentProfilesToForge().catch(err => {
       process.exit(1);
     }
 
-    console.error(`Starting Genie MCP Server v${getGenieVersion()} (HTTP Stream)...`);
-    console.error(`Port: ${PORT}`);
+    if (debugMode) {
+      console.error(`Starting Genie MCP Server v${getGenieVersion()} (HTTP Stream)...`);
+      console.error(`Port: ${PORT}`);
+    }
 
     // Use http-server.ts (Express + SDK StreamableHTTPServerTransport + OAuth)
     await startHttpServer({
@@ -991,21 +1017,8 @@ syncAgentProfilesToForge().catch(err => {
       oauth2Config,
       port: PORT,
       onReady: (url) => {
-        console.error('✅ Server started successfully (HTTP Stream)');
-        console.error(`   HTTP Stream: ${url}/mcp`);
-        console.error(`   SSE Stream:  ${url}/mcp (GET)`);
-        console.error(`   Health:      ${url}/health`);
-        console.error(`   OAuth Token: ${url}/oauth/token`);
-        console.error(`   OAuth Meta:  ${url}/.well-known/oauth-protected-resource`);
-        console.error('');
-        console.error('🔐 Authentication: OAuth2.1 Client Credentials');
-        console.error(`   ├─ Client ID:     ${oauth2Config.clientId}`);
-        console.error(`   ├─ Token Expiry:  ${oauth2Config.tokenExpiry}s`);
-        console.error(`   └─ Issuer:        ${oauth2Config.issuer}`);
-        console.error('');
-        console.error('📡 Transport: Streamable HTTP (MCP SDK official)');
-        console.error('   ├─ POST /mcp → JSON-RPC over HTTP');
-        console.error('   └─ GET  /mcp → Server-Sent Events (SSE) for streaming');
+        // http-server.ts already prints the success message
+        // This callback is kept for backwards compatibility
       }
     });
   } else {

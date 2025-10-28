@@ -178,14 +178,31 @@ async function runInit(parsed, _config, _paths) {
                 execSync('git init', { cwd, stdio: 'pipe' });
             }
         }
-        // Only backup if old Genie installation detected
+        // Backup on version mismatch or old Genie installation
+        // Until we have proper upgrade pipeline, treat all upgrades as requiring backup
         let backupId;
-        if (installType === 'old_genie') {
+        let tempBackupPath;
+        if (installType === 'old_genie' || isUpgrade) {
             console.log('');
-            console.log('💾 Creating backup of old Genie installation...');
-            backupId = await (0, fs_utils_1.backupGenieDirectory)(cwd, 'old_genie');
-            console.log(`   Backup created: .genie/backups/${backupId}`);
+            console.log('💾 Creating backup before upgrade...');
+            const reason = installType === 'old_genie' ? 'old_genie' : 'pre_upgrade';
+            const backupResult = await (0, fs_utils_1.backupGenieDirectory)(cwd, reason);
+            // Handle two return types: string (copy backup) or object (two-stage move)
+            if (typeof backupResult === 'string') {
+                backupId = backupResult;
+                console.log(`   Backup created: .genie/backups/${backupId}`);
+            }
+            else {
+                backupId = backupResult.backupId;
+                tempBackupPath = backupResult.tempPath;
+                console.log(`   Old .genie moved to: ${tempBackupPath}`);
+            }
             console.log('');
+            // Create git checkpoint commit (clean rollback point before template modifications)
+            if (backupId && oldVersion) {
+                await createUpgradeCheckpoint(cwd, oldVersion, currentPackageVersion, backupId);
+                console.log('');
+            }
         }
         // Copy ALL selected templates (not just the first one)
         for (const tmpl of templates) {
@@ -193,6 +210,13 @@ async function runInit(parsed, _config, _paths) {
         }
         await copyTemplateRootFiles(packageRoot, cwd, template);
         await migrateAgentsDocs(cwd);
+        // Finalize two-stage backup if needed (move temp backup into .genie/backups/)
+        if (tempBackupPath && backupId) {
+            console.log('💾 Finalizing backup...');
+            await (0, fs_utils_1.finalizeBackup)(cwd, tempBackupPath, backupId);
+            console.log(`   Backup finalized: .genie/backups/${backupId}/genie/`);
+            console.log('');
+        }
         // Copy INSTALL.md workflow guide (like UPDATE.md for update command)
         const templateInstallMd = path_1.default.join(templateGenie, 'INSTALL.md');
         const targetInstallMd = path_1.default.join(targetGenie, 'INSTALL.md');
@@ -414,6 +438,52 @@ async function getGitCommit() {
     }
     catch {
         return 'unknown';
+    }
+}
+/**
+ * Create git checkpoint commit after backup but before template modifications
+ *
+ * Purpose: Provides clean rollback point if upgrade fails
+ *
+ * @param cwd - Workspace directory
+ * @param oldVersion - Version before upgrade
+ * @param newVersion - Version after upgrade
+ * @param backupId - Backup timestamp ID
+ */
+async function createUpgradeCheckpoint(cwd, oldVersion, newVersion, backupId) {
+    const { execSync } = await import('child_process');
+    try {
+        // Verify git repo exists
+        execSync('git rev-parse --git-dir', { cwd, stdio: 'pipe' });
+        // Check for uncommitted changes in .genie/
+        const status = execSync('git status --porcelain .genie/', {
+            cwd,
+            encoding: 'utf8'
+        });
+        if (status.trim()) {
+            // Stage .genie/ changes
+            execSync('git add .genie/', { cwd, stdio: 'pipe' });
+            // Create checkpoint commit
+            // chore(upgrade): prefix = exempt from traceability requirements (commit-advisory.cjs:345)
+            // GENIE_DISABLE_COAUTHOR=1 = no co-author attribution (system operation, not Genie authoring)
+            const message = `chore(upgrade): checkpoint before upgrading from ${oldVersion} to ${newVersion}\n\nBackup ID: ${backupId}`;
+            execSync(`git commit -m "${message.replace(/"/g, '\\"')}"`, {
+                cwd,
+                stdio: 'pipe',
+                env: {
+                    ...process.env,
+                    GENIE_DISABLE_COAUTHOR: '1' // System operation, not Genie authoring
+                }
+            });
+            console.log('✓ Checkpoint commit created');
+        }
+        else {
+            console.log('✓ No changes to checkpoint (clean state)');
+        }
+    }
+    catch (err) {
+        // Non-fatal: not a git repo or git command failed
+        console.log('⚠️  Skipped checkpoint commit (git not available)');
     }
 }
 async function initializeProviderStatus(cwd) {
