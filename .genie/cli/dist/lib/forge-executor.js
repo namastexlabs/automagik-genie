@@ -6,7 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ForgeExecutor = void 0;
 exports.createForgeExecutor = createForgeExecutor;
 // @ts-ignore - forge.js is compiled JS without type declarations
-const forge_js_1 = require("../../../../forge.js");
+const forge_client_js_1 = require("../../../../src/lib/forge-client.js");
 const child_process_1 = require("child_process");
 const crypto_1 = require("crypto");
 const fs_1 = __importDefault(require("fs"));
@@ -14,14 +14,20 @@ const path_1 = __importDefault(require("path"));
 class ForgeExecutor {
     constructor(config) {
         this.config = config;
-        this.forge = new forge_js_1.ForgeClient(config.forgeBaseUrl, config.forgeToken);
+        this.forge = new forge_client_js_1.ForgeClient(config.forgeBaseUrl, config.forgeToken);
     }
     async syncProfiles(profiles, workspaceRoot) {
         try {
             const startTime = Date.now();
             // If profiles provided, use them directly (bypass change detection)
             if (profiles) {
-                await this.forge.updateExecutorProfiles(profiles);
+                // Normalize: wrap in {executors: ...} if not already wrapped
+                const normalizedProfiles = 'executors' in profiles
+                    ? profiles
+                    : { executors: profiles };
+                // Clean null values (YAML null becomes JSON null, but Forge expects omitted fields)
+                const cleaned = this.cleanNullValues(normalizedProfiles);
+                await this.forge.updateExecutorProfiles(cleaned);
                 return;
             }
             // Otherwise, sync from agent registry (pass workspace root for correct scanning)
@@ -218,6 +224,25 @@ class ForgeExecutor {
      * @param agentProfile - Single agent profile to add/update
      * @returns Merged profiles
      */
+    cleanNullValues(obj) {
+        if (obj === null || obj === undefined) {
+            return undefined; // Will be omitted when stringified
+        }
+        if (Array.isArray(obj)) {
+            return obj.map(item => this.cleanNullValues(item)).filter(item => item !== undefined);
+        }
+        if (typeof obj === 'object') {
+            const cleaned = {};
+            for (const [key, value] of Object.entries(obj)) {
+                const cleanedValue = this.cleanNullValues(value);
+                if (cleanedValue !== undefined && cleanedValue !== null) {
+                    cleaned[key] = cleanedValue;
+                }
+            }
+            return cleaned;
+        }
+        return obj;
+    }
     mergeProfiles(current, agentProfile) {
         // Validate inputs
         if (!current || typeof current !== 'object') {

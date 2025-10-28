@@ -1,5 +1,5 @@
 // @ts-ignore - forge.js is compiled JS without type declarations
-import { ForgeClient } from '../../../../forge.js';
+import { ForgeClient } from '../../../../src/lib/forge-client.js';
 import { execSync } from 'child_process';
 import { createHash } from 'crypto';
 import fs from 'fs';
@@ -60,7 +60,15 @@ export class ForgeExecutor {
 
       // If profiles provided, use them directly (bypass change detection)
       if (profiles) {
-        await this.forge.updateExecutorProfiles(profiles);
+        // Normalize: wrap in {executors: ...} if not already wrapped
+        const normalizedProfiles = 'executors' in profiles
+          ? profiles
+          : { executors: profiles };
+
+        // Clean null values (YAML null becomes JSON null, but Forge expects omitted fields)
+        const cleaned = this.cleanNullValues(normalizedProfiles);
+
+        await this.forge.updateExecutorProfiles(cleaned);
         return;
       }
 
@@ -281,6 +289,26 @@ export class ForgeExecutor {
    * @param agentProfile - Single agent profile to add/update
    * @returns Merged profiles
    */
+  private cleanNullValues(obj: any): any {
+    if (obj === null || obj === undefined) {
+      return undefined; // Will be omitted when stringified
+    }
+    if (Array.isArray(obj)) {
+      return obj.map(item => this.cleanNullValues(item)).filter(item => item !== undefined);
+    }
+    if (typeof obj === 'object') {
+      const cleaned: any = {};
+      for (const [key, value] of Object.entries(obj)) {
+        const cleanedValue = this.cleanNullValues(value);
+        if (cleanedValue !== undefined && cleanedValue !== null) {
+          cleaned[key] = cleanedValue;
+        }
+      }
+      return cleaned;
+    }
+    return obj;
+  }
+
   private mergeProfiles(current: any, agentProfile: any): any {
     // Validate inputs
     if (!current || typeof current !== 'object') {

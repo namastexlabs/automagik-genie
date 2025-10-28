@@ -5,7 +5,7 @@
 
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const { ForgeClient: BaseForgeClient } = require('../../../../forge.js');
+const { ForgeClient: BaseForgeClient } = require('../../../../src/lib/forge-client.js');
 
 /**
  * User-facing error for MCP tools

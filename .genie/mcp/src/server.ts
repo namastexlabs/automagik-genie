@@ -91,7 +91,7 @@ async function viewSession(taskId: string): Promise<{status: string; transcript:
     const forgeExecutor = mod.createForgeExecutor();
 
     // Get task details to find latest attempt
-    const { ForgeClient } = require('../../../forge.js');
+    const { ForgeClient } = require('../../../src/lib/forge-client.js');
     const forge = new ForgeClient(process.env.FORGE_BASE_URL || 'http://localhost:8887', process.env.FORGE_TOKEN);
 
     // Get task attempts for this task

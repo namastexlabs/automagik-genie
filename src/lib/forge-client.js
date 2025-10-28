@@ -129,7 +129,15 @@ class ForgeClient {
         } catch (error) {
             // Fallback to /api/profiles if /api/info fails
         }
-        return this.request('GET', '/profiles');
+
+        // Fallback: /api/profiles returns { content: "<JSON_STRING>", path: "..." }
+        // (request() method already unwraps .data, so we get the content field directly)
+        const profiles = await this.request('GET', '/profiles');
+        if (profiles?.content && typeof profiles.content === 'string') {
+            // Parse JSON string and return
+            return JSON.parse(profiles.content);
+        }
+        return profiles;
     }
     /**
      * PUT /api/profiles
