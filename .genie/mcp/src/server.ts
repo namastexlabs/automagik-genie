@@ -42,6 +42,9 @@ import { detectGenieRole, isReadOnlyFilesystem } from './lib/role-detector.js';
 import { startHttpServer } from './lib/http-server.js';
 import { OAuth2Config } from './lib/oauth-provider.js';
 
+// Import process cleanup utilities
+import { writePidFile, isServerAlreadyRunning, cleanupStaleMcpServers } from './lib/process-cleanup.js';
+
 const execFileAsync = promisify(execFile);
 
 const PORT = process.env.MCP_PORT ? parseInt(process.env.MCP_PORT) : 8885;
@@ -947,6 +950,56 @@ const readOnly = isReadOnlyFilesystem(roleInfo.role);
 // Debug mode detection
 const debugMode = process.env.MCP_DEBUG === '1' || process.env.DEBUG === '1';
 
+// ============================================================================
+// CLEANUP HANDLERS - Prevent zombie processes (Fix: MCP server proliferation)
+// ============================================================================
+
+let isShuttingDown = false;
+let serverConnection: any = null; // Store server connection for cleanup
+
+async function gracefulShutdown(signal: string) {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+
+  if (debugMode) {
+    console.error(`\n📡 Received ${signal}, shutting down MCP server gracefully...`);
+  }
+
+  try {
+    // Close server connection if exists
+    if (serverConnection && typeof serverConnection.close === 'function') {
+      await serverConnection.close();
+    }
+
+    // Give pending operations time to finish (max 2s)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    if (debugMode) {
+      console.error('✅ MCP server shutdown complete');
+    }
+  } catch (error) {
+    console.error(`⚠️  Error during shutdown: ${error}`);
+  } finally {
+    process.exit(0);
+  }
+}
+
+// Register signal handlers for all termination signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGHUP', () => gracefulShutdown('SIGHUP'));
+
+// Handle uncaught errors
+process.on('uncaughtException', (error) => {
+  console.error(`❌ Uncaught exception: ${error.message}`);
+  gracefulShutdown('uncaughtException');
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error(`❌ Unhandled rejection: ${reason}`);
+  gracefulShutdown('unhandledRejection');
+});
+
 // Start server with configured transport (only log in debug mode)
 if (debugMode) {
   // Verbose startup logs (debug mode only)
@@ -977,6 +1030,33 @@ if (debugMode) {
   console.error('WebSocket: Real-time streaming enabled');
   console.error('');
 }
+
+// Check for existing server and cleanup orphans
+(async () => {
+  // Cleanup orphaned servers on startup
+  const cleanupResult = await cleanupStaleMcpServers({
+    killOrphans: true,
+    dryRun: false
+  });
+
+  if (debugMode && cleanupResult.orphans > 0) {
+    console.error(`🧹 Cleaned up ${cleanupResult.killed} orphaned MCP server(s)`);
+    if (cleanupResult.failed > 0) {
+      console.error(`⚠️  Failed to kill ${cleanupResult.failed} process(es)`);
+    }
+  }
+
+  // Check if another server is already running for this workspace
+  const serverStatus = isServerAlreadyRunning(WORKSPACE_ROOT);
+  if (serverStatus.running) {
+    console.error(`⚠️  MCP server already running (PID ${serverStatus.pid})`);
+    console.error('   Kill the existing server first or check for stale PID file');
+    process.exit(1);
+  }
+
+  // Write PID file for this instance
+  writePidFile(WORKSPACE_ROOT);
+})();
 
 // Forge sync (always show, one line)
 process.stderr.write('🔄 Syncing agent profiles...');
