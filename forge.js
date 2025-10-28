@@ -118,6 +118,17 @@ class ForgeClient {
      * @returns All executor profile configurations
      */
     async getExecutorProfiles() {
+        // Prefer /api/info for executor profiles (includes executors in stable format)
+        try {
+            const info = await this.request('GET', '/info');
+            const executors = info?.data?.executors || info?.executors;
+            if (executors) {
+                // Return normalized format: { executors: {...} }
+                return { executors };
+            }
+        } catch (error) {
+            // Fallback to /api/profiles if /api/info fails
+        }
         return this.request('GET', '/profiles');
     }
     /**

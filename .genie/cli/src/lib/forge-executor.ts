@@ -134,19 +134,8 @@ export class ForgeExecutor {
       // Fetch current profiles to extract built-in variants
       const currentProfiles = await this.forge.getExecutorProfiles();
 
-      // Parse profiles response (Forge returns { content: "JSON string" })
-      let accumulated: any;
-      if (typeof currentProfiles.content === 'string') {
-        try {
-          accumulated = JSON.parse(currentProfiles.content);
-        } catch (parseError: any) {
-          throw new Error(`Failed to parse Forge profiles: ${parseError.message}`);
-        }
-      } else if (typeof currentProfiles === 'object' && currentProfiles.content) {
-        accumulated = currentProfiles.content;
-      } else {
-        accumulated = currentProfiles;
-      }
+      // Forge wrapper already returns normalized { executors: {...} }
+      let accumulated: any = currentProfiles;
 
       // Validate that profiles have executors field
       if (!accumulated || typeof accumulated !== 'object') {
@@ -172,9 +161,8 @@ export class ForgeExecutor {
         try {
           // Get current Forge state (includes built-ins + previously synced agents)
           const currentProfiles = await this.forge.getExecutorProfiles();
-          const current = typeof currentProfiles.content === 'string'
-            ? JSON.parse(currentProfiles.content)
-            : currentProfiles;
+          // Forge wrapper already returns normalized { executors: {...} }
+          const current = currentProfiles;
 
           // Generate profile for THIS agent only
           const agentProfile = await registry.generateForgeProfiles(this.forge, [agent]);
