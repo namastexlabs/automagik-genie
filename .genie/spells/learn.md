@@ -459,14 +459,15 @@ Action: Append as new learning
 **Tool:** `genie helper embeddings` (100% local, no cloud APIs)
 
 **Technology:**
-- Python + sentence-transformers
+- Node.js + @xenova/transformers (transformers.js)
 - Model: all-MiniLM-L6-v2 (85MB, runs on CPU)
 - Download once, use offline forever
+- Pure JavaScript/TypeScript (consistent with project stack)
 
 **Setup (one-time):**
 ```bash
-# Install dependencies
-pip3 install sentence-transformers numpy scikit-learn
+# Dependencies already in package.json
+pnpm install
 
 # First run downloads model (~10s, one-time)
 genie helper embeddings cache --file .genie/spells/learn.md --section "Validation"
@@ -491,23 +492,30 @@ genie helper embeddings compare \
 # }
 ```
 
+**Implementation:**
+- Location: `.genie/scripts/helpers/embeddings.ts`
+- Uses @xenova/transformers (Hugging Face models in JS)
+- ONNX runtime for fast CPU inference
+- Fully typed (TypeScript)
+
 **Cache:**
 - Location: `.genie/.cache/embeddings/<file-section-hash>.json`
 - Stores precomputed embeddings per section
 - Regenerate when section content changes
 
 **Performance:**
-- First run: ~100ms (model load)
-- Subsequent: ~1ms per comparison
-- Memory: ~200MB (model in RAM)
+- First run: ~200ms (model load from disk)
+- Subsequent: ~10ms per comparison
+- Memory: ~150MB (model in RAM)
 
 **Benefits:**
 - 100% local (no API calls, no privacy concerns)
+- Pure Node.js/TypeScript (consistent with project)
 - Fast enough for interactive use
 - Catches paraphrases git grep misses
 - Scales to hundreds of learnings
 
-**Design:** `/tmp/embedding-helper-design.md` (full specification)
+**Next:** Implement embeddings.ts helper (Phase 3 task)
 
 ---
 
