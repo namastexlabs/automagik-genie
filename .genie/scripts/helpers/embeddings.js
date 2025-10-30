@@ -27,8 +27,21 @@ async function initEmbedder() {
   if (!embedder) {
     const { pipeline: pipelineImport } = await import('@xenova/transformers');
     pipeline = pipelineImport;
+
     // Use all-MiniLM-L6-v2 for sentence embeddings
-    embedder = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+    // Show progress indicator on first download (85MB model)
+    console.error('⏳ Loading embedding model (first time: downloads 85MB)...');
+    embedder = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', {
+      progress_callback: (progress) => {
+        if (progress.status === 'downloading' && progress.progress !== undefined) {
+          const percent = Math.round(progress.progress);
+          if (percent % 10 === 0) { // Log every 10%
+            console.error(`   Downloading: ${percent}%`);
+          }
+        }
+      }
+    });
+    console.error('✅ Model loaded!\n');
   }
   return embedder;
 }
@@ -60,11 +73,26 @@ async function getEmbedding(text) {
 }
 
 /**
- * Extract section content from markdown file
+ * Validate that file path is within workspace (security)
  */
-function extractSection(filePath, sectionName) {
-  const content = fs.readFileSync(filePath, 'utf-8');
-  const lines = content.split('\n');
+function validateFilePath(filePath) {
+  const absPath = path.resolve(filePath);
+  const workspaceRoot = path.resolve(process.cwd());
+
+  if (!absPath.startsWith(workspaceRoot)) {
+    throw new Error(`Security: Path outside workspace not allowed: ${filePath}`);
+  }
+
+  return absPath;
+}
+
+/**
+ * Extract section content from markdown file
+ * @param {string} fileContent - File content (already read)
+ * @param {string} sectionName - Section header to extract
+ */
+function extractSection(fileContent, sectionName) {
+  const lines = fileContent.split('\n');
 
   const sectionLines = [];
   let inSection = false;
@@ -72,7 +100,7 @@ function extractSection(filePath, sectionName) {
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    const headerMatch = line.match(/^(#{1,6})\s+(.+)/);
+    const headerMatch = line.match(/^(#{1,6})\s+(.+)$/); // Added $ anchor
 
     if (headerMatch) {
       const level = headerMatch[1].length;
@@ -128,8 +156,13 @@ function getRecommendation(similarity) {
  * Compare new learning to section (with caching)
  */
 async function compareToSection(newText, filePath, sectionName) {
+  // Security: Validate file path is within workspace
+  const validatedPath = validateFilePath(filePath);
+
+  // Read file once (optimization: avoid dual reads)
+  const fileContent = fs.readFileSync(validatedPath, 'utf-8');
+
   // Stage 1: Check for exact match with grep (fast)
-  const fileContent = fs.readFileSync(filePath, 'utf-8');
   if (fileContent.includes(newText)) {
     return {
       stage: 1,
@@ -139,7 +172,7 @@ async function compareToSection(newText, filePath, sectionName) {
   }
 
   // Stage 2: Semantic comparison (thorough)
-  const cachePath = getCachePath(filePath, sectionName);
+  const cachePath = getCachePath(validatedPath, sectionName);
   let cached = null;
 
   // Try to load cache
@@ -151,8 +184,8 @@ async function compareToSection(newText, filePath, sectionName) {
     }
   }
 
-  // Extract section lines
-  const sectionLines = extractSection(filePath, sectionName);
+  // Extract section lines (pass content to avoid re-reading file)
+  const sectionLines = extractSection(fileContent, sectionName);
 
   if (sectionLines.length === 0) {
     return {
@@ -161,10 +194,18 @@ async function compareToSection(newText, filePath, sectionName) {
     };
   }
 
-  // Compute embeddings (use cache if available)
+  // Compute content hash for cache invalidation
+  const sectionHash = crypto.createHash('md5')
+    .update(sectionLines.map(l => l.text).join('\n'))
+    .digest('hex');
+
+  // Compute embeddings (use cache if valid)
   let embeddings = [];
 
-  if (cached && cached.embeddings && cached.embeddings.length === sectionLines.length) {
+  if (cached &&
+      cached.hash === sectionHash &&
+      cached.embeddings &&
+      cached.embeddings.length === sectionLines.length) {
     embeddings = cached.embeddings;
   } else {
     for (const item of sectionLines) {
@@ -172,11 +213,12 @@ async function compareToSection(newText, filePath, sectionName) {
       embeddings.push({ text: item.text, line: item.line, embedding: emb });
     }
 
-    // Save cache
+    // Save cache with content hash
     fs.writeFileSync(cachePath, JSON.stringify({
-      file: filePath,
+      file: validatedPath,
       section: sectionName,
       model: 'Xenova/all-MiniLM-L6-v2',
+      hash: sectionHash,
       updated: new Date().toISOString(),
       embeddings
     }));
@@ -295,5 +337,8 @@ async function main() {
 
 main().catch(err => {
   console.error('ERROR:', err.message);
+  if (err.stack) {
+    console.error(err.stack);
+  }
   process.exit(1);
 });

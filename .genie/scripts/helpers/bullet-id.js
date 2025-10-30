@@ -15,6 +15,9 @@
 const fs = require('fs');
 const path = require('path');
 
+// Maximum bullet ID number (supports 001-999)
+const MAX_BULLET_ID = 999;
+
 /**
  * Extract prefix from filename
  * learn.md → learn
@@ -138,8 +141,8 @@ function generateSingleId(filePath, peek = false) {
   const prefix = getFilePrefix(filePath);
   const nextNum = getNextId(filePath, prefix);
 
-  if (nextNum > 999) {
-    console.error(`ERROR: ID limit reached for ${prefix} (max 999)`);
+  if (nextNum > MAX_BULLET_ID) {
+    console.error(`ERROR: ID limit reached for ${prefix} (max ${MAX_BULLET_ID})`);
     process.exit(1);
   }
 
@@ -160,8 +163,8 @@ function generateBatchIds(filePath, count) {
   const prefix = getFilePrefix(filePath);
   let nextNum = getNextId(filePath, prefix);
 
-  if (nextNum + count > 999) {
-    console.error(`ERROR: Batch would exceed ID limit for ${prefix} (max 999)`);
+  if (nextNum + count > MAX_BULLET_ID) {
+    console.error(`ERROR: Batch would exceed ID limit for ${prefix} (max ${MAX_BULLET_ID})`);
     process.exit(1);
   }
 

@@ -335,8 +335,8 @@ Iterative rewriting by LLMs can degrade detailed knowledge into shorter, less in
 
 **Before Adding New Learning:**
 - [learn-044] helpful=0 harmful=0: Read target section completely before adding
-- [learn-045] helpful=0 harmful=0: Check for existing similar content to avoid duplication
-- [learn-046] helpful=0 harmful=0: If duplicate found, update existing entry (don't append new)
+- [learn-045] helpful=0 harmful=0: MUST use `genie helper embeddings "new text" file.md "Section"` before adding any learning (ACE Protocol - Amendment #12)
+- [learn-046] helpful=0 harmful=0: Only add if similarity < 0.70 (DIFFERENT) - if > 0.85 (DUPLICATE) merge or skip, if 0.70-0.85 (RELATED) evaluate carefully
 - [learn-047] helpful=0 harmful=0: If complementary, append new entry to preserve both insights
 - [learn-048] helpful=0 harmful=0: If contradictory, investigate and ask for clarification before proceeding
 
@@ -526,12 +526,12 @@ genie helper embeddings clear-cache
 
 Before finalizing any edit:
 - [learn-058] helpful=0 harmful=0: [ ] **Minimal change:** Only modified lines actually needed
-- [learn-059] helpful=0 harmful=0: [ ] **No duplication:** Checked for existing similar content
+- [learn-059] helpful=0 harmful=0: [ ] **No duplication:** MUST have used `genie helper embeddings "text" file.md "Section"` and verified similarity < 0.70
 - [learn-060] helpful=0 harmful=0: [ ] **Formatting preserved:** Indentation, spacing, structure intact
 - [learn-061] helpful=0 harmful=0: [ ] **Syntax valid:** Markdown/XML/JSON/YAML well-formed
 - [learn-062] helpful=0 harmful=0: [ ] **Evidence captured:** Reasoning documented in report
 - [learn-063] helpful=0 harmful=0: [ ] **Diff reviewed:** Changes shown for approval
-- [learn-064] helpful=0 harmful=0: [ ] **Context growth measured:** Lines added vs removed tracked
+- [learn-064] helpful=0 harmful=0: [ ] **Context growth measured:** Lines added vs removed tracked, MUST use `genie helper count-tokens file.md` to verify token impact (Amendment #12)
 
 ---
 
