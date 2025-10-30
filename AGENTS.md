@@ -399,6 +399,16 @@ Use `genie helper count-tokens <file>.md` (tiktoken cl100k_base)
 - Ask: "Does this make me smarter or fatter?"
 - Prefer edit > create, delete > archive, reference > duplicate
 
+**Balance Principle:**
+Token efficiency ≠ brevity bias. Lean infrastructure, rich domain knowledge.
+
+- **Infrastructure:** Stay lean (spells, workflows, protocols should be concise)
+- **Domain Knowledge:** Be comprehensive (strategies, patterns, failure modes should be detailed)
+- **Why:** LLMs work better with detailed contexts than compressed summaries
+- **Core insight:** Unlike humans (who benefit from abstractions), LLMs distill relevance autonomously from abundant information
+
+Contexts should be comprehensive playbooks—detailed, inclusive, rich with insights—not compressed to save tokens at the cost of domain knowledge.
+
 ### 7. Zero Metadata - Git Is Source of Truth 🔴 CRITICAL
 **Rule:** Never duplicate metadata that git already tracks. Frontmatter contains semantic info only.
 

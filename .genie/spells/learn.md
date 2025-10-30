@@ -299,6 +299,85 @@ Read file → Generate entire new version → Overwrite
 
 ---
 
+## Grow-and-Refine Protocol (Context Collapse Protection)
+
+**Purpose:** Ensure learnings accumulate and strengthen over time without degrading into compressed summaries
+
+### The Collapse Problem
+
+**What is context collapse?**
+Iterative rewriting by LLMs can degrade detailed knowledge into shorter, less informative summaries over time, causing dramatic performance loss.
+
+**Example pattern:**
+- Step 1: 18,000 tokens, detailed strategies, 66% accuracy
+- Step 2: LLM rewrites entire context
+- Result: 120 tokens, generic advice, 57% accuracy (worse than baseline!)
+
+**Root cause:** Monolithic full-context rewrites ask LLM to compress everything, leading to information loss
+
+### The Grow-and-Refine Solution
+
+**Principle:** Incremental delta updates that preserve accumulated knowledge
+
+**Three Operations:**
+
+1. **Grow (Append New):**
+   - New learnings → append to appropriate section
+   - Never rewrite existing content to add new content
+   - Preserve all accumulated knowledge
+
+2. **Refine (Update Existing):**
+   - Existing learnings → update in place
+   - Add examples, refine wording, strengthen evidence
+   - Small targeted edits, not wholesale rewrites
+
+3. **Prune (Deduplicate):**
+   - Check for near-duplicates before adding
+   - Merge similar learnings when appropriate
+   - Remove only when explicitly identified as harmful/wrong
+
+### Execution Rules
+
+**Before Adding New Learning:**
+1. Read target section completely
+2. Check for existing similar content
+3. If duplicate: Update existing entry (don't append new)
+4. If complementary: Append new entry
+5. If contradictory: Investigate, ask for clarification
+
+**Before Editing Existing Learning:**
+1. Understand origin and context
+2. Make minimal, targeted changes
+3. Preserve core insight, enhance with new evidence
+4. Never compress to save tokens
+
+**Never Do:**
+- ❌ Rewrite entire spell/section to "clean it up"
+- ❌ Compress detailed strategies into generic summaries
+- ❌ Delete learnings without understanding their value
+- ❌ Merge unrelated learnings to reduce file size
+- ❌ Treat long contexts as problems to solve
+
+**Always Do:**
+- ✅ Append new learnings to preserve history
+- ✅ Update existing learnings to strengthen them
+- ✅ Keep detailed domain insights (they're features, not bloat)
+- ✅ Trust that LLMs can distill relevance from comprehensive contexts
+- ✅ Track context growth (lines added vs removed) to ensure accumulation
+
+### Metrics to Track
+
+After each learning session, record:
+- Lines added (new knowledge)
+- Lines modified (strengthened knowledge)
+- Lines removed (pruned knowledge)
+- Net growth (should be positive over time)
+
+**Healthy pattern:** +20 added, +5 modified, -2 pruned = +23 net growth
+**Unhealthy pattern:** +5 added, +50 modified, -40 pruned = -35 net shrinkage (collapse!)
+
+---
+
 ## Validation Checklist
 
 Before finalizing any edit:
