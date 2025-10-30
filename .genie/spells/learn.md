@@ -119,6 +119,123 @@ Base Genie is the human interface. Recognition means understanding what the user
 - [learn-026] helpful=0 harmful=0: ❌ Creating files without checking for existing patterns (leaves trash, creates duplicates)
 - [learn-027] helpful=0 harmful=0: ❌ Changing architecture without cleaning up old files
 - [learn-028] helpful=0 harmful=0: ❌ Not tracking context growth (code + documentation lines added/removed)
+- [learn-188] helpful=0 harmful=0: ❌ Adding learnings without using `genie helper embeddings` (violates Amendment #12)
+- [learn-189] helpful=0 harmful=0: ❌ Committing framework changes without using `genie helper count-tokens` (violates Amendment #12)
+
+---
+
+## ACE Helper Automatic Invocation (Amendment #12 Compliance)
+
+**🔴 CRITICAL: These are MANDATORY tool calls, not optional checks.**
+
+### When Adding ANY New Learning
+
+**ALWAYS execute this sequence:**
+
+1. **Read target section** (learn-044)
+   ```bash
+   # No tool needed, use Read tool to load section
+   ```
+
+2. **Check for semantic duplicates** (learn-045) 🔴 MANDATORY
+   ```bash
+   genie helper embeddings "new learning text" file.md "Section Name"
+   ```
+   **Decision rules:**
+   - similarity > 0.85 (DUPLICATE) → Merge or skip, do NOT add new
+   - similarity 0.70-0.85 (RELATED) → Evaluate carefully, usually merge
+   - similarity < 0.70 (DIFFERENT) → Safe to proceed
+
+3. **If DIFFERENT (< 0.70), proceed with surgical edit**
+   - Use Edit tool (not Write) for existing files
+   - Append to section (grow-and-refine)
+   - Preserve formatting
+
+4. **Measure token impact** (learn-064) 🔴 MANDATORY
+   ```bash
+   genie helper count-tokens file.md
+   ```
+   **Record:** Note tokens before/after in commit message
+
+5. **Generate diff and review**
+   - Show changes for approval
+   - Explain reasoning with evidence
+
+**Example Workflow:**
+```bash
+# Step 1: Read current section
+Read(.genie/spells/learn.md, section="Validation Checklist")
+
+# Step 2: Check for duplicates (MANDATORY)
+$ genie helper embeddings "Must check for duplicates before adding" .genie/spells/learn.md "Validation Checklist"
+# Output: similarity=0.92 (DUPLICATE - learn-059 already exists)
+# Decision: Skip adding, learn-059 already covers this
+
+# Step 3: If DIFFERENT, measure tokens before edit
+$ genie helper count-tokens .genie/spells/learn.md
+# Output: 7870 tokens
+
+# Step 4: Make surgical edit
+Edit(.genie/spells/learn.md, append new learning)
+
+# Step 5: Measure tokens after edit
+$ genie helper count-tokens .genie/spells/learn.md
+# Output: 7895 tokens (+25 tokens)
+
+# Step 6: Document in commit
+# "learn: Add ACE helper requirement (+25 tokens, evidence: Amendment #12)"
+```
+
+### When QA Scenario Completes (Manual Until Phase 5)
+
+**After executing ANY QA scenario:**
+
+1. **Determine outcome** (passed/failed)
+
+2. **Update counters** 🔴 MANDATORY (when QA active)
+   ```bash
+   # If scenario PASSED (learning was helpful)
+   genie helper bullet-counter learn-042 --helpful
+
+   # If scenario FAILED (prevention learning was harmful)
+   genie helper bullet-counter error-015 --harmful
+   ```
+
+3. **Capture evidence**
+   - Save CLI output to `.genie/qa/evidence/`
+   - Document which learnings were tested
+   - Link scenario → learnings in metadata (Phase 5)
+
+**Current Status:**
+- Manual QA: Update counters manually after each scenario
+- Automated QA (Phase 5): Attribution engine updates automatically
+
+### When Committing Framework Changes
+
+**Before EVERY commit to `.genie/`:**
+
+1. **Measure token impact** 🔴 MANDATORY
+   ```bash
+   genie helper count-tokens file.md
+   ```
+
+2. **Calculate net growth**
+   - Lines added vs removed
+   - Tokens added vs removed
+   - Verify healthy pattern (+growth, not -shrinkage)
+
+3. **Document in commit message**
+   ```
+   learn: Add ACE behavioral triggers (+127 lines, +542 tokens)
+
+   Evidence: Amendment #12 requires explicit ACE helper usage
+   Token impact: Measured via genie helper count-tokens
+   Net growth: +542 tokens (healthy)
+   ```
+
+**Enforcement:** Amendment #12 makes this mandatory for all framework edits
+
+---
 
 ## Origin: From Scattered Work to Living Framework
 
