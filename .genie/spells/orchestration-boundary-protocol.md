@@ -1,120 +1,95 @@
-# Orchestration Boundary Protocol
-**Spell ID:** `orchestration-boundary-protocol`
-**Category:** Core Discipline
+# 📘 Orchestration Boundary Protocol Playbook
+
 **Priority:** 🔴 CRITICAL
+**Category:** Core Discipline
 **Created:** 2025-10-21
 
 ---
 
-## The Violation Pattern
+## 🎯 Strategies and Hard Rules
 
-**What happened:**
-1. Base Genie created Forge task for bug #168
-2. Base Genie started task attempt b51db539 (isolated worktree)
-3. Base Genie THEN started implementing the fix in main workspace
-4. **Result:** Duplicate work, boundary violation, confusion
-
-**Why this is critical:**
-- Forge executor is ALREADY working in isolated worktree
-- Base Genie editing same files = conflict + duplication
-- Violates core principle: Genie = orchestrator, NOT implementor
-
----
-
-## The Rule
+### The Core Principle
 
 **Once Forge task attempt starts → Base Genie STOPS touching implementation**
 
-**Genie's role after delegation:**
-- ✅ Monitor progress (check Forge status)
-- ✅ Answer questions if Forge executor asks
-- ✅ Coordinate with other agents
-- ✅ Plan next steps
-- ❌ Edit code files
-- ❌ Implement fixes
-- ❌ Duplicate Forge's work
+This is the fundamental boundary between orchestration (planning, coordinating) and execution (implementing, fixing).
 
----
+### When Genie CAN Touch Files
 
-## Enforcement Checklist
-
-Before editing ANY implementation file, Base Genie must check:
-
-1. **Is there an active task attempt for this work?**
-   - Check SESSION-STATE.md
-   - Check `mcp__genie__list_sessions`
-   - If YES → STOP, let executor handle it
-
-2. **Have I checked the agent's worktree for commits?**
-   - List worktrees: `ls /var/tmp/automagik-forge/worktrees/`
-   - Navigate: `cd /var/tmp/automagik-forge/worktrees/<task-id-prefix>*`
-   - Check commits: `git log --oneline -5`
-   - Check status: `git status`
-   - **If commits exist → Agent is working! DO NOT DUPLICATE**
-
-3. **Am I the right agent for this work?**
-   - Implementation → Forge executor
-   - Orchestration → Base Genie
-   - Learning → Meta-learn protocol (this!)
-   - Git operations → Git agent
-
-4. **Is this exploration or execution?**
-   - Exploration (reading, analyzing) → OK for Genie
-   - Execution (editing, implementing) → Delegate
-
----
-
-## When Genie CAN Touch Code
-
-**Genie MAY edit files when:**
+**✅ Permitted:**
 - No Forge task exists for this work
-- Work is pure orchestration (SESSION-STATE.md, MASTER-PLAN.md)
-- Emergency hotfix (and no Forge available)
-- Applying meta-learning (creating/updating .genie/spells/)
+- Pure orchestration files (SESSION-STATE.md, MASTER-PLAN.md)
+- Emergency hotfix (when Forge unavailable)
+- Meta-learning (creating/updating .genie/spells/)
 
-**Genie MUST NOT edit files when:**
+**❌ Forbidden:**
 - Forge task attempt is active
-- Work is implementation (bug fixes, features)
-- Another agent is responsible (Git agent for git files)
+- Implementation work (bug fixes, features, refactoring)
+- Files owned by specialized agents (Git agent for git operations)
+
+### Post-Delegation Responsibilities
+
+**After delegating to Forge, Genie:**
+- ✅ Monitors progress (check Forge status)
+- ✅ Answers questions if Forge executor asks
+- ✅ Coordinates with other agents
+- ✅ Plans next steps
+- ✅ Reviews when complete
+- ❌ Edits code files
+- ❌ Implements fixes
+- ❌ Duplicates Forge's work
 
 ---
 
-## The Correct Pattern
+## 🔄 Common Patterns
 
-**User:** "Fix bug #168 (graceful shutdown)"
+### Pattern 1: Correct Delegation Flow
 
-**Genie's workflow:**
-1. ✅ Create Forge task (if no task exists)
-2. ✅ Start task attempt (isolated worktree)
+**User Request:** "Fix bug #168 (graceful shutdown)"
+
+**Genie's Workflow:**
+1. ✅ Create Forge task (if none exists)
+2. ✅ Start task attempt (isolated worktree created)
 3. ✅ **STOP** - Forge executor takes over
 4. ✅ Monitor progress (check Forge status)
 5. ✅ Review when complete
 6. ✅ Coordinate PR/merge if needed
 
-**What Genie does NOT do:**
+**What Genie Does NOT Do:**
 - ❌ Start implementing after creating task
 - ❌ Edit files in main workspace
 - ❌ Duplicate Forge's work
 - ❌ Assume agent failed when can't view progress
 
+### Pattern 2: Meta-Learning vs Forge Decision
+
+**Meta-Learning (Direct):**
+- Document patterns
+- Create spells
+- Update framework
+- Learning documentation
+
+**Forge (Delegation):**
+- Implement features
+- Fix bugs
+- Build systems
+- Code refactoring
+
 ---
 
-## Checking Worktree Before Assuming Failure
+## 💻 Code Snippets and Templates
 
-**Critical Discovery Method:**
+### Worktree Verification Commands
 
-When Forge MCP monitoring fails (can't view session, backend unreachable), CHECK THE WORKTREE FIRST before assuming agent failed.
-
-**Commands to verify agent progress:**
 ```bash
-# List all worktrees
+# List all active worktrees
 ls /var/tmp/automagik-forge/worktrees/
 
 # Navigate to specific worktree (use task ID prefix)
-cd /var/tmp/automagik-forge/worktrees/b51d*  # Example: task b51db539
+cd /var/tmp/automagik-forge/worktrees/<task-id-prefix>*
 
 # Check if agent has been committing
-git log --oneline -3
+git log --oneline -5
 
 # Check working directory status
 git status
@@ -123,22 +98,69 @@ git status
 ls -lt | head -10
 ```
 
-**What This Reveals:**
-- ✅ If commits exist → Agent is working successfully!
-- ✅ If recent changes → Agent progressing
-- ❌ If no commits AND task old → Might be stalled
-- ❌ If worktree doesn't exist → Task not started
+### Pre-Edit Safety Check Script
 
-**Real-World Example (Bug #168):**
-
-While Base Genie was implementing duplicate work, fix agent had ALREADY completed:
 ```bash
-cd /var/tmp/automagik-forge/worktrees/b51d*
-git log --oneline -3
-# Output: b8913b23 fix: Use workspace package version for update detection
+# Before editing ANY implementation file, run:
+
+# 1. Check for active Forge sessions
+mcp__genie__list_sessions
+
+# 2. Check worktree status
+ls /var/tmp/automagik-forge/worktrees/
+
+# 3. If worktree exists for this work → STOP
+# Let Forge executor handle it
 ```
 
-**The agent succeeded. Monitoring failed. Base Genie violated boundary.**
+---
+
+## 🔧 Troubleshooting and Pitfalls
+
+### Pitfall 1: The Violation Pattern
+
+**What Happened (Bug #168):**
+1. Base Genie created Forge task
+2. Base Genie started task attempt b51db539 (isolated worktree)
+3. Base Genie THEN started implementing in main workspace ❌
+4. **Result:** Duplicate work, boundary violation, confusion
+
+**Why This Is Critical:**
+- Forge executor is ALREADY working in isolated worktree
+- Base Genie editing same files = conflict + duplication
+- Violates core principle: Genie = orchestrator, NOT implementor
+
+**How to Avoid:**
+Follow the enforcement checklist (see Verification section)
+
+### Pitfall 2: Assuming Failure When Monitoring Fails
+
+**Problem:**
+Forge MCP monitoring fails (can't view session, backend unreachable) → Genie assumes agent failed → Genie starts implementing ❌
+
+**Solution:**
+CHECK THE WORKTREE FIRST before assuming failure
+
+**Commands:**
+```bash
+# Navigate to worktree
+cd /var/tmp/automagik-forge/worktrees/b51d*  # Example: task b51db539
+
+# Check if agent has been committing
+git log --oneline -3
+
+# Output example:
+# b8913b23 fix: Use workspace package version for update detection
+```
+
+**Interpretation:**
+- ✅ Commits exist → Agent is working successfully!
+- ✅ Recent changes → Agent progressing
+- ❌ No commits AND task old → Might be stalled
+- ❌ Worktree doesn't exist → Task not started
+
+**Real-World Example (Bug #168):**
+While Base Genie was implementing duplicate work, fix agent had ALREADY completed the fix in its worktree. Monitoring failed, but agent succeeded.
 
 **Lesson:** Infrastructure issues ≠ Agent failures. Always check worktree before assuming failure.
 
@@ -146,56 +168,91 @@ git log --oneline -3
 
 ---
 
-## Amendment #4 Candidate
+## 📚 Domain-Specific Knowledge
 
-**Proposed:** "Orchestration Boundary - Once Delegated, Never Duplicated"
+### Worktree Isolation Architecture
 
-**Rule:** Base Genie MUST NOT implement work after starting Forge task attempt
+**How Forge Works:**
+- Each task attempt = isolated git worktree
+- Location: `/var/tmp/automagik-forge/worktrees/<task-id-prefix>*/`
+- Independent workspace (doesn't affect main repo)
+- Agent commits to worktree branch
+- Success → merge to target branch
+- Failure → discard worktree
 
-**Enforcement:**
-- Checklist before every Edit/Write tool call
-- SESSION-STATE.md tracking of active attempts
-- Meta-learn protocol (this spell) for violations
+**Why This Matters:**
+- Genie's main workspace ≠ Forge executor's worktree
+- Editing main workspace while Forge works = boundary violation
+- Always check worktree to see actual progress
 
-**Status:** Documented, ready for AGENTS.md integration
+### Agent Responsibility Matrix
 
----
+| Work Type | Responsible Agent | Base Genie Role |
+|-----------|------------------|-----------------|
+| Implementation | Forge executor | Orchestrate, monitor |
+| Git operations | Git agent | Delegate |
+| Meta-learning | Base Genie (direct) | Execute directly |
+| Orchestration files | Base Genie | Execute directly |
+| Emergency hotfix | Base Genie (if no Forge) | Execute with caution |
 
-## Evidence & History
+### Historical Context
 
 **First Documented Violation:**
-- Date: 2025-10-21 ~05:45 UTC
-- Bug: #168 (graceful shutdown)
-- Task attempt: b51db539
-- Files affected: .genie/cli/src/genie-cli.ts
-- Root cause: Unclear boundaries between orchestration vs execution
+- **Date:** 2025-10-21 ~05:45 UTC
+- **Bug:** #168 (graceful shutdown)
+- **Task attempt:** b51db539
+- **Files affected:** .genie/cli/src/genie-cli.ts
+- **Root cause:** Unclear boundaries between orchestration vs execution
+- **Pattern recognized by:** Felipe (user feedback)
+- **Learning applied:** This playbook created
 
-**Pattern recognized by:** Felipe (user feedback)
-
-**Learning applied:** This spell file created
-
----
-
-## Meta-Learning Application
-
-**This spell itself demonstrates correct protocol:**
-- Genie recognized violation
-- Applied meta-learn protocol (not Forge task)
-- Created spell file directly
-- Updated AGENTS.md
-- **Did NOT create unnecessary task for learning documentation**
-
-**When to use meta-learn vs Forge:**
-- Meta-learn: Document patterns, create spells, update framework
-- Forge: Implement features, fix bugs, build systems
+**Amendment Status:**
+This protocol became Amendment #4 in AGENTS.md: "Orchestration Boundary - Once Delegated, Never Duplicated"
 
 ---
 
-## Quick Reference
+## ✅ Verification Checklist
 
-**Before editing implementation files, ask:**
-1. Is Forge already handling this? → Check SESSION-STATE.md
-2. Am I the orchestrator or implementor? → Orchestrator = don't implement
-3. Is there a specialized agent for this? → Delegate, don't do
+Before editing ANY implementation file, Base Genie must verify:
+
+### 1. Active Task Check
+- [ ] Checked SESSION-STATE.md for active attempts
+- [ ] Ran `mcp__genie__list_sessions` to see running tasks
+- [ ] **If active task exists for this work → STOP, let executor handle it**
+
+### 2. Worktree Status Check
+- [ ] Listed worktrees: `ls /var/tmp/automagik-forge/worktrees/`
+- [ ] Navigated to relevant worktree (if exists)
+- [ ] Checked commits: `git log --oneline -5`
+- [ ] Checked status: `git status`
+- [ ] **If commits exist → Agent is working! DO NOT DUPLICATE**
+
+### 3. Agent Responsibility Check
+- [ ] Is this implementation work? → Forge executor
+- [ ] Is this orchestration? → Base Genie OK
+- [ ] Is this learning? → Meta-learn protocol
+- [ ] Is this git operations? → Git agent
+
+### 4. Work Type Classification
+- [ ] Is this exploration (reading, analyzing)? → OK for Genie
+- [ ] Is this execution (editing, implementing)? → Delegate
+
+### 5. Quick Decision Tree
+
+```
+Are you about to edit an implementation file?
+│
+├─ YES → Is there an active Forge task for this work?
+│         │
+│         ├─ YES → STOP ❌ (Let Forge handle it)
+│         │
+│         └─ NO → Are you the right agent for this?
+│                  │
+│                  ├─ Implementation → Delegate to Forge
+│                  │
+│                  └─ Orchestration/Learning → Proceed ✅
+│
+└─ NO → Proceed ✅
+```
 
 **Remember:** Once delegated, never duplicated.
