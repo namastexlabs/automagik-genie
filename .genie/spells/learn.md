@@ -383,19 +383,41 @@ After each learning session, record:
 
 **Purpose:** Prevent redundant learnings as framework accumulates knowledge over time
 
-### When to Use Semantic Similarity
+### Two-Stage Deduplication Strategy
 
-**Manual Check (Current):**
-- Read target section completely
-- Identify similar content by reading
-- Ask: "Does this add new information or repeat existing?"
+**Stage 1: Exact Match (Git Grep) - FAST**
+```bash
+# Check if identical text already exists
+grep -F "new learning text" target-file.md
+```
+- **Found:** Update existing entry (don't append duplicate)
+- **Not found:** Proceed to Stage 2
 
-**Semantic Similarity (Future Enhancement):**
-- Compute embedding for new learning
-- Compare to existing learnings in target section
-- Cosine similarity > 0.85 → likely duplicate
-- Cosine similarity 0.70-0.85 → related (merge or keep separate)
-- Cosine similarity < 0.70 → different (safe to add)
+**Stage 2: Semantic Match (Embeddings) - THOROUGH**
+```bash
+# Check for paraphrases and conceptual duplicates
+genie helper embeddings compare \
+  --text "new learning text" \
+  --file "target-file.md" \
+  --section "target-section"
+```
+
+Output shows:
+- Top 5 similar entries with similarity scores
+- Recommendation for each match
+- Max similarity + suggested action
+
+**Why Two Stages:**
+- Git grep catches exact copies (instant, 0 cost)
+- Embeddings catch paraphrases (slower, but catches what grep misses)
+- Only run embeddings if Stage 1 finds nothing
+
+### Semantic Similarity Interpretation
+
+**Cosine Similarity Scores:**
+- **> 0.85:** Strong overlap (likely duplicate concept)
+- **0.70-0.85:** Related (evaluate if truly different angle)
+- **< 0.70:** Different (safe to append)
 
 ### Decision Matrix
 
@@ -432,23 +454,60 @@ Action: Append as new learning
 
 **Decision:** Append (different insight about monitoring)
 
-### Future Implementation Notes
+### Local Embedding Helper Implementation
 
-**When semantic comparison becomes available:**
-1. Extract text content from new learning
-2. Generate embedding (e.g., OpenAI text-embedding-3-small)
-3. Compare to embeddings of existing learnings in target section
-4. Present similarity scores + recommended action
-5. Human reviews and confirms decision
+**Tool:** `genie helper embeddings` (100% local, no cloud APIs)
 
-**Storage:**
-- Embeddings cached per section (regenerate when section changes)
-- Similarity threshold configurable (default: 0.85 for duplicates)
+**Technology:**
+- Python + sentence-transformers
+- Model: all-MiniLM-L6-v2 (85MB, runs on CPU)
+- Download once, use offline forever
+
+**Setup (one-time):**
+```bash
+# Install dependencies
+pip3 install sentence-transformers numpy scikit-learn
+
+# First run downloads model (~10s, one-time)
+genie helper embeddings cache --file .genie/spells/learn.md --section "Validation"
+```
+
+**Usage:**
+```bash
+# Compare new learning to section
+genie helper embeddings compare \
+  --text "New learning text here" \
+  --file ".genie/spells/learn.md" \
+  --section "Grow-and-Refine Protocol"
+
+# Output (JSON):
+# {
+#   "matches": [
+#     {"text": "...", "similarity": 0.87, "recommendation": "MERGE"},
+#     {"text": "...", "similarity": 0.72, "recommendation": "EVALUATE"}
+#   ],
+#   "max_similarity": 0.87,
+#   "action": "merge_or_skip"
+# }
+```
+
+**Cache:**
+- Location: `.genie/.cache/embeddings/<file-section-hash>.json`
+- Stores precomputed embeddings per section
+- Regenerate when section content changes
+
+**Performance:**
+- First run: ~100ms (model load)
+- Subsequent: ~1ms per comparison
+- Memory: ~200MB (model in RAM)
 
 **Benefits:**
-- Catches duplicates that manual reading might miss
-- Scales as framework grows (hundreds of learnings)
-- Data-driven deduplication (not subjective judgment)
+- 100% local (no API calls, no privacy concerns)
+- Fast enough for interactive use
+- Catches paraphrases git grep misses
+- Scales to hundreds of learnings
+
+**Design:** `/tmp/embedding-helper-design.md` (full specification)
 
 ---
 
