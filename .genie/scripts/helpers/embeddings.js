@@ -298,27 +298,44 @@ function clearCache() {
  */
 async function main() {
   const args = process.argv.slice(2);
+
+  // Help flag
+  if (args.includes('--help') || args.includes('-h')) {
+    console.log('Usage:');
+    console.log('  embeddings compare "text" [file] [section]');
+    console.log('    Returns: similarity score (0-1)');
+    console.log('    Defaults: file=.genie/spells/learn.md, section=Grow-and-Refine Protocol');
+    console.log('');
+    console.log('  embeddings cache file section');
+    console.log('    Precomputes embeddings for a section');
+    console.log('');
+    console.log('  embeddings clear-cache');
+    console.log('    Clears all cached embeddings');
+    return;
+  }
+
   const command = args[0];
 
   if (command === 'compare') {
-    const text = args.find(a => a.startsWith('--text='))?.split('=')[1];
-    const file = args.find(a => a.startsWith('--file='))?.split('=')[1];
-    const section = args.find(a => a.startsWith('--section='))?.split('=')[1];
+    const text = args[1];
+    const file = args[2] || '.genie/spells/learn.md';
+    const section = args[3] || 'Grow-and-Refine Protocol';
 
-    if (!text || !file || !section) {
-      console.error('Usage: embeddings compare --text="..." --file=path.md --section="Section Name"');
+    if (!text) {
+      console.error('Usage: embeddings compare "text" [file] [section]');
+      console.error('  Returns similarity score (0-1)');
       process.exit(1);
     }
 
     const result = await compareToSection(text, file, section);
-    console.log(JSON.stringify(result, null, 2));
+    console.log(result.max_similarity);
 
   } else if (command === 'cache') {
-    const file = args.find(a => a.startsWith('--file='))?.split('=')[1];
-    const section = args.find(a => a.startsWith('--section='))?.split('=')[1];
+    const file = args[1];
+    const section = args[2];
 
     if (!file || !section) {
-      console.error('Usage: embeddings cache --file=path.md --section="Section Name"');
+      console.error('Usage: embeddings cache file section');
       process.exit(1);
     }
 
@@ -329,9 +346,10 @@ async function main() {
 
   } else {
     console.error('Usage:');
-    console.error('  embeddings compare --text="..." --file=path.md --section="Section"');
-    console.error('  embeddings cache --file=path.md --section="Section"');
-    console.error('  embeddings clear-cache');
+    console.error('  embeddings compare "text" [file] [section]  # Returns score');
+    console.error('  embeddings cache file section               # Precompute');
+    console.error('  embeddings clear-cache                      # Clear cache');
+    console.error('  embeddings --help                           # Show help');
     process.exit(1);
   }
 }
