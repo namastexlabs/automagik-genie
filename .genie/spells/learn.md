@@ -395,16 +395,34 @@ grep -F "new learning text" target-file.md
 
 **Stage 2: Semantic Match (Embeddings) - THOROUGH**
 ```bash
-# Check for paraphrases and conceptual duplicates
-# Compare new learning file to existing spell
-genie helper embeddings new-learning.md .genie/spells/target-spell.md
+# Check for paraphrases and conceptual duplicates in section
+genie helper embeddings \
+  "Never rewrite entire sections" \
+  .genie/spells/learn.md \
+  "Grow-and-Refine Protocol"
 ```
 
-Output: Similarity score (0-1)
-- 0.95+ = duplicate concept (skip or merge)
-- 0.80-0.95 = related content (evaluate carefully)
-- 0.70-0.80 = loosely related (likely different angle)
-- <0.70 = different topics (safe to append)
+Output: Top matches with scores and recommendations
+```json
+{
+  "stage": 2,
+  "matches": [
+    {
+      "similarity": 0.842,
+      "line": 356,
+      "text": "- ❌ Rewrite entire spell/section to \"clean it up\"",
+      "recommendation": "RELATED"
+    }
+  ],
+  "max_similarity": 0.842,
+  "recommendation": "RELATED"
+}
+```
+
+Interpretation:
+- 0.85+ = DUPLICATE (merge or skip)
+- 0.70-0.85 = RELATED (evaluate carefully)
+- <0.70 = DIFFERENT (safe to append)
 
 **Why Two Stages:**
 - Git grep catches exact copies (instant, 0 cost)
@@ -473,10 +491,10 @@ pnpm install
 
 **Usage:**
 ```bash
-# Compare two files
-genie helper embeddings file1.md file2.md
+# Check if new learning exists in section
+genie helper embeddings "text" file.md "Section Name"
 
-# Output: 0.842 (single similarity score)
+# Output: JSON with top matches, line numbers, recommendations
 
 # Clear cache
 genie helper embeddings clear-cache
@@ -486,16 +504,18 @@ genie helper embeddings clear-cache
 - Location: `.genie/scripts/helpers/embeddings.js`
 - Uses @xenova/transformers (Hugging Face models in JS)
 - ONNX runtime for fast CPU inference
-- Removes markdown noise before comparison (frontmatter, code blocks, headers)
+- Two-stage: grep (exact match) → embeddings (semantic match)
 
 **Cache:**
-- Location: `.genie/.cache/embeddings/<file-hash>.json`
-- Stores precomputed embeddings per file
-- Auto-invalidated when file content changes
+- Location: `.genie/.cache/embeddings/<file-section-hash>.json`
+- Stores precomputed embeddings per section
+- Auto-invalidated when section content changes
+- Rebuild only when section modified
 
 **Performance:**
 - First run: ~200ms (model load from disk)
-- Subsequent: ~10ms per comparison
+- Cached section: ~10ms per comparison
+- New section: ~50ms per line (one-time cost)
 - Memory: ~150MB (model in RAM)
 
 **Benefits:**
@@ -503,7 +523,8 @@ genie helper embeddings clear-cache
 - Pure Node.js (consistent with project)
 - Fast enough for interactive use
 - Catches paraphrases git grep misses
-- File-level comparison (intuitive interface)
+- Returns line numbers for quick location
+- Shows context (first 80 chars of matching text)
 
 ---
 
