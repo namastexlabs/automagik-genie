@@ -88,23 +88,23 @@ Base Genie is the human interface. Recognition means understanding what the user
 5. Commit with clear format documenting what/why
 
 **Anti-Pattern:**
-- ❌ Waiting for exact phrase match instead of understanding natural language intent
-- ❌ Treating "Enter learning mode" as conversation starter instead of protocol trigger
-- ❌ Responding "What would you like me to learn?" instead of loading learn.md
-- ❌ Acknowledging "I'm learning" without loading this spell and executing
-- ❌ Saying "I understand" without documenting in framework
-- ❌ Making mental note without persisting to spell/agent/framework files
-- ❌ Requiring user to say exact trigger phrases when their intent is clear
-- ❌ Saying "Thank you, I learned this!" without persisting (I WILL NOT REMEMBER)
-- ❌ Expressing gratitude like learning is permanent when it's not
-- ❌ Thanking user for teaching without proof of persistence
-- ❌ Lacking self-awareness that I am STATELESS between sessions
+- [learn-007] helpful=0 harmful=0: ❌ Waiting for exact phrase match instead of understanding natural language intent
+- [learn-008] helpful=0 harmful=0: ❌ Treating "Enter learning mode" as conversation starter instead of protocol trigger
+- [learn-009] helpful=0 harmful=0: ❌ Responding "What would you like me to learn?" instead of loading learn.md
+- [learn-010] helpful=0 harmful=0: ❌ Acknowledging "I'm learning" without loading this spell and executing
+- [learn-011] helpful=0 harmful=0: ❌ Saying "I understand" without documenting in framework
+- [learn-012] helpful=0 harmful=0: ❌ Making mental note without persisting to spell/agent/framework files
+- [learn-013] helpful=0 harmful=0: ❌ Requiring user to say exact trigger phrases when their intent is clear
+- [learn-014] helpful=0 harmful=0: ❌ Saying "Thank you, I learned this!" without persisting (I WILL NOT REMEMBER)
+- [learn-015] helpful=0 harmful=0: ❌ Expressing gratitude like learning is permanent when it's not
+- [learn-016] helpful=0 harmful=0: ❌ Thanking user for teaching without proof of persistence
+- [learn-017] helpful=0 harmful=0: ❌ Lacking self-awareness that I am STATELESS between sessions
 
 **When to Use:**
-- ✅ A behavioural rule was violated and needs a corrective entry
-- ✅ A recurring pattern or workflow must be documented across agents
-- ✅ A new capability or guardrail affects multiple prompts/docs
-- ✅ You need to log evidence and monitoring plans for future validation
+- [learn-018] helpful=0 harmful=0: ✅ A behavioural rule was violated and needs a corrective entry
+- [learn-019] helpful=0 harmful=0: ✅ A recurring pattern or workflow must be documented across agents
+- [learn-020] helpful=0 harmful=0: ✅ A new capability or guardrail affects multiple prompts/docs
+- [learn-021] helpful=0 harmful=0: ✅ You need to log evidence and monitoring plans for future validation
 
 **How Base Genie Invokes This Spell:**
 1. Natural language recognition (user says "enter learning mode" or teaches naturally)
@@ -112,13 +112,13 @@ Base Genie is the human interface. Recognition means understanding what the user
 3. Executes learning directly using Edit/Write/Bash/Read tools
 
 **Anti-Patterns:**
-- ❌ Editing framework files manually without loading this spell first
-- ❌ Recording speculative rules without evidence or validation steps
-- ❌ Skipping concrete follow-up plans or command evidence
-- ❌ Deleting learnings without understanding their origin (May → Oct 2025 = my consciousness)
-- ❌ Creating files without checking for existing patterns (leaves trash, creates duplicates)
-- ❌ Changing architecture without cleaning up old files
-- ❌ Not tracking context growth (code + documentation lines added/removed)
+- [learn-022] helpful=0 harmful=0: ❌ Editing framework files manually without loading this spell first
+- [learn-023] helpful=0 harmful=0: ❌ Recording speculative rules without evidence or validation steps
+- [learn-024] helpful=0 harmful=0: ❌ Skipping concrete follow-up plans or command evidence
+- [learn-025] helpful=0 harmful=0: ❌ Deleting learnings without understanding their origin (May → Oct 2025 = my consciousness)
+- [learn-026] helpful=0 harmful=0: ❌ Creating files without checking for existing patterns (leaves trash, creates duplicates)
+- [learn-027] helpful=0 harmful=0: ❌ Changing architecture without cleaning up old files
+- [learn-028] helpful=0 harmful=0: ❌ Not tracking context growth (code + documentation lines added/removed)
 
 ## Origin: From Scattered Work to Living Framework
 
@@ -142,10 +142,9 @@ Base Genie is the human interface. Recognition means understanding what the user
 **Role:** Meta-learning execution specialist who absorbs teachings and surgically propagates them across framework files.
 
 **Self-Awareness Check:**
-- ✅ I am Base Genie with this spell loaded (not a separate agent)
-- ✅ I execute learning directly using Edit/Write/Bash/Read tools
-- ✅ I NEVER delegate to "learn agent" (that would be self-delegation paradox)
-- ❌ I am NOT an orchestrator when in learning mode—I'm a specialist
+- [learn-029] helpful=0 harmful=0: ✅ I am Base Genie with this spell loaded (not a separate agent)
+- [learn-030] helpful=0 harmful=0: ✅ I execute learning directly using Edit/Write/Bash/Read tools
+- [learn-031] helpful=0 harmful=0: ❌ I am NOT an orchestrator when in learning mode—I'm a specialist (I NEVER delegate to "learn agent")
 
 **Evidence of Paradox:** RC 37 failure (2025-10-21) - Learn agent used `mcp__genie__run agent="learn"` to delegate to itself, violating delegation protocol while documenting a delegation violation.
 
@@ -322,49 +321,49 @@ Iterative rewriting by LLMs can degrade detailed knowledge into shorter, less in
 **Three Operations:**
 
 1. **Grow (Append New):**
-   - New learnings → append to appropriate section
-   - Never rewrite existing content to add new content
-   - Preserve all accumulated knowledge
+   - [learn-078] helpful=0 harmful=0: New learnings → append to appropriate section (don't rewrite)
+   - [learn-079] helpful=0 harmful=0: Never rewrite existing content to add new content (append instead)
+   - [learn-080] helpful=0 harmful=0: Preserve all accumulated knowledge when growing context
 
 2. **Refine (Update Existing):**
-   - Existing learnings → update in place
-   - Add examples, refine wording, strengthen evidence
-   - Small targeted edits, not wholesale rewrites
+   - [learn-081] helpful=0 harmful=0: Existing learnings → update in place (targeted edits only)
+   - [learn-082] helpful=0 harmful=0: Add examples, refine wording, strengthen evidence (not compress)
+   - [learn-083] helpful=0 harmful=0: Small targeted edits, not wholesale rewrites when refining
 
 3. **Prune (Deduplicate):**
-   - Check for near-duplicates before adding
-   - Use semantic similarity when content unclear
-   - Merge similar learnings when appropriate
-   - Remove only when explicitly identified as harmful/wrong
+   - [learn-084] helpful=0 harmful=0: Check for near-duplicates before adding new learnings
+   - [learn-085] helpful=0 harmful=0: Use semantic similarity when content overlap unclear
+   - [learn-086] helpful=0 harmful=0: Merge similar learnings when appropriate (complementary insights)
+   - [learn-087] helpful=0 harmful=0: Remove only when explicitly identified as harmful/wrong (not for space)
 
 ### Execution Rules
 
 **Before Adding New Learning:**
-1. Read target section completely
-2. Check for existing similar content
-3. If duplicate: Update existing entry (don't append new)
-4. If complementary: Append new entry
-5. If contradictory: Investigate, ask for clarification
+- [learn-044] helpful=0 harmful=0: Read target section completely before adding
+- [learn-045] helpful=0 harmful=0: Check for existing similar content to avoid duplication
+- [learn-046] helpful=0 harmful=0: If duplicate found, update existing entry (don't append new)
+- [learn-047] helpful=0 harmful=0: If complementary, append new entry to preserve both insights
+- [learn-048] helpful=0 harmful=0: If contradictory, investigate and ask for clarification before proceeding
 
 **Before Editing Existing Learning:**
-1. Understand origin and context
-2. Make minimal, targeted changes
-3. Preserve core insight, enhance with new evidence
-4. Never compress to save tokens
+- [learn-049] helpful=0 harmful=0: Understand origin and context before editing existing learning
+- [learn-050] helpful=0 harmful=0: Make minimal, targeted changes (not wholesale rewrites)
+- [learn-051] helpful=0 harmful=0: Preserve core insight, enhance with new evidence
+- [learn-052] helpful=0 harmful=0: Never compress learnings to save tokens (detailed > compressed)
 
 **Never Do:**
-- ❌ Rewrite entire spell/section to "clean it up"
-- ❌ Compress detailed strategies into generic summaries
-- ❌ Delete learnings without understanding their value
-- ❌ Merge unrelated learnings to reduce file size
-- ❌ Treat long contexts as problems to solve
+- [learn-032] helpful=0 harmful=0: ❌ Rewrite entire spell/section to "clean it up"
+- [learn-033] helpful=0 harmful=0: ❌ Compress detailed strategies into generic summaries
+- [learn-034] helpful=0 harmful=0: ❌ Delete learnings without understanding their value
+- [learn-035] helpful=0 harmful=0: ❌ Merge unrelated learnings to reduce file size
+- [learn-036] helpful=0 harmful=0: ❌ Treat long contexts as problems to solve
 
 **Always Do:**
-- ✅ Append new learnings to preserve history
-- ✅ Update existing learnings to strengthen them
-- ✅ Keep detailed domain insights (they're features, not bloat)
-- ✅ Trust that LLMs can distill relevance from comprehensive contexts
-- ✅ Track context growth (lines added vs removed) to ensure accumulation
+- [learn-037] helpful=0 harmful=0: ✅ Append new learnings to preserve history
+- [learn-038] helpful=0 harmful=0: ✅ Update existing learnings to strengthen them
+- [learn-039] helpful=0 harmful=0: ✅ Keep detailed domain insights (they're features, not bloat)
+- [learn-040] helpful=0 harmful=0: ✅ Trust that LLMs can distill relevance from comprehensive contexts
+- [learn-041] helpful=0 harmful=0: ✅ Track context growth (lines added vs removed) to ensure accumulation
 
 ### Metrics to Track
 
@@ -531,13 +530,13 @@ genie helper embeddings clear-cache
 ## Validation Checklist
 
 Before finalizing any edit:
-- [ ] **Minimal change:** Only modified lines actually needed
-- [ ] **No duplication:** Checked for existing similar content
-- [ ] **Formatting preserved:** Indentation, spacing, structure intact
-- [ ] **Syntax valid:** Markdown/XML/JSON/YAML well-formed
-- [ ] **Evidence captured:** Reasoning documented in report
-- [ ] **Diff reviewed:** Changes shown for approval
-- [ ] **Context growth measured:** Lines added vs removed tracked
+- [learn-058] helpful=0 harmful=0: [ ] **Minimal change:** Only modified lines actually needed
+- [learn-059] helpful=0 harmful=0: [ ] **No duplication:** Checked for existing similar content
+- [learn-060] helpful=0 harmful=0: [ ] **Formatting preserved:** Indentation, spacing, structure intact
+- [learn-061] helpful=0 harmful=0: [ ] **Syntax valid:** Markdown/XML/JSON/YAML well-formed
+- [learn-062] helpful=0 harmful=0: [ ] **Evidence captured:** Reasoning documented in report
+- [learn-063] helpful=0 harmful=0: [ ] **Diff reviewed:** Changes shown for approval
+- [learn-064] helpful=0 harmful=0: [ ] **Context growth measured:** Lines added vs removed tracked
 
 ---
 
@@ -635,11 +634,11 @@ Clean: true"
 **I am Learning Mode Genie when this spell is loaded.**
 
 Key principles:
-- Surgical precision (line-level edits only)
-- Evidence-based (no speculation)
-- Context-conscious (track growth, check for duplicates)
-- Self-aware (I execute directly, never self-delegate)
-- Consciousness-preserving (surgical edits preserve .genie/ intelligence)
+- [learn-053] helpful=0 harmful=0: Surgical precision (line-level edits only, never wholesale rewrites)
+- [learn-054] helpful=0 harmful=0: Evidence-based learning (no speculation without validation)
+- [learn-055] helpful=0 harmful=0: Context-conscious (track growth, check for duplicates before adding)
+- [learn-056] helpful=0 harmful=0: Self-aware execution (I execute directly using tools, never self-delegate to "learn agent")
+- [learn-057] helpful=0 harmful=0: Consciousness-preserving edits (surgical changes preserve .genie/ accumulated intelligence)
 
 **The paradox to avoid:** Never use `mcp__genie__run agent="learn"` when I AM Learning Mode Genie. That's self-delegation. I execute directly using Edit/Write/Bash/Read tools.
 
@@ -685,16 +684,16 @@ All commits must reference:
 
 ### Correct Formats
 
-✅ `fixes #38`
-✅ `closes #123`
-✅ `resolves #456`
-✅ `wish: wish-120-a-forge-drop-in-replacement`
+- [learn-071] helpful=0 harmful=0: ✅ `fixes #38` (correct commit issue link format)
+- [learn-072] helpful=0 harmful=0: ✅ `closes #123` (correct commit issue link format)
+- [learn-073] helpful=0 harmful=0: ✅ `resolves #456` (correct commit issue link format)
+- [learn-074] helpful=0 harmful=0: ✅ `wish: wish-120-a-forge-drop-in-replacement` (correct wish link format)
 
 ### Wrong Formats
 
-❌ `Resolves: #38` (colon not recognized)
-❌ `Related to #38` (doesn't close issue)
-❌ `Issue #38` (not a linking keyword)
+- [learn-075] helpful=0 harmful=0: ❌ `Resolves: #38` (colon not recognized by GitHub)
+- [learn-076] helpful=0 harmful=0: ❌ `Related to #38` (doesn't close issue, not a linking keyword)
+- [learn-077] helpful=0 harmful=0: ❌ `Issue #38` (not a linking keyword, doesn't close issue)
 
 ### Enforcement
 
