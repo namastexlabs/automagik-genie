@@ -152,6 +152,19 @@ const HELPERS = {
       '$ genie helper bullet-id .genie/spells/learn.md',
       '$ genie helper bullet-id .genie/spells/learn.md --count=5'
     ]
+  },
+  'bullet-counter': {
+    script: 'bullet-counter.js',
+    description: 'Update helpful/harmful counters for learning bullets',
+    usage: [
+      'genie helper bullet-counter ID',
+      'genie helper bullet-counter ID --helpful',
+      'genie helper bullet-counter ID --harmful'
+    ],
+    examples: [
+      '$ genie helper bullet-counter learn-042',
+      '$ genie helper bullet-counter learn-042 --helpful'
+    ]
   }
 };
 
