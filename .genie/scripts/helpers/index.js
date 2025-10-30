@@ -165,6 +165,22 @@ const HELPERS = {
       '$ genie helper bullet-counter learn-042',
       '$ genie helper bullet-counter learn-042 --helpful'
     ]
+  },
+  'bullet-find': {
+    script: 'bullet-find.js',
+    description: 'Find and query structured learning bullets',
+    usage: [
+      'genie helper bullet-find ID',
+      'genie helper bullet-find --top-helpful --limit=10',
+      'genie helper bullet-find --top-harmful --limit=10',
+      'genie helper bullet-find --file=file.md',
+      'genie helper bullet-find --search="keyword"'
+    ],
+    examples: [
+      '$ genie helper bullet-find learn-042',
+      '$ genie helper bullet-find --top-helpful --limit=5',
+      '$ genie helper bullet-find --search="delegate"'
+    ]
   }
 };
 
