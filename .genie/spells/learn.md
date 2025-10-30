@@ -333,6 +333,7 @@ Iterative rewriting by LLMs can degrade detailed knowledge into shorter, less in
 
 3. **Prune (Deduplicate):**
    - Check for near-duplicates before adding
+   - Use semantic similarity when content unclear
    - Merge similar learnings when appropriate
    - Remove only when explicitly identified as harmful/wrong
 
@@ -375,6 +376,79 @@ After each learning session, record:
 
 **Healthy pattern:** +20 added, +5 modified, -2 pruned = +23 net growth
 **Unhealthy pattern:** +5 added, +50 modified, -40 pruned = -35 net shrinkage (collapse!)
+
+---
+
+## Semantic De-duplication (Advanced Pruning)
+
+**Purpose:** Prevent redundant learnings as framework accumulates knowledge over time
+
+### When to Use Semantic Similarity
+
+**Manual Check (Current):**
+- Read target section completely
+- Identify similar content by reading
+- Ask: "Does this add new information or repeat existing?"
+
+**Semantic Similarity (Future Enhancement):**
+- Compute embedding for new learning
+- Compare to existing learnings in target section
+- Cosine similarity > 0.85 → likely duplicate
+- Cosine similarity 0.70-0.85 → related (merge or keep separate)
+- Cosine similarity < 0.70 → different (safe to add)
+
+### Decision Matrix
+
+**For similarity > 0.85 (Strong Overlap):**
+```
+Option 1: Merge (if new learning adds examples/evidence)
+Option 2: Skip (if truly duplicate)
+Option 3: Update existing (if new learning is better)
+```
+
+**For similarity 0.70-0.85 (Related):**
+```
+Option 1: Keep separate (if different angles)
+Option 2: Merge (if complementary details)
+```
+
+**For similarity < 0.70 (Different):**
+```
+Action: Append as new learning
+```
+
+### Example Comparison
+
+**Existing Learning:**
+> "Never implement after delegating to Forge. Once task attempt starts, monitor progress but don't edit code files."
+
+**New Learning (0.92 similarity - DUPLICATE):**
+> "After creating Forge task, Base Genie should not start implementation. Let executor handle it."
+
+**Decision:** Merge or skip (same core insight)
+
+**New Learning (0.45 similarity - DIFFERENT):**
+> "Check worktree commits before assuming agent failed. Infrastructure issues ≠ agent failures."
+
+**Decision:** Append (different insight about monitoring)
+
+### Future Implementation Notes
+
+**When semantic comparison becomes available:**
+1. Extract text content from new learning
+2. Generate embedding (e.g., OpenAI text-embedding-3-small)
+3. Compare to embeddings of existing learnings in target section
+4. Present similarity scores + recommended action
+5. Human reviews and confirms decision
+
+**Storage:**
+- Embeddings cached per section (regenerate when section changes)
+- Similarity threshold configurable (default: 0.85 for duplicates)
+
+**Benefits:**
+- Catches duplicates that manual reading might miss
+- Scales as framework grows (hundreds of learnings)
+- Data-driven deduplication (not subjective judgment)
 
 ---
 
