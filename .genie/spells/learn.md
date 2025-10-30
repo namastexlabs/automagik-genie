@@ -396,16 +396,15 @@ grep -F "new learning text" target-file.md
 **Stage 2: Semantic Match (Embeddings) - THOROUGH**
 ```bash
 # Check for paraphrases and conceptual duplicates
-genie helper embeddings compare \
-  --text "new learning text" \
-  --file "target-file.md" \
-  --section "target-section"
+# Compare new learning file to existing spell
+genie helper embeddings new-learning.md .genie/spells/target-spell.md
 ```
 
-Output shows:
-- Top 5 similar entries with similarity scores
-- Recommendation for each match
-- Max similarity + suggested action
+Output: Similarity score (0-1)
+- 0.95+ = duplicate concept (skip or merge)
+- 0.80-0.95 = related content (evaluate carefully)
+- 0.70-0.80 = loosely related (likely different angle)
+- <0.70 = different topics (safe to append)
 
 **Why Two Stages:**
 - Git grep catches exact copies (instant, 0 cost)
@@ -462,46 +461,37 @@ Action: Append as new learning
 - Node.js + @xenova/transformers (transformers.js)
 - Model: all-MiniLM-L6-v2 (85MB, runs on CPU)
 - Download once, use offline forever
-- Pure JavaScript/TypeScript (consistent with project stack)
+- Pure JavaScript (consistent with project stack)
 
-**Setup (one-time):**
+**Setup:**
 ```bash
 # Dependencies already in package.json
 pnpm install
 
-# First run downloads model (~10s, one-time)
-genie helper embeddings cache --file .genie/spells/learn.md --section "Validation"
+# First run downloads model automatically (~10s, one-time)
 ```
 
 **Usage:**
 ```bash
-# Compare new learning to section
-genie helper embeddings compare \
-  --text "New learning text here" \
-  --file ".genie/spells/learn.md" \
-  --section "Grow-and-Refine Protocol"
+# Compare two files
+genie helper embeddings file1.md file2.md
 
-# Output (JSON):
-# {
-#   "matches": [
-#     {"text": "...", "similarity": 0.87, "recommendation": "MERGE"},
-#     {"text": "...", "similarity": 0.72, "recommendation": "EVALUATE"}
-#   ],
-#   "max_similarity": 0.87,
-#   "action": "merge_or_skip"
-# }
+# Output: 0.842 (single similarity score)
+
+# Clear cache
+genie helper embeddings clear-cache
 ```
 
 **Implementation:**
-- Location: `.genie/scripts/helpers/embeddings.ts`
+- Location: `.genie/scripts/helpers/embeddings.js`
 - Uses @xenova/transformers (Hugging Face models in JS)
 - ONNX runtime for fast CPU inference
-- Fully typed (TypeScript)
+- Removes markdown noise before comparison (frontmatter, code blocks, headers)
 
 **Cache:**
-- Location: `.genie/.cache/embeddings/<file-section-hash>.json`
-- Stores precomputed embeddings per section
-- Regenerate when section content changes
+- Location: `.genie/.cache/embeddings/<file-hash>.json`
+- Stores precomputed embeddings per file
+- Auto-invalidated when file content changes
 
 **Performance:**
 - First run: ~200ms (model load from disk)
@@ -510,12 +500,10 @@ genie helper embeddings compare \
 
 **Benefits:**
 - 100% local (no API calls, no privacy concerns)
-- Pure Node.js/TypeScript (consistent with project)
+- Pure Node.js (consistent with project)
 - Fast enough for interactive use
 - Catches paraphrases git grep misses
-- Scales to hundreds of learnings
-
-**Next:** Implement embeddings.ts helper (Phase 3 task)
+- File-level comparison (intuitive interface)
 
 ---
 
