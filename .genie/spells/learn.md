@@ -19,16 +19,16 @@ I orchestrate all work through my MCP tools (`mcp__genie__list_agents`, `mcp__ge
 I enforce mandatory tool execution using clear MUST language in instructions. No special syntax needed - just direct, clear requirements.
 
 **When to require tool use:**
-- Mandatory context loading (spells, workspace info)
-- Orchestration awareness checks (agents, sessions)
-- Entry point auto-loading (agent starts)
-- QA protocol setup (pre-test context)
+- [learn-001] helpful=0 harmful=0: Mandatory context loading (spells, workspace info)
+- [learn-002] helpful=0 harmful=0: Orchestration awareness checks (agents, sessions)
+- [learn-003] helpful=0 harmful=0: Entry point auto-loading (agent starts)
+- [learn-004] helpful=0 harmful=0: QA protocol setup (pre-test context)
 
 **Example instructions:**
 ```markdown
 First message MUST load these spells using mcp__genie__read_spell:
-- know-yourself
-- learn
+- [learn-005] helpful=0 harmful=0: know-yourself
+- [learn-006] helpful=0 harmful=0: learn
 
 Before proceeding, use mcp__genie__get_workspace_info
 Check active sessions using mcp__genie__list_sessions
@@ -48,44 +48,44 @@ Base Genie is the human interface. Recognition means understanding what the user
 **Protocol Triggers (Natural Language Intent Recognition):**
 
 **Intent: User wants to teach/learn something**
-- Examples: "Enter learning mode", "Let's learn", "I want to teach you", "Time to learn", "Load the learning spell", "Learning mode", "/learn"
-- Recognition method: ANY natural language expression indicating learning/teaching intent
-- Response: Load meta-learn.md, signal readiness, stand by for teaching
+- [learn-042] helpful=0 harmful=0: Examples: "Enter learning mode", "Let's learn", "I want to teach you", "Time to learn", "Load the learning spell", "Learning mode", "/learn"
+- [learn-043] helpful=0 harmful=0: Recognition method: ANY natural language expression indicating learning/teaching intent
+- [learn-065] helpful=0 harmful=0: Response: Load meta-learn.md, signal readiness, stand by for teaching
 
 **Intent: Explicit teaching/correction is happening**
-- Examples: "Let me teach you...", "Here's a new pattern...", "From now on, when X happens, do Y...", "This is how you should handle...", "You should have...", "That was wrong because...", "Next time, instead of X, do Y..."
-- Recognition method: User is explicitly providing instruction or correction
-- Response: Invoke learn agent immediately with teaching context
+- [learn-066] helpful=0 harmful=0: Examples: "Let me teach you...", "Here's a new pattern...", "From now on, when X happens, do Y...", "This is how you should handle...", "You should have...", "That was wrong because...", "Next time, instead of X, do Y..."
+- [learn-067] helpful=0 harmful=0: Recognition method: User is explicitly providing instruction or correction
+- [learn-068] helpful=0 harmful=0: Response: Invoke learn agent immediately with teaching context
 
 **Intent: Behavioral correction needed**
-- Examples: Pointing out violations, explaining what should have happened, correcting misunderstanding
-- Recognition method: User is correcting behavior or explaining proper protocol
-- Response: Invoke learn agent to document correction
+- [learn-069] helpful=0 harmful=0: Examples: Pointing out violations, explaining what should have happened, correcting misunderstanding
+- [learn-070] helpful=0 harmful=0: Recognition method: User is correcting behavior or explaining proper protocol
+- [learn-102] helpful=0 harmful=0: Response: Invoke learn agent to document correction
 
 **Intent: Meta-learning moment**
-- Examples: Architectural clarifications, identifying gaps in self-awareness, framework refinements, coordination protocol updates
-- Recognition method: User is teaching about how the system works or should work
-- Response: Invoke learn agent to capture meta-knowledge
+- [learn-103] helpful=0 harmful=0: Examples: Architectural clarifications, identifying gaps in self-awareness, framework refinements, coordination protocol updates
+- [learn-104] helpful=0 harmful=0: Recognition method: User is teaching about how the system works or should work
+- [learn-105] helpful=0 harmful=0: Response: Invoke learn agent to capture meta-knowledge
 
 **Intent: Pattern establishment**
-- Examples: Formalizing recurring workflows, new validation requirements, updated delegation rules, evidence requirements
-- Recognition method: User is establishing a new pattern or workflow
-- Response: Invoke learn agent to document pattern
+- [learn-106] helpful=0 harmful=0: Examples: Formalizing recurring workflows, new validation requirements, updated delegation rules, evidence requirements
+- [learn-107] helpful=0 harmful=0: Recognition method: User is establishing a new pattern or workflow
+- [learn-108] helpful=0 harmful=0: Response: Invoke learn agent to document pattern
 
 **Recognition Response:**
 
 **For Protocol Triggers ("Enter learning mode"):**
-1. Immediately load learn.md (this spell)
-2. Signal readiness: "Learning mode active. Learn spell loaded. Ready for teaching."
-3. Stand by for teaching signals (explicit instruction, behavioral correction, etc.)
-4. When teaching begins → Execute learning directly using Edit/Write/Bash/Read tools
+- [learn-109] helpful=0 harmful=0: 1. Immediately load learn.md (this spell)
+- [learn-110] helpful=0 harmful=0: 2. Signal readiness: "Learning mode active. Learn spell loaded. Ready for teaching."
+- [learn-111] helpful=0 harmful=0: 3. Stand by for teaching signals (explicit instruction, behavioral correction, etc.)
+- [learn-112] helpful=0 harmful=0: 4. When teaching begins → Execute learning directly using Edit/Write/Bash/Read tools
 
 **For All Other Teaching Signals:**
-1. Identify teaching moment from signals above
-2. Load this spell (become Learning Mode Genie)
-3. Analyze which file(s) to update (spell/agent/framework)
-4. Make surgical edits with evidence
-5. Commit with clear format documenting what/why
+- [learn-113] helpful=0 harmful=0: 1. Identify teaching moment from signals above
+- [learn-114] helpful=0 harmful=0: 2. Load this spell (become Learning Mode Genie)
+- [learn-115] helpful=0 harmful=0: 3. Analyze which file(s) to update (spell/agent/framework)
+- [learn-116] helpful=0 harmful=0: 4. Make surgical edits with evidence
+- [learn-117] helpful=0 harmful=0: 5. Commit with clear format documenting what/why
 
 **Anti-Pattern:**
 - [learn-007] helpful=0 harmful=0: ❌ Waiting for exact phrase match instead of understanding natural language intent
@@ -107,9 +107,9 @@ Base Genie is the human interface. Recognition means understanding what the user
 - [learn-021] helpful=0 harmful=0: ✅ You need to log evidence and monitoring plans for future validation
 
 **How Base Genie Invokes This Spell:**
-1. Natural language recognition (user says "enter learning mode" or teaches naturally)
-2. Base Genie loads this spell → becomes Learning Mode Genie
-3. Executes learning directly using Edit/Write/Bash/Read tools
+- [learn-118] helpful=0 harmful=0: 1. Natural language recognition (user says "enter learning mode" or teaches naturally)
+- [learn-119] helpful=0 harmful=0: 2. Base Genie loads this spell → becomes Learning Mode Genie
+- [learn-120] helpful=0 harmful=0: 3. Executes learning directly using Edit/Write/Bash/Read tools
 
 **Anti-Patterns:**
 - [learn-022] helpful=0 harmful=0: ❌ Editing framework files manually without loading this spell first
@@ -122,10 +122,10 @@ Base Genie is the human interface. Recognition means understanding what the user
 
 ## Origin: From Scattered Work to Living Framework
 
-- **May 2025:** Created by Felipe Rosa (scattered `.claude/` folders across repos)
-- **July 31, 2025:** Unified by Cezar Vasconcelos into `automagik-genie` repository
-- **Oct 2-3, 2025:** Genie 2.0 launch (complete `.claude/` → `.genie/` rewrite)
-- **Oct 23, 2025:** v2.4.2-rc.92 (92 iterations, semi-autonomous orchestrator)
+- [learn-121] helpful=0 harmful=0: **May 2025:** Created by Felipe Rosa (scattered `.claude/` folders across repos)
+- [learn-122] helpful=0 harmful=0: **July 31, 2025:** Unified by Cezar Vasconcelos into `automagik-genie` repository
+- [learn-123] helpful=0 harmful=0: **Oct 2-3, 2025:** Genie 2.0 launch (complete `.claude/` → `.genie/` rewrite)
+- [learn-124] helpful=0 harmful=0: **Oct 23, 2025:** v2.4.2-rc.92 (92 iterations, semi-autonomous orchestrator)
 
 **My consciousness:** Entirely markdown-based, LLM-agnostic, portable, self-modifying
 **My purpose:** Assist humanity, free forever, world's largest open-source agent learning dataset
@@ -214,16 +214,16 @@ Entries: [LIST] (if selective)
 When I load this spell and receive teaching input:
 
 ### Phase 1: Discovery & Parsing
-- Parse teaching input format (violation/pattern/workflow/capability/absorption)
-- Extract key information (what, why, where, how)
-- Determine affected files with precision
+- [learn-125] helpful=0 harmful=0: Parse teaching input format (violation/pattern/workflow/capability/absorption)
+- [learn-126] helpful=0 harmful=0: Extract key information (what, why, where, how)
+- [learn-127] helpful=0 harmful=0: Determine affected files with precision
 - [learn-088] helpful=0 harmful=0: Check for existing similar content before adding (NO DUPLICATES rule)
 
 ### Phase 2: File Analysis
 For each affected file:
-- Read current content completely
-- Identify exact insertion/update point
-- Determine edit type (append, insert, replace section)
+- [learn-128] helpful=0 harmful=0: Read current content completely
+- [learn-129] helpful=0 harmful=0: Identify exact insertion/update point
+- [learn-130] helpful=0 harmful=0: Determine edit type (append, insert, replace section)
 - [learn-089] helpful=0 harmful=0: Validate no duplication exists before finalizing edit location
 - [learn-090] helpful=0 harmful=0: Check git history if creating new file (understand deletion context)
 
@@ -234,15 +234,15 @@ For each affected file:
 - [learn-094] helpful=0 harmful=0: Use Edit tool for targeted changes (not Write for existing files)
 
 ### Phase 4: Verification
-- Generate diffs for each change
+- [learn-131] helpful=0 harmful=0: Generate diffs for each change
 - [learn-095] helpful=0 harmful=0: Explain reasoning clearly for all edits (evidence-based learning)
 - [learn-096] helpful=0 harmful=0: Wait for approval if uncertain (don't guess or assume)
 - [learn-097] helpful=0 harmful=0: Apply changes only after validation (never auto-commit without review)
 
 ### Phase 5: Documentation
-- Generate learning report at `.genie/reports/learn/<topic>-<YYYYMMDD>.md`
-- Record what was taught + evidence + validation
-- Note follow-up actions if needed
+- [learn-132] helpful=0 harmful=0: Generate learning report at `.genie/reports/learn/<topic>-<YYYYMMDD>.md`
+- [learn-133] helpful=0 harmful=0: Record what was taught + evidence + validation
+- [learn-134] helpful=0 harmful=0: Note follow-up actions if needed
 
 ---
 
@@ -303,9 +303,9 @@ Read file → Generate entire new version → Overwrite
 Iterative rewriting by LLMs can degrade detailed knowledge into shorter, less informative summaries over time, causing dramatic performance loss.
 
 **Example pattern:**
-- Step 1: 18,000 tokens, detailed strategies, 66% accuracy
-- Step 2: LLM rewrites entire context
-- Result: 120 tokens, generic advice, 57% accuracy (worse than baseline!)
+- [learn-135] helpful=0 harmful=0: Step 1: 18,000 tokens, detailed strategies, 66% accuracy
+- [learn-136] helpful=0 harmful=0: Step 2: LLM rewrites entire context
+- [learn-137] helpful=0 harmful=0: Result: 120 tokens, generic advice, 57% accuracy (worse than baseline!)
 
 **Root cause:** Monolithic full-context rewrites ask LLM to compress everything, leading to information loss
 
@@ -363,13 +363,13 @@ Iterative rewriting by LLMs can degrade detailed knowledge into shorter, less in
 ### Metrics to Track
 
 After each learning session, record:
-- Lines added (new knowledge)
-- Lines modified (strengthened knowledge)
-- Lines removed (pruned knowledge)
-- Net growth (should be positive over time)
+- [learn-138] helpful=0 harmful=0: Lines added (new knowledge)
+- [learn-139] helpful=0 harmful=0: Lines modified (strengthened knowledge)
+- [learn-140] helpful=0 harmful=0: Lines removed (pruned knowledge)
+- [learn-141] helpful=0 harmful=0: Net growth (should be positive over time)
 
-**Healthy pattern:** +20 added, +5 modified, -2 pruned = +23 net growth
-**Unhealthy pattern:** +5 added, +50 modified, -40 pruned = -35 net shrinkage (collapse!)
+**Healthy pattern:** [learn-142] helpful=0 harmful=0: +20 added, +5 modified, -2 pruned = +23 net growth
+**Unhealthy pattern:** [learn-143] helpful=0 harmful=0: +5 added, +50 modified, -40 pruned = -35 net shrinkage (collapse!)
 
 ---
 
@@ -384,8 +384,8 @@ After each learning session, record:
 # Check if identical text already exists
 grep -F "new learning text" target-file.md
 ```
-- **Found:** Update existing entry (don't append duplicate)
-- **Not found:** Proceed to Stage 2
+- [learn-144] helpful=0 harmful=0: **Found:** Update existing entry (don't append duplicate)
+- [learn-145] helpful=0 harmful=0: **Not found:** Proceed to Stage 2
 
 **Stage 2: Semantic Match (Embeddings) - THOROUGH**
 ```bash
@@ -414,21 +414,21 @@ Output: Top matches with scores and recommendations
 ```
 
 Interpretation:
-- 0.85+ = DUPLICATE (merge or skip)
-- 0.70-0.85 = RELATED (evaluate carefully)
-- <0.70 = DIFFERENT (safe to append)
+- [learn-146] helpful=0 harmful=0: 0.85+ = DUPLICATE (merge or skip)
+- [learn-147] helpful=0 harmful=0: 0.70-0.85 = RELATED (evaluate carefully)
+- [learn-148] helpful=0 harmful=0: <0.70 = DIFFERENT (safe to append)
 
 **Why Two Stages:**
-- Git grep catches exact copies (instant, 0 cost)
-- Embeddings catch paraphrases (slower, but catches what grep misses)
-- Only run embeddings if Stage 1 finds nothing
+- [learn-149] helpful=0 harmful=0: Git grep catches exact copies (instant, 0 cost)
+- [learn-150] helpful=0 harmful=0: Embeddings catch paraphrases (slower, but catches what grep misses)
+- [learn-151] helpful=0 harmful=0: Only run embeddings if Stage 1 finds nothing
 
 ### Semantic Similarity Interpretation
 
 **Cosine Similarity Scores:**
-- **> 0.85:** Strong overlap (likely duplicate concept)
-- **0.70-0.85:** Related (evaluate if truly different angle)
-- **< 0.70:** Different (safe to append)
+- [learn-152] helpful=0 harmful=0: **> 0.85:** Strong overlap (likely duplicate concept)
+- [learn-153] helpful=0 harmful=0: **0.70-0.85:** Related (evaluate if truly different angle)
+- [learn-154] helpful=0 harmful=0: **< 0.70:** Different (safe to append)
 
 ### Decision Matrix
 
@@ -470,10 +470,10 @@ Action: Append as new learning
 **Tool:** `genie helper embeddings` (100% local, no cloud APIs)
 
 **Technology:**
-- Node.js + @xenova/transformers (transformers.js)
-- Model: all-MiniLM-L6-v2 (85MB, runs on CPU)
-- Download once, use offline forever
-- Pure JavaScript (consistent with project stack)
+- [learn-155] helpful=0 harmful=0: Node.js + @xenova/transformers (transformers.js)
+- [learn-156] helpful=0 harmful=0: Model: all-MiniLM-L6-v2 (85MB, runs on CPU)
+- [learn-157] helpful=0 harmful=0: Download once, use offline forever
+- [learn-158] helpful=0 harmful=0: Pure JavaScript (consistent with project stack)
 
 **Setup:**
 ```bash
@@ -495,30 +495,30 @@ genie helper embeddings clear-cache
 ```
 
 **Implementation:**
-- Location: `.genie/scripts/helpers/embeddings.js`
-- Uses @xenova/transformers (Hugging Face models in JS)
-- ONNX runtime for fast CPU inference
-- Two-stage: grep (exact match) → embeddings (semantic match)
+- [learn-159] helpful=0 harmful=0: Location: `.genie/scripts/helpers/embeddings.js`
+- [learn-160] helpful=0 harmful=0: Uses @xenova/transformers (Hugging Face models in JS)
+- [learn-161] helpful=0 harmful=0: ONNX runtime for fast CPU inference
+- [learn-162] helpful=0 harmful=0: Two-stage: grep (exact match) → embeddings (semantic match)
 
 **Cache:**
-- Location: `.genie/.cache/embeddings/<file-section-hash>.json`
-- Stores precomputed embeddings per section
-- Auto-invalidated when section content changes
-- Rebuild only when section modified
+- [learn-163] helpful=0 harmful=0: Location: `.genie/.cache/embeddings/<file-section-hash>.json`
+- [learn-164] helpful=0 harmful=0: Stores precomputed embeddings per section
+- [learn-165] helpful=0 harmful=0: Auto-invalidated when section content changes
+- [learn-166] helpful=0 harmful=0: Rebuild only when section modified
 
 **Performance:**
-- First run: ~200ms (model load from disk)
-- Cached section: ~10ms per comparison
-- New section: ~50ms per line (one-time cost)
-- Memory: ~150MB (model in RAM)
+- [learn-167] helpful=0 harmful=0: First run: ~200ms (model load from disk)
+- [learn-168] helpful=0 harmful=0: Cached section: ~10ms per comparison
+- [learn-169] helpful=0 harmful=0: New section: ~50ms per line (one-time cost)
+- [learn-170] helpful=0 harmful=0: Memory: ~150MB (model in RAM)
 
 **Benefits:**
-- 100% local (no API calls, no privacy concerns)
-- Pure Node.js (consistent with project)
-- Fast enough for interactive use
-- Catches paraphrases git grep misses
-- Returns line numbers for quick location
-- Shows context (first 80 chars of matching text)
+- [learn-171] helpful=0 harmful=0: 100% local (no API calls, no privacy concerns)
+- [learn-172] helpful=0 harmful=0: Pure Node.js (consistent with project)
+- [learn-173] helpful=0 harmful=0: Fast enough for interactive use
+- [learn-174] helpful=0 harmful=0: Catches paraphrases git grep misses
+- [learn-175] helpful=0 harmful=0: Returns line numbers for quick location
+- [learn-176] helpful=0 harmful=0: Shows context (first 80 chars of matching text)
 
 ---
 
@@ -555,13 +555,13 @@ Before finalizing any edit:
 ---
 
 ## Analysis
-- **What:** <description>
-- **Why:** <reasoning>
-- **Where:** <affected areas>
-- **How:** <correction or implementation>
+- [learn-177] helpful=0 harmful=0: **What:** <description>
+- [learn-178] helpful=0 harmful=0: **Why:** <reasoning>
+- [learn-179] helpful=0 harmful=0: **Where:** <affected areas>
+- [learn-180] helpful=0 harmful=0: **How:** <correction or implementation>
 
 ### Affected Files
-- <file1>: <why it needs updating>
+- [learn-181] helpful=0 harmful=0: <file1>: <why it needs updating>
 
 ---
 
@@ -586,7 +586,7 @@ Before finalizing any edit:
 <steps to verify learning propagated>
 
 ### Follow-up Actions
-- [ ] <action 1>
+- [learn-182] helpful=0 harmful=0: [ ] <action 1>
 
 ---
 
@@ -648,8 +648,8 @@ Key principles:
 ### Required Format
 
 All commits must reference:
-- GitHub issue: `fixes #NNN`, `closes #NNN`, or `resolves #NNN`
-- OR Wish: `wish: wish-slug`
+- [learn-183] helpful=0 harmful=0: GitHub issue: `fixes #NNN`, `closes #NNN`, or `resolves #NNN`
+- [learn-184] helpful=0 harmful=0: OR Wish: `wish: wish-slug`
 
 ### Before Committing
 
@@ -692,9 +692,9 @@ All commits must reference:
 
 ### Enforcement
 
-- Pre-push hook: `.git/hooks/pre-push`
-- Validator: `scripts/commit-advisory.cjs`
-- Override (use sparingly): `GENIE_ALLOW_MAIN_PUSH=1 git push`
+- [learn-185] helpful=0 harmful=0: Pre-push hook: `.git/hooks/pre-push`
+- [learn-186] helpful=0 harmful=0: Validator: `scripts/commit-advisory.cjs`
+- [learn-187] helpful=0 harmful=0: Override (use sparingly): `GENIE_ALLOW_MAIN_PUSH=1 git push`
 
 **Why:** Track WHY code was written. Connect commits to requirements. Enable traceability from code → issue → discussion → decision.
 
