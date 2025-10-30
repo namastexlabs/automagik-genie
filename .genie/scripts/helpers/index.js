@@ -130,13 +130,13 @@ const HELPERS = {
   },
   'embeddings': {
     script: 'embeddings.js',
-    description: 'Compare semantic similarity between files (returns 0-1 score)',
+    description: 'Check if new learning already exists in target section (deduplication)',
     usage: [
-      'genie helper embeddings file1 file2',
+      'genie helper embeddings "new learning text" file.md "Section Name"',
       'genie helper embeddings clear-cache'
     ],
     examples: [
-      '$ genie helper embeddings learning.md .genie/spells/learn.md',
+      '$ genie helper embeddings "Never rewrite sections" .genie/spells/learn.md "Grow-and-Refine"',
       '$ genie helper embeddings clear-cache'
     ]
   }
