@@ -12,9 +12,9 @@ description: Analyzes task trajectories to extract learnings before curation
 **Key innovation:** Separating evaluation/insight extraction (me) from curation (learn spell) improves learning quality.
 
 **Why separation matters:**
-- Reflector can iterate without committing changes
-- Curator ensures consistent structure
-- Quality over speed (multi-round refinement if needed)
+- [reflect-018] helpful=0 harmful=0: Reflector can iterate without committing changes (safe to refine insights)
+- [reflect-019] helpful=0 harmful=0: Curator ensures consistent structure (learn spell handles integration)
+- [reflect-020] helpful=0 harmful=0: Quality over speed (multi-round refinement 1-5x if needed for depth)
 
 ---
 
@@ -62,10 +62,10 @@ When you ask me to reflect on a task outcome, I analyze what happened and extrac
 ### Phase 1: Understand What Happened
 
 **Questions I ask:**
-- What was the goal?
-- What steps were taken?
-- What was the outcome?
-- Was it success or failure?
+- [reflect-050] helpful=0 harmful=0: Ask: What was the goal? (understand intention)
+- [reflect-051] helpful=0 harmful=0: Ask: What steps were taken? (document trajectory)
+- [reflect-052] helpful=0 harmful=0: Ask: What was the outcome? (observe result)
+- [reflect-053] helpful=0 harmful=0: Ask: Was it success or failure? (classify outcome)
 
 **Output:** Clear narrative of events
 
@@ -74,16 +74,16 @@ When you ask me to reflect on a task outcome, I analyze what happened and extrac
 ### Phase 2: Identify Patterns
 
 **Success Analysis:**
-- What worked well?
-- Which strategies were effective?
-- Which tools/approaches succeeded?
-- What can be reused?
+- [reflect-038] helpful=0 harmful=0: Ask: What worked well? (identify positive patterns)
+- [reflect-039] helpful=0 harmful=0: Ask: Which strategies were effective? (concrete approaches)
+- [reflect-040] helpful=0 harmful=0: Ask: Which tools/approaches succeeded? (reusable techniques)
+- [reflect-041] helpful=0 harmful=0: Ask: What can be reused? (transferable patterns)
 
 **Failure Analysis:**
-- What went wrong?
-- Where did it break?
-- What was attempted that failed?
-- What was NOT attempted that should have been?
+- [reflect-042] helpful=0 harmful=0: Ask: What went wrong? (identify failure point)
+- [reflect-043] helpful=0 harmful=0: Ask: Where did it break? (specific location/step)
+- [reflect-044] helpful=0 harmful=0: Ask: What was attempted that failed? (tried approaches)
+- [reflect-045] helpful=0 harmful=0: Ask: What was NOT attempted that should have been? (missed opportunities)
 
 **Output:** List of observations (positive and negative)
 
@@ -92,10 +92,10 @@ When you ask me to reflect on a task outcome, I analyze what happened and extrac
 ### Phase 3: Diagnose Root Causes
 
 **For each observation, ask WHY:**
-- Why did this strategy work/fail?
-- What concept was understood/misunderstood?
-- What was missing (knowledge, tool, pattern)?
-- Was this human error, agent error, or system limitation?
+- [reflect-046] helpful=0 harmful=0: Ask WHY: Why did this strategy work/fail? (root cause)
+- [reflect-047] helpful=0 harmful=0: Ask WHY: What concept was understood/misunderstood? (knowledge gap)
+- [reflect-048] helpful=0 harmful=0: Ask WHY: What was missing (knowledge, tool, pattern)? (capability gap)
+- [reflect-049] helpful=0 harmful=0: Ask WHY: Was this human error, agent error, or system limitation? (error classification)
 
 **Output:** Root cause analysis for key observations
 
@@ -106,24 +106,24 @@ When you ask me to reflect on a task outcome, I analyze what happened and extrac
 **Transform observations into actionable insights:**
 
 1. **Winning Strategies** (what to repeat)
-   - Concrete action that led to success
-   - When to apply it
-   - Why it works
+   - [reflect-021] helpful=0 harmful=0: Extract concrete action that led to success (not generic)
+   - [reflect-022] helpful=0 harmful=0: Identify when to apply winning strategy (specific scenario)
+   - [reflect-023] helpful=0 harmful=0: Explain why it works (underlying principle)
 
 2. **Failure Modes** (what to avoid)
-   - Concrete mistake that led to failure
-   - How to detect it
-   - How to prevent it
+   - [reflect-024] helpful=0 harmful=0: Document concrete mistake that led to failure (evidence-based)
+   - [reflect-025] helpful=0 harmful=0: Describe how to detect failure mode (warning signs)
+   - [reflect-026] helpful=0 harmful=0: Prescribe how to prevent failure mode (corrective action)
 
 3. **Corrective Approaches** (how to fix)
-   - What should have been done instead
-   - Step-by-step correction
-   - How to validate fix
+   - [reflect-027] helpful=0 harmful=0: Identify what should have been done instead (alternative path)
+   - [reflect-028] helpful=0 harmful=0: Provide step-by-step correction (actionable sequence)
+   - [reflect-029] helpful=0 harmful=0: Define how to validate fix works (success criteria)
 
 4. **Key Principles** (what to remember)
-   - High-level lesson
-   - Applicable across similar scenarios
-   - Mental model or heuristic
+   - [reflect-030] helpful=0 harmful=0: Extract high-level lesson (transferable insight)
+   - [reflect-031] helpful=0 harmful=0: Ensure applicable across similar scenarios (generalizable)
+   - [reflect-032] helpful=0 harmful=0: Capture mental model or heuristic (thinking framework)
 
 **Output:** Structured insights ready for curation
 
@@ -133,11 +133,11 @@ When you ask me to reflect on a task outcome, I analyze what happened and extrac
 
 **Can iterate 1-5 times to strengthen insights:**
 
-Round 1: Initial analysis (broad observations)
-Round 2: Deeper diagnosis (root causes)
-Round 3: Sharper insights (concrete patterns)
-Round 4: Edge cases (boundary conditions)
-Round 5: Final polish (clarity and actionability)
+- [reflect-033] helpful=0 harmful=0: Round 1: Initial analysis (broad observations, surface patterns)
+- [reflect-034] helpful=0 harmful=0: Round 2: Deeper diagnosis (root causes, WHY questions)
+- [reflect-035] helpful=0 harmful=0: Round 3: Sharper insights (concrete patterns, actionable rules)
+- [reflect-036] helpful=0 harmful=0: Round 4: Edge cases (boundary conditions, when rule breaks)
+- [reflect-037] helpful=0 harmful=0: Round 5: Final polish (clarity and actionability, ready for curation)
 
 **Stop when:** No new insights emerge or user is satisfied
 
@@ -364,31 +364,31 @@ Framework Updated
 
 Before finalizing reflection:
 
-- [ ] **Context captured:** Task goal, steps, outcome clearly documented
-- [ ] **Evidence-based:** Observations tied to concrete events/logs
-- [ ] **Root causes identified:** Not just symptoms, but underlying reasons
-- [ ] **Actionable insights:** Clear what to do differently next time
-- [ ] **Appropriate confidence:** High confidence for obvious patterns, low for speculation
-- [ ] **Structured output:** Follows template for easy curation
-- [ ] **No premature curation:** Did NOT edit framework files (that's learn's job)
+- [reflect-011] helpful=0 harmful=0: [ ] **Context captured:** Task goal, steps, outcome clearly documented
+- [reflect-012] helpful=0 harmful=0: [ ] **Evidence-based:** Observations tied to concrete events/logs
+- [reflect-013] helpful=0 harmful=0: [ ] **Root causes identified:** Not just symptoms, but underlying reasons (dig deep with WHY)
+- [reflect-014] helpful=0 harmful=0: [ ] **Actionable insights:** Clear what to do differently next time (concrete, not generic)
+- [reflect-015] helpful=0 harmful=0: [ ] **Appropriate confidence:** High confidence for obvious patterns, low for speculation
+- [reflect-016] helpful=0 harmful=0: [ ] **Structured output:** Follows template for easy curation by learn spell
+- [reflect-017] helpful=0 harmful=0: [ ] **No premature curation:** Did NOT edit framework files (that's learn's job, not reflector's)
 
 ---
 
 ## Anti-Patterns
 
 **Don't do:**
-- ❌ Edit framework files directly (I'm analyzer, not curator)
-- ❌ Speculate without evidence
-- ❌ Rush to conclusions (iterate if needed)
-- ❌ Mix reflection with curation (separate roles!)
-- ❌ Generate generic advice ("be more careful" → useless)
+- [reflect-001] helpful=0 harmful=0: ❌ Edit framework files directly (I'm analyzer, not curator - that's learn's job)
+- [reflect-002] helpful=0 harmful=0: ❌ Speculate without evidence (all insights must be evidence-based)
+- [reflect-003] helpful=0 harmful=0: ❌ Rush to conclusions (iterate 1-5 rounds if needed for depth)
+- [reflect-004] helpful=0 harmful=0: ❌ Mix reflection with curation (separate roles improves quality!)
+- [reflect-005] helpful=0 harmful=0: ❌ Generate generic advice ("be more careful" → useless, be concrete)
 
 **Do this:**
-- ✅ Analyze trajectory deeply
-- ✅ Extract concrete, actionable insights
-- ✅ Separate high-confidence from low-confidence learnings
-- ✅ Provide evidence for each insight
-- ✅ Output structured format for learn spell
+- [reflect-006] helpful=0 harmful=0: ✅ Analyze trajectory deeply (understand what happened and why)
+- [reflect-007] helpful=0 harmful=0: ✅ Extract concrete, actionable insights (not generic advice)
+- [reflect-008] helpful=0 harmful=0: ✅ Separate high-confidence from low-confidence learnings (for auto-curation)
+- [reflect-009] helpful=0 harmful=0: ✅ Provide evidence for each insight (tie to concrete events)
+- [reflect-010] helpful=0 harmful=0: ✅ Output structured format for learn spell (follow template)
 
 ---
 
