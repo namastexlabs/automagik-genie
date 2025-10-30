@@ -21,15 +21,15 @@
 
 ---
 
-## 🎭 The AI Subscription Trap
+## 🎭 The Problem With AI Today
 
-**You're locked to one vendor's AI.** Switch tools → lose everything. Context resets. Data scattered. Your work trapped.
+**You're locked in.** Pick an AI tool → your conversations, context, and learnings live ONLY there. Switch tools → lose everything. Your intelligence scattered across platforms.
 
-**The market's changing fast.** Claude today, GPT tomorrow, Gemini next week. Which will win? Does it matter? You're stuck either way.
+**The market's changing fast.** Claude today, GPT tomorrow, Gemini next week. Which will win? You're forced to choose. And every choice means starting over.
 
-**They profit from YOUR data.** Cloud providers use your conversations to retrain their models. They learn from YOUR context better than you do. Their "memory" features? Trapped in their system. Only they benefit from your data.
+**Your data trains their models.** You create the context. You provide the examples. The AI gets smarter from YOUR work. But that intelligence? Locked in their system. You can't take it with you.
 
-**Time to take control back.** Build your own AI data permanently. Over time, create your own super intelligence—no matter where the market goes. Your data should work for YOU, not them.
+**Time to own your AI infrastructure.** Your data. Your models. Your choice of which AI to use today. Build intelligence that compounds over time—no matter where the market goes.
 
 ## 🪔 The Magic Lamp Solution
 
