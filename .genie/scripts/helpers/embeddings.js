@@ -3,22 +3,17 @@
 /**
  * Embeddings Helper
  *
- * Local semantic similarity for deduplication.
+ * Compare semantic similarity between two files.
  * Uses transformers.js with all-MiniLM-L6-v2 (85MB, CPU-only).
  *
  * Usage:
- *   genie helper embeddings compare --text "..." --file path.md --section "Section"
- *   genie helper embeddings cache --file path.md --section "Section"
- *   genie helper embeddings clear-cache
+ *   genie helper embeddings file1 file2
  *
- * Output (JSON):
- *   {
- *     "matches": [
- *       {"text": "...", "similarity": 0.87, "line": 123, "recommendation": "MERGE"}
- *     ],
- *     "max_similarity": 0.87,
- *     "action": "merge_or_skip"
- *   }
+ * Output: Similarity score (0-1)
+ *   0.95+ = duplicate concept
+ *   0.80-0.95 = related content
+ *   0.70-0.80 = loosely related
+ *   <0.70 = different topics
  */
 
 const fs = require('fs');
@@ -66,53 +61,26 @@ async function getEmbedding(text) {
 }
 
 /**
- * Extract section content from markdown file
+ * Read file and clean content (remove markdown noise)
  */
-function extractSection(filePath, sectionName) {
+function readAndClean(filePath) {
   const content = fs.readFileSync(filePath, 'utf-8');
-  const lines = content.split('\n');
 
-  const sectionLines = [];
-  let inSection = false;
-  let sectionLevel = 0;
-  let startLine = 0;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const headerMatch = line.match(/^(#{1,6})\s+(.+)/);
-
-    if (headerMatch) {
-      const level = headerMatch[1].length;
-      const title = headerMatch[2].trim();
-
-      if (title.includes(sectionName) || title === sectionName) {
-        inSection = true;
-        sectionLevel = level;
-        startLine = i + 1;
-        continue;
-      } else if (inSection && level <= sectionLevel) {
-        // Hit next section at same/higher level, stop
-        break;
-      }
-    }
-
-    if (inSection && line.trim()) {
-      // Skip code blocks and markdown formatting
-      if (!line.startsWith('```') && !line.startsWith('---')) {
-        sectionLines.push({ text: line.trim(), line: i + 1 });
-      }
-    }
-  }
-
-  return sectionLines;
+  // Remove code blocks, frontmatter, excessive whitespace
+  return content
+    .replace(/^---[\s\S]*?---/m, '') // Remove frontmatter
+    .replace(/```[\s\S]*?```/g, '') // Remove code blocks
+    .replace(/#{1,6}\s+/g, '') // Remove markdown headers
+    .replace(/\n{3,}/g, '\n\n') // Normalize whitespace
+    .trim();
 }
 
 /**
- * Get cache path for file + section
+ * Get cache path for file
  */
-function getCachePath(filePath, sectionName) {
+function getCachePath(filePath) {
   const hash = crypto.createHash('md5')
-    .update(filePath + ':' + sectionName)
+    .update(filePath)
     .digest('hex');
 
   const cacheDir = path.join(process.cwd(), '.genie', '.cache', 'embeddings');
@@ -124,157 +92,67 @@ function getCachePath(filePath, sectionName) {
 }
 
 /**
- * Get recommendation based on similarity score
+ * Compare two files semantically (with caching)
  */
-function getRecommendation(similarity) {
-  if (similarity > 0.85) return 'MERGE (strong overlap)';
-  if (similarity > 0.70) return 'EVALUATE (related content)';
-  return 'APPEND (different concept)';
-}
+async function compareFiles(file1, file2) {
+  // Read and clean both files
+  const content1 = readAndClean(file1);
+  const content2 = readAndClean(file2);
 
-/**
- * Get action based on max similarity
- */
-function getAction(maxSim) {
-  if (maxSim > 0.85) return 'merge_or_skip';
-  if (maxSim > 0.70) return 'evaluate';
-  return 'append';
-}
+  // Check cache for file1
+  const cache1Path = getCachePath(file1);
+  let embedding1 = null;
 
-/**
- * Compare text to section (with caching)
- */
-async function compareToSection(newText, filePath, sectionName) {
-  // Stage 1: Check for exact match with grep (fast)
-  const exactMatch = fs.readFileSync(filePath, 'utf-8').includes(newText);
-  if (exactMatch) {
-    return {
-      matches: [
-        {
-          text: newText,
-          similarity: 1.0,
-          line: -1,
-          recommendation: 'EXACT DUPLICATE (found by grep)'
-        }
-      ],
-      max_similarity: 1.0,
-      action: 'skip'
-    };
-  }
-
-  // Stage 2: Semantic comparison (thorough)
-  const cachePath = getCachePath(filePath, sectionName);
-  let cached = null;
-
-  // Try to load cache
-  if (fs.existsSync(cachePath)) {
+  if (fs.existsSync(cache1Path)) {
     try {
-      cached = JSON.parse(fs.readFileSync(cachePath, 'utf-8'));
+      const cached = JSON.parse(fs.readFileSync(cache1Path, 'utf-8'));
+      if (cached.content === content1) {
+        embedding1 = cached.embedding;
+      }
     } catch (err) {
-      console.error('Cache read failed, rebuilding:', err.message);
+      // Cache invalid, will recompute
     }
   }
 
-  // Extract section lines
-  const sectionLines = extractSection(filePath, sectionName);
-
-  if (sectionLines.length === 0) {
-    return {
-      matches: [],
-      max_similarity: 0,
-      action: 'append',
-      error: `Section "${sectionName}" not found in ${filePath}`
-    };
+  if (!embedding1) {
+    embedding1 = await getEmbedding(content1);
+    fs.writeFileSync(cache1Path, JSON.stringify({
+      file: file1,
+      content: content1,
+      embedding: embedding1,
+      updated: new Date().toISOString()
+    }));
   }
 
-  // Compute embeddings (use cache if available)
-  let embeddings = [];
+  // Check cache for file2
+  const cache2Path = getCachePath(file2);
+  let embedding2 = null;
 
-  if (cached && cached.embeddings && cached.embeddings.length === sectionLines.length) {
-    embeddings = cached.embeddings;
-  } else {
-    console.error('Computing embeddings for section (this may take a moment)...');
-    for (const item of sectionLines) {
-      const emb = await getEmbedding(item.text);
-      embeddings.push({ text: item.text, line: item.line, embedding: emb });
+  if (fs.existsSync(cache2Path)) {
+    try {
+      const cached = JSON.parse(fs.readFileSync(cache2Path, 'utf-8'));
+      if (cached.content === content2) {
+        embedding2 = cached.embedding;
+      }
+    } catch (err) {
+      // Cache invalid, will recompute
     }
-
-    // Save cache
-    fs.writeFileSync(cachePath, JSON.stringify({
-      file: filePath,
-      section: sectionName,
-      model: 'Xenova/all-MiniLM-L6-v2',
-      updated: new Date().toISOString(),
-      embeddings
-    }, null, 2));
   }
 
-  // Get new text embedding
-  const newEmbedding = await getEmbedding(newText);
-
-  // Calculate similarities
-  const similarities = embeddings.map(item => ({
-    text: item.text,
-    line: item.line,
-    similarity: cosineSimilarity(newEmbedding, item.embedding)
-  }));
-
-  // Sort by similarity and get top matches
-  similarities.sort((a, b) => b.similarity - a.similarity);
-  const topMatches = similarities.slice(0, 5).filter(m => m.similarity > 0.65);
-
-  const matches = topMatches.map(m => ({
-    text: m.text,
-    similarity: parseFloat(m.similarity.toFixed(3)),
-    line: m.line,
-    recommendation: getRecommendation(m.similarity)
-  }));
-
-  const maxSim = similarities.length > 0 ? similarities[0].similarity : 0;
-
-  return {
-    matches,
-    max_similarity: parseFloat(maxSim.toFixed(3)),
-    action: getAction(maxSim)
-  };
-}
-
-/**
- * Cache section embeddings
- */
-async function cacheSection(filePath, sectionName) {
-  const sectionLines = extractSection(filePath, sectionName);
-
-  if (sectionLines.length === 0) {
-    console.error(`ERROR: Section "${sectionName}" not found in ${filePath}`);
-    process.exit(1);
+  if (!embedding2) {
+    embedding2 = await getEmbedding(content2);
+    fs.writeFileSync(cache2Path, JSON.stringify({
+      file: file2,
+      content: content2,
+      embedding: embedding2,
+      updated: new Date().toISOString()
+    }));
   }
 
-  console.error(`Caching ${sectionLines.length} items from "${sectionName}"...`);
+  // Calculate similarity
+  const similarity = cosineSimilarity(embedding1, embedding2);
 
-  const embeddings = [];
-  for (const item of sectionLines) {
-    const emb = await getEmbedding(item.text);
-    embeddings.push({ text: item.text, line: item.line, embedding: emb });
-    process.stderr.write('.');
-  }
-  console.error(' done!');
-
-  const cachePath = getCachePath(filePath, sectionName);
-  fs.writeFileSync(cachePath, JSON.stringify({
-    file: filePath,
-    section: sectionName,
-    model: 'Xenova/all-MiniLM-L6-v2',
-    updated: new Date().toISOString(),
-    embeddings
-  }, null, 2));
-
-  console.log(JSON.stringify({
-    cached: embeddings.length,
-    file: filePath,
-    section: sectionName,
-    cache_path: cachePath
-  }, null, 2));
+  return parseFloat(similarity.toFixed(3));
 }
 
 /**
@@ -287,9 +165,9 @@ function clearCache() {
     for (const file of files) {
       fs.unlinkSync(path.join(cacheDir, file));
     }
-    console.log(JSON.stringify({ cleared: files.length }));
+    console.log(`Cleared ${files.length} cached embeddings`);
   } else {
-    console.log(JSON.stringify({ cleared: 0 }));
+    console.log('No cache to clear');
   }
 }
 
@@ -300,58 +178,49 @@ async function main() {
   const args = process.argv.slice(2);
 
   // Help flag
-  if (args.includes('--help') || args.includes('-h')) {
+  if (args.length === 0 || args.includes('--help') || args.includes('-h')) {
     console.log('Usage:');
-    console.log('  embeddings compare "text" [file] [section]');
-    console.log('    Returns: similarity score (0-1)');
-    console.log('    Defaults: file=.genie/spells/learn.md, section=Grow-and-Refine Protocol');
+    console.log('  genie helper embeddings file1 file2');
     console.log('');
-    console.log('  embeddings cache file section');
-    console.log('    Precomputes embeddings for a section');
+    console.log('Output: Similarity score (0-1)');
+    console.log('  0.95+ = duplicate concept');
+    console.log('  0.80-0.95 = related content');
+    console.log('  0.70-0.80 = loosely related');
+    console.log('  <0.70 = different topics');
     console.log('');
-    console.log('  embeddings clear-cache');
-    console.log('    Clears all cached embeddings');
+    console.log('Commands:');
+    console.log('  genie helper embeddings file1 file2    # Compare files');
+    console.log('  genie helper embeddings clear-cache    # Clear cache');
     return;
   }
 
-  const command = args[0];
-
-  if (command === 'compare') {
-    const text = args[1];
-    const file = args[2] || '.genie/spells/learn.md';
-    const section = args[3] || 'Grow-and-Refine Protocol';
-
-    if (!text) {
-      console.error('Usage: embeddings compare "text" [file] [section]');
-      console.error('  Returns similarity score (0-1)');
-      process.exit(1);
-    }
-
-    const result = await compareToSection(text, file, section);
-    console.log(result.max_similarity);
-
-  } else if (command === 'cache') {
-    const file = args[1];
-    const section = args[2];
-
-    if (!file || !section) {
-      console.error('Usage: embeddings cache file section');
-      process.exit(1);
-    }
-
-    await cacheSection(file, section);
-
-  } else if (command === 'clear-cache') {
+  // Clear cache command
+  if (args[0] === 'clear-cache') {
     clearCache();
+    return;
+  }
 
-  } else {
-    console.error('Usage:');
-    console.error('  embeddings compare "text" [file] [section]  # Returns score');
-    console.error('  embeddings cache file section               # Precompute');
-    console.error('  embeddings clear-cache                      # Clear cache');
-    console.error('  embeddings --help                           # Show help');
+  // Default: compare two files
+  const file1 = args[0];
+  const file2 = args[1];
+
+  if (!file1 || !file2) {
+    console.error('Usage: genie helper embeddings file1 file2');
     process.exit(1);
   }
+
+  if (!fs.existsSync(file1)) {
+    console.error(`File not found: ${file1}`);
+    process.exit(1);
+  }
+
+  if (!fs.existsSync(file2)) {
+    console.error(`File not found: ${file2}`);
+    process.exit(1);
+  }
+
+  const similarity = await compareFiles(file1, file2);
+  console.log(similarity);
 }
 
 main().catch(err => {

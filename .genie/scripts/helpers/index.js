@@ -127,6 +127,18 @@ const HELPERS = {
     examples: [
       '$ genie helper validate-links .genie'
     ]
+  },
+  'embeddings': {
+    script: 'embeddings.js',
+    description: 'Compare semantic similarity between files (returns 0-1 score)',
+    usage: [
+      'genie helper embeddings file1 file2',
+      'genie helper embeddings clear-cache'
+    ],
+    examples: [
+      '$ genie helper embeddings learning.md .genie/spells/learn.md',
+      '$ genie helper embeddings clear-cache'
+    ]
   }
 };
 
