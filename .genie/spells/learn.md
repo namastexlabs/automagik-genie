@@ -217,27 +217,27 @@ When I load this spell and receive teaching input:
 - Parse teaching input format (violation/pattern/workflow/capability/absorption)
 - Extract key information (what, why, where, how)
 - Determine affected files with precision
-- Check for existing similar content (NO DUPLICATES)
+- [learn-088] helpful=0 harmful=0: Check for existing similar content before adding (NO DUPLICATES rule)
 
 ### Phase 2: File Analysis
 For each affected file:
 - Read current content completely
 - Identify exact insertion/update point
 - Determine edit type (append, insert, replace section)
-- Validate no duplication exists
-- Check git history if creating new file
+- [learn-089] helpful=0 harmful=0: Validate no duplication exists before finalizing edit location
+- [learn-090] helpful=0 harmful=0: Check git history if creating new file (understand deletion context)
 
 ### Phase 3: Surgical Editing
-- Make minimal, line-level edits (NEVER wholesale rewrite)
-- Preserve formatting, indentation, structure
-- Validate syntax (XML/JSON/YAML/Markdown well-formed)
-- Use Edit tool for targeted changes
+- [learn-091] helpful=0 harmful=0: Make minimal, line-level edits (NEVER wholesale rewrite)
+- [learn-092] helpful=0 harmful=0: Preserve formatting, indentation, structure when editing
+- [learn-093] helpful=0 harmful=0: Validate syntax (XML/JSON/YAML/Markdown well-formed) before committing
+- [learn-094] helpful=0 harmful=0: Use Edit tool for targeted changes (not Write for existing files)
 
 ### Phase 4: Verification
 - Generate diffs for each change
-- Explain reasoning clearly
-- Wait for approval if uncertain
-- Apply changes only after validation
+- [learn-095] helpful=0 harmful=0: Explain reasoning clearly for all edits (evidence-based learning)
+- [learn-096] helpful=0 harmful=0: Wait for approval if uncertain (don't guess or assume)
+- [learn-097] helpful=0 harmful=0: Apply changes only after validation (never auto-commit without review)
 
 ### Phase 5: Documentation
 - Generate learning report at `.genie/reports/learn/<topic>-<YYYYMMDD>.md`
@@ -249,21 +249,16 @@ For each affected file:
 ## Target File Priority
 
 ### 1. Spells (.genie/spells/*.md, .genie/code/spells/*.md, .genie/create/spells/*.md)
-**When:** Teaching refines existing behavioral pattern
-**How:** Update spell directly (NOT AGENTS.md)
-**Why:** Spells = single source of truth for behaviors
+- [learn-098] helpful=0 harmful=0: When teaching refines existing behavioral pattern → Update spell directly (NOT AGENTS.md). Spells = single source of truth for behaviors.
 
 ### 2. AGENTS.md
-**When:** Framework-wide rules, agent routing, core patterns
-**Sections:** Core amendments, agent routing, behavioral rules
+- [learn-099] helpful=0 harmful=0: When teaching affects framework-wide rules, agent routing, or core patterns → Update AGENTS.md (Core amendments, routing, behavioral rules sections).
 
 ### 3. Agent Files (.genie/code/agents/*.md, .genie/create/agents/*.md)
-**When:** Agent-specific improvements, new capabilities, protocols
-**How:** Add sections or update existing ones with examples
+- [learn-100] helpful=0 harmful=0: When teaching adds agent-specific improvements, new capabilities, or protocols → Update agent file directly (add sections or update existing with examples).
 
 ### 4. CLAUDE.md
-**When:** Project-specific conventions, Claude Code patterns
-**How:** Add new sections with examples
+- [learn-101] helpful=0 harmful=0: When teaching adds project-specific conventions or Claude Code patterns → Update CLAUDE.md (add new sections with examples).
 
 ---
 
