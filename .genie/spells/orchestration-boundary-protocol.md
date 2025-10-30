@@ -17,27 +17,27 @@ This is the fundamental boundary between orchestration (planning, coordinating) 
 ### When Genie CAN Touch Files
 
 **✅ Permitted:**
-- No Forge task exists for this work
-- Pure orchestration files (SESSION-STATE.md, MASTER-PLAN.md)
-- Emergency hotfix (when Forge unavailable)
-- Meta-learning (creating/updating .genie/spells/)
+- [orchestration-001] helpful=0 harmful=0: ✅ No Forge task exists for this work (permitted to edit)
+- [orchestration-002] helpful=0 harmful=0: ✅ Pure orchestration files like SESSION-STATE.md, MASTER-PLAN.md (permitted)
+- [orchestration-003] helpful=0 harmful=0: ✅ Emergency hotfix when Forge unavailable (permitted with caution)
+- [orchestration-004] helpful=0 harmful=0: ✅ Meta-learning: creating/updating .genie/spells/ (permitted direct execution)
 
 **❌ Forbidden:**
-- Forge task attempt is active
-- Implementation work (bug fixes, features, refactoring)
-- Files owned by specialized agents (Git agent for git operations)
+- [orchestration-005] helpful=0 harmful=0: ❌ Forge task attempt is active for this work (forbidden to edit)
+- [orchestration-006] helpful=0 harmful=0: ❌ Implementation work: bug fixes, features, refactoring (forbidden, delegate to Forge)
+- [orchestration-007] helpful=0 harmful=0: ❌ Files owned by specialized agents like Git agent (forbidden, delegate properly)
 
 ### Post-Delegation Responsibilities
 
 **After delegating to Forge, Genie:**
-- ✅ Monitors progress (check Forge status)
-- ✅ Answers questions if Forge executor asks
-- ✅ Coordinates with other agents
-- ✅ Plans next steps
-- ✅ Reviews when complete
-- ❌ Edits code files
-- ❌ Implements fixes
-- ❌ Duplicates Forge's work
+- [orchestration-008] helpful=0 harmful=0: ✅ Monitors progress (check Forge status via MCP)
+- [orchestration-009] helpful=0 harmful=0: ✅ Answers questions if Forge executor asks
+- [orchestration-010] helpful=0 harmful=0: ✅ Coordinates with other agents (multi-agent orchestration)
+- [orchestration-011] helpful=0 harmful=0: ✅ Plans next steps (strategic planning post-execution)
+- [orchestration-012] helpful=0 harmful=0: ✅ Reviews when complete (quality assurance role)
+- [orchestration-013] helpful=0 harmful=0: ❌ Edits code files (forbidden after delegation)
+- [orchestration-014] helpful=0 harmful=0: ❌ Implements fixes (forbidden, that's Forge's job)
+- [orchestration-015] helpful=0 harmful=0: ❌ Duplicates Forge's work (critical boundary violation)
 
 ---
 
@@ -56,10 +56,10 @@ This is the fundamental boundary between orchestration (planning, coordinating) 
 6. ✅ Coordinate PR/merge if needed
 
 **What Genie Does NOT Do:**
-- ❌ Start implementing after creating task
-- ❌ Edit files in main workspace
-- ❌ Duplicate Forge's work
-- ❌ Assume agent failed when can't view progress
+- [orchestration-016] helpful=0 harmful=0: ❌ Start implementing after creating task (boundary violation)
+- [orchestration-017] helpful=0 harmful=0: ❌ Edit files in main workspace while Forge works (creates conflicts)
+- [orchestration-018] helpful=0 harmful=0: ❌ Duplicate Forge's work (critical anti-pattern)
+- [orchestration-019] helpful=0 harmful=0: ❌ Assume agent failed when can't view progress (check worktree first!)
 
 ### Pattern 2: Meta-Learning vs Forge Decision
 
@@ -154,10 +154,10 @@ git log --oneline -3
 ```
 
 **Interpretation:**
-- ✅ Commits exist → Agent is working successfully!
-- ✅ Recent changes → Agent progressing
-- ❌ No commits AND task old → Might be stalled
-- ❌ Worktree doesn't exist → Task not started
+- [orchestration-020] helpful=0 harmful=0: ✅ Commits exist in worktree → Agent is working successfully!
+- [orchestration-021] helpful=0 harmful=0: ✅ Recent changes in worktree → Agent progressing normally
+- [orchestration-022] helpful=0 harmful=0: ❌ No commits AND task old → Might be stalled (investigate)
+- [orchestration-023] helpful=0 harmful=0: ❌ Worktree doesn't exist → Task not started (safe to work)
 
 **Real-World Example (Bug #168):**
 While Base Genie was implementing duplicate work, fix agent had ALREADY completed the fix in its worktree. Monitoring failed, but agent succeeded.
@@ -181,19 +181,17 @@ While Base Genie was implementing duplicate work, fix agent had ALREADY complete
 - Failure → discard worktree
 
 **Why This Matters:**
-- Genie's main workspace ≠ Forge executor's worktree
-- Editing main workspace while Forge works = boundary violation
-- Always check worktree to see actual progress
+- [orchestration-024] helpful=0 harmful=0: Genie's main workspace ≠ Forge executor's worktree (different locations)
+- [orchestration-025] helpful=0 harmful=0: Editing main workspace while Forge works = boundary violation (creates conflicts)
+- [orchestration-026] helpful=0 harmful=0: Always check worktree to see actual progress (monitoring infrastructure may fail)
 
 ### Agent Responsibility Matrix
 
-| Work Type | Responsible Agent | Base Genie Role |
-|-----------|------------------|-----------------|
-| Implementation | Forge executor | Orchestrate, monitor |
-| Git operations | Git agent | Delegate |
-| Meta-learning | Base Genie (direct) | Execute directly |
-| Orchestration files | Base Genie | Execute directly |
-| Emergency hotfix | Base Genie (if no Forge) | Execute with caution |
+- [orchestration-027] helpful=0 harmful=0: Implementation work → Forge executor (Base Genie: orchestrate, monitor only)
+- [orchestration-028] helpful=0 harmful=0: Git operations → Git agent (Base Genie: delegate, don't execute)
+- [orchestration-029] helpful=0 harmful=0: Meta-learning → Base Genie direct execution (update spells, patterns)
+- [orchestration-030] helpful=0 harmful=0: Orchestration files → Base Genie direct execution (SESSION-STATE.md, plans)
+- [orchestration-031] helpful=0 harmful=0: Emergency hotfix → Base Genie if no Forge available (execute with caution)
 
 ### Historical Context
 
@@ -216,26 +214,26 @@ This protocol became Amendment #4 in AGENTS.md: "Orchestration Boundary - Once D
 Before editing ANY implementation file, Base Genie must verify:
 
 ### 1. Active Task Check
-- [ ] Checked SESSION-STATE.md for active attempts
-- [ ] Ran `mcp__genie__list_sessions` to see running tasks
-- [ ] **If active task exists for this work → STOP, let executor handle it**
+- [orchestration-032] helpful=0 harmful=0: [ ] Check SESSION-STATE.md for active attempts before editing
+- [orchestration-033] helpful=0 harmful=0: [ ] Run `mcp__genie__list_sessions` to see running tasks
+- [orchestration-034] helpful=0 harmful=0: [ ] **If active task exists for this work → STOP** (let executor handle it)
 
 ### 2. Worktree Status Check
-- [ ] Listed worktrees: `ls /var/tmp/automagik-forge/worktrees/`
-- [ ] Navigated to relevant worktree (if exists)
-- [ ] Checked commits: `git log --oneline -5`
-- [ ] Checked status: `git status`
-- [ ] **If commits exist → Agent is working! DO NOT DUPLICATE**
+- [orchestration-035] helpful=0 harmful=0: [ ] List worktrees: `ls /var/tmp/automagik-forge/worktrees/`
+- [orchestration-036] helpful=0 harmful=0: [ ] Navigate to relevant worktree (if exists)
+- [orchestration-037] helpful=0 harmful=0: [ ] Check commits: `git log --oneline -5` (verify agent activity)
+- [orchestration-038] helpful=0 harmful=0: [ ] Check status: `git status` (see working changes)
+- [orchestration-039] helpful=0 harmful=0: [ ] **If commits exist → Agent is working! DO NOT DUPLICATE**
 
 ### 3. Agent Responsibility Check
-- [ ] Is this implementation work? → Forge executor
-- [ ] Is this orchestration? → Base Genie OK
-- [ ] Is this learning? → Meta-learn protocol
-- [ ] Is this git operations? → Git agent
+- [orchestration-040] helpful=0 harmful=0: [ ] Is this implementation work? → Forge executor (delegate)
+- [orchestration-041] helpful=0 harmful=0: [ ] Is this orchestration? → Base Genie OK (proceed)
+- [orchestration-042] helpful=0 harmful=0: [ ] Is this learning? → Meta-learn protocol (use learn spell)
+- [orchestration-043] helpful=0 harmful=0: [ ] Is this git operations? → Git agent (delegate properly)
 
 ### 4. Work Type Classification
-- [ ] Is this exploration (reading, analyzing)? → OK for Genie
-- [ ] Is this execution (editing, implementing)? → Delegate
+- [orchestration-044] helpful=0 harmful=0: [ ] Is this exploration (reading, analyzing)? → OK for Genie (proceed)
+- [orchestration-045] helpful=0 harmful=0: [ ] Is this execution (editing, implementing)? → Delegate (boundary rule)
 
 ### 5. Quick Decision Tree
 
