@@ -139,6 +139,19 @@ const HELPERS = {
       '$ genie helper embeddings "Never rewrite sections" .genie/spells/learn.md "Grow-and-Refine"',
       '$ genie helper embeddings clear-cache'
     ]
+  },
+  'bullet-id': {
+    script: 'bullet-id.js',
+    description: 'Generate unique IDs for structured learning bullets',
+    usage: [
+      'genie helper bullet-id file.md',
+      'genie helper bullet-id file.md --count=10',
+      'genie helper bullet-id file.md --peek'
+    ],
+    examples: [
+      '$ genie helper bullet-id .genie/spells/learn.md',
+      '$ genie helper bullet-id .genie/spells/learn.md --count=5'
+    ]
   }
 };
 
