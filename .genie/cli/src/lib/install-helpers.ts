@@ -106,13 +106,14 @@ See @.genie/spells/install-genie.md for detailed instructions.`;
   try {
     const { getAgentRegistry } = await import('./agent-registry.js');
     const registry = await getAgentRegistry();
-    // Lookup "Master Neuron" agent by name
-    const masterAgentDef = registry.getAgent('master neuron', 'code');
-    if (masterAgentDef?.forge_profile_name) {
-      masterVariant = masterAgentDef.forge_profile_name;
-    }
-    if (masterAgentDef?.genie?.executor) {
-      masterExecutor = masterAgentDef.genie.executor;
+    // Lookup master neuron by workflow name
+    // Neurons are registered as "neuron/master" without collective
+    const masterAgentDef = registry.getAgent('master');
+    if (masterAgentDef) {
+      // Derive forge_profile_name: use explicit or derive from neuron name
+      masterVariant = masterAgentDef.forge_profile_name
+        || (masterAgentDef.type === 'neuron' ? masterAgentDef.name.toUpperCase() : 'MASTER');
+      masterExecutor = masterAgentDef.genie?.executor || masterExecutor;
     }
   } catch (error) {
     // Use fallback MASTER if registry unavailable

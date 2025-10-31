@@ -151,11 +151,9 @@ const server = new McpServer({
 }, {
   capabilities: {
     logging: {},
-    tools: {},
-    resources: {
-      subscribe: true,
-      listChanged: true
-    }
+    tools: {}
+    // Note: resources capability removed until neuron provider is fully implemented
+    // See: .genie/mcp/src/resources/neuron-provider.ts (provider exists but not wired up)
   }
 });
 
