@@ -13,6 +13,7 @@ import { checkGitState, formatGitStateError } from '../lib/git-validation.js';
 import { shortenUrl, getApiKeyFromEnv } from '../lib/url-shortener.js';
 import { sessionManager } from '../lib/session-manager.js';
 import { getOrCreateGenieProject } from '../lib/project-detector.js';
+import { formatTaskTitle } from '../lib/task-title-formatter.js';
 import path from 'path';
 
 // Load ForgeClient from Genie package root (not user's cwd)
@@ -195,7 +196,7 @@ export async function executeWishTool(
     taskResult = await forgeClient.createAndStartTask({
       task: {
         project_id: projectId,
-        title: `Wish: ${args.feature}`,
+        title: formatTaskTitle('MCP', args.feature, args.github_issue),
         description: `GitHub Issue: #${args.github_issue}\n\nFeature: ${args.feature}`
       },
       executor_profile_id: {
