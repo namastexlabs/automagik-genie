@@ -246,13 +246,13 @@ export async function runInit(
       }
     }
 
-    // Backup on version mismatch or old Genie installation
-    // CRITICAL: Always backup if .genie/ exists (prevents data loss on re-init)
+    // CRITICAL: Always backup if .genie/ exists - no exceptions
+    // Prevents data loss on re-init, aborted installs, or any overwrite scenario
     let backupId: string | undefined;
     let tempBackupPath: string | undefined;
 
     const genieExists = await pathExists(targetGenie);
-    if (genieExists && (installType === 'old_genie' || isUpgrade || isPartialInstall)) {
+    if (genieExists) {
       console.log('');
       console.log('💾 Creating backup before overwriting...');
       const reason = installType === 'old_genie' ? 'old_genie' : 'pre_upgrade';
