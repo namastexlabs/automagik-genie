@@ -16,8 +16,8 @@ import { DEFAULT_EXECUTOR_KEY, normalizeExecutorKeyOrDefault, normalizeExecutorK
  */
 export interface SessionEntry {
   agent: string;
-  taskId: string;          // Forge task ID
-  projectId: string;       // Forge project ID
+  taskId?: string;         // Forge task ID (optional for migrated v3 sessions)
+  projectId?: string;      // Forge project ID (optional for migrated v3 sessions)
   preset?: string;
   mode?: string;
   executor?: string;
@@ -112,33 +112,89 @@ function normalizeSessionStore(
     };
   }
 
-  // Version 3 or earlier - CLEAN BREAK (no migration)
-  // Rationale: Fixes issue #407 by removing friendly name abstraction
-  // Previous sessions incompatible with new UUID-based architecture
+  // Version 3 or earlier - MIGRATE to v4
+  // Rationale: Preserve user's ability to resume/stop/view existing sessions
+  // Key change: Use attemptId (from v3's sessionId field) as the v4 key
   if (incoming.version && incoming.version < 4) {
+    const sessions: Record<string, SessionEntry> = {};
+    let migratedCount = 0;
+
+    // v3 sessions were keyed by friendly name, need to rekey by attemptId
+    Object.entries(incoming.sessions || {}).forEach(([_friendlyName, entry]: [string, any]) => {
+      if (!entry || typeof entry !== 'object') return;
+
+      // v3 stored attemptId in the 'sessionId' field
+      const attemptId = entry.sessionId;
+      if (!attemptId || typeof attemptId !== 'string') return;
+
+      // Migrate to v4 format (taskId/projectId will be undefined for migrated sessions)
+      sessions[attemptId] = {
+        agent: entry.agent,
+        // taskId and projectId omitted (not available in v3)
+        preset: entry.preset,
+        mode: entry.mode,
+        executor: entry.executor,
+        executorVariant: entry.executorVariant,
+        model: entry.model,
+        status: entry.status,
+        created: entry.created,
+        lastUsed: entry.lastUsed,
+        lastPrompt: entry.lastPrompt,
+        forgeUrl: entry.forgeUrl,
+        background: entry.background
+      };
+      migratedCount++;
+    });
+
     callbacks.onWarning?.(
-      `Session storage upgraded to v4 (issue #407 fix). ` +
-      `Previous v${incoming.version} sessions are no longer compatible. ` +
-      `Please create new sessions using: genie run <agent> "<prompt>"`
+      `Migrated ${migratedCount} session(s) from v${incoming.version} to v4. ` +
+      `Sessions can be viewed/resumed/stopped using their IDs. ` +
+      `Some metadata (taskId/projectId) may be incomplete for migrated sessions.`
     );
 
     return {
       version: 4,
-      sessions: {}
+      sessions
     };
   }
 
-  // No version number - treat as legacy
-  if (!incoming.version) {
+  // No version number - treat as v2 and migrate
+  if (!incoming.version && incoming.sessions) {
+    const sessions: Record<string, SessionEntry> = {};
+    let migratedCount = 0;
+
+    // v2 sessions were keyed by sessionId (attemptId), already in correct format
+    Object.entries(incoming.sessions).forEach(([attemptId, entry]: [string, any]) => {
+      if (!entry || typeof entry !== 'object') return;
+
+      // v2 already used attemptId as key, just need to copy fields
+      sessions[attemptId] = {
+        agent: entry.agent,
+        // taskId and projectId omitted (not available in v2)
+        preset: entry.preset,
+        mode: entry.mode,
+        executor: entry.executor,
+        executorVariant: entry.executorVariant,
+        model: entry.model,
+        status: entry.status,
+        created: entry.created,
+        lastUsed: entry.lastUsed,
+        lastPrompt: entry.lastPrompt,
+        forgeUrl: entry.forgeUrl,
+        background: entry.background
+      };
+      migratedCount++;
+    });
+
     callbacks.onWarning?.(
-      'Session storage upgraded to v4 (issue #407 fix). ' +
-      'Previous sessions are no longer compatible. ' +
-      'Please create new sessions using: genie run <agent> "<prompt>"'
+      `Migrated ${migratedCount} session(s) from v2 to v4. ` +
+      `Sessions can be viewed/resumed/stopped using their IDs. ` +
+      `Some metadata (taskId/projectId) may be incomplete for migrated sessions.`
     );
 
     return {
       version: 4,
-      sessions: {}
+      sessions
     };
   }
 
