@@ -38,14 +38,18 @@ export class SessionManager {
 
       const registry = await getAgentRegistry();
 
-      // Try to find neuron agent by workflow name + " Neuron" pattern
-      // e.g., "wish" -> "Wish Neuron"
-      const neuronName = `${workflow} neuron`;
-      const neuronAgent = registry.getAgent(neuronName, 'code');
+      // Try to find neuron agent by workflow name
+      // Neurons are registered as "neuron/${workflow}" without collective
+      // e.g., "wish" -> registry key "neuron/wish"
+      const neuronAgent = registry.getAgent(workflow);
 
-      if (neuronAgent && neuronAgent.forge_profile_name) {
+      if (neuronAgent) {
+        // Derive forge_profile_name: use explicit or derive from neuron name
+        const profileName = neuronAgent.forge_profile_name
+          || (neuronAgent.type === 'neuron' ? neuronAgent.name.toUpperCase() : workflow.toUpperCase());
+
         return {
-          forge_profile_name: neuronAgent.forge_profile_name,
+          forge_profile_name: profileName,
           executor: neuronAgent.genie?.executor || 'CLAUDE_CODE',
           model: neuronAgent.genie?.model,
           background: neuronAgent.genie?.background
