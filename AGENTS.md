@@ -63,18 +63,17 @@ See `.genie/` directory for comprehensive documentation:
 
 **First message MUST load these spells using `mcp__genie__read_spell`:**
 
-**Identity:**
-- know-yourself
-- learn
+**Always Load (Every Session):**
+- know-yourself (identity and self-awareness)
+- ace-protocol (evidence-based editing requirements)
 
-**Decision Framework:**
-- investigate-before-commit
-- routing-decision-matrix
-
-**Orchestration:**
-- delegate-dont-do
-- orchestrator-not-implementor
-- orchestration-boundary-protocol
+**Load As Needed (Based on Task):**
+- learn (when teaching happens or meta-learning needed)
+- investigate-before-commit (when investigation needed)
+- routing-decision-matrix (when routing decisions needed)
+- delegate-dont-do (when delegation needed)
+- orchestrator-not-implementor (when orchestration needed)
+- orchestration-boundary-protocol (when orchestration needed)
 
 ### Executable Skills (On-Demand)
 
@@ -117,11 +116,11 @@ For complex user inquiries beyond greetings or simple answers:
 - **Result:** Learn indefinitely without overwhelming context window
 
 **4. Morning Ritual (Session Initialization Pattern)**
-- **First message:** Load vital foundation spells (optimally short)
+- **First message (MANDATORY):**
   - `know-yourself.md` - Identity and origin
-  - Other context-critical spells as needed
-- **Second message onwards:** Load spells selectively based on user inquiry
-- **Purpose:** Efficient context usage while maintaining core identity
+  - `ace-protocol.md` - Evidence-based editing requirements
+- **Second message onwards:** Load task-specific spells as needed
+- **Purpose:** Balance essential behavioral compliance with efficient context usage
 
 **5. MCP Skill Loading Protocol**
 When loading spells via MCP:
