@@ -445,17 +445,48 @@ export class ForgeExecutor {
 
   async listSessions(): Promise<ForgeSessionSummary[]> {
     const projectId = await this.getOrCreateGenieProject();
-    const tasks = await this.forge.listTasks(projectId);
-    return tasks.map((task: any) => ({
-      id: task.id,
-      agent: this.extractAgentNameFromTitle(task.title),
-      status: task.status || 'unknown',
-      executor: (task.executor_profile_id?.executor || '').toLowerCase() || null,
-      variant: task.executor_profile_id?.variant || null,
-      model: task.executor_profile_id?.model || null,
-      created: task.created_at,
-      updated: task.updated_at
-    }));
+
+    // Query tasks and attempts separately
+    const [tasks, allAttempts] = await Promise.all([
+      this.forge.listTasks(projectId),
+      this.forge.listTaskAttempts()
+    ]);
+
+    // Filter attempts to current project
+    const projectAttempts = allAttempts.filter((attempt: any) => attempt.project_id === projectId);
+
+    // Build task lookup map (task_id -> task)
+    const taskMap = new Map<string, any>();
+    for (const task of tasks) {
+      taskMap.set(task.id, task);
+    }
+
+    // Group attempts by task_id and get latest attempt for each task
+    const latestAttemptsByTask = new Map<string, any>();
+    for (const attempt of projectAttempts) {
+      const taskId = attempt.task_id;
+      const existing = latestAttemptsByTask.get(taskId);
+
+      // Keep the most recently created attempt for each task
+      if (!existing || new Date(attempt.created_at) > new Date(existing.created_at)) {
+        latestAttemptsByTask.set(taskId, attempt);
+      }
+    }
+
+    // Return attempt summaries (using attempt ID, not task ID)
+    return Array.from(latestAttemptsByTask.values()).map((attempt: any) => {
+      const task = taskMap.get(attempt.task_id);
+      return {
+        id: attempt.id,  // ✅ Now returns attempt ID (UUID) instead of task ID
+        agent: this.extractAgentNameFromTitle(task?.title || ''),
+        status: attempt.status || 'unknown',
+        executor: (attempt.executor_profile_id?.executor || '').toLowerCase() || null,
+        variant: attempt.executor_profile_id?.variant || null,
+        model: attempt.executor_profile_id?.model || null,
+        created: attempt.created_at,
+        updated: attempt.updated_at
+      };
+    });
   }
 
   /**
