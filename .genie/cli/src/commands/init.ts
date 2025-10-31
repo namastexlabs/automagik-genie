@@ -255,24 +255,45 @@ export async function runInit(
     if (genieExists) {
       console.log('');
       console.log('💾 Creating backup before overwriting...');
-      const reason = installType === 'old_genie' ? 'old_genie' : 'pre_upgrade';
-      const backupResult = await backupGenieDirectory(cwd, reason);
+      let backupId: string | undefined;
+      let tempBackupPath: string | undefined;
+      try {
+        const reason = installType === 'old_genie' ? 'old_genie' : 'pre_upgrade';
+        const backupResult = await backupGenieDirectory(cwd, reason);
 
-      // Handle two return types: string (copy backup) or object (two-stage move)
-      if (typeof backupResult === 'string') {
-        backupId = backupResult;
-        console.log(`   Backup created: .genie/backups/${backupId}`);
-      } else {
-        backupId = backupResult.backupId;
-        tempBackupPath = backupResult.tempPath;
-        console.log(`   Old .genie moved to: ${tempBackupPath}`);
+        // Handle two return types: string (copy backup) or object (two-stage move)
+        if (typeof backupResult === 'string') {
+          backupId = backupResult;
+          console.log(`   Backup created: .genie/backups/${backupId}`);
+        } else {
+          backupId = backupResult.backupId;
+          tempBackupPath = backupResult.tempPath;
+          console.log(`   Old .genie moved to: ${tempBackupPath}`);
+        }
+      } catch (backupError) {
+        const errorMsg = backupError instanceof Error ? backupError.message : String(backupError);
+        await emitView(
+          buildErrorView(
+            'Backup Failed',
+            `Failed to create backup of .genie directory: ${errorMsg}\n\nYour existing .genie is preserved, but initialization cannot proceed without a safe backup. Please check permissions and disk space, then retry 'genie init'.`
+          ),
+          parsed.options,
+          { stream: process.stderr }
+        );
+        process.exitCode = 1;
+        return;
       }
       console.log('');
 
       // Create git checkpoint commit (clean rollback point before template modifications)
       if (backupId && oldVersion) {
-        await createUpgradeCheckpoint(cwd, oldVersion, currentPackageVersion, backupId);
-        console.log('');
+        try {
+          await createUpgradeCheckpoint(cwd, oldVersion, currentPackageVersion, backupId);
+          console.log('');
+        } catch (checkpointError) {
+          console.warn(`⚠️  Failed to create git checkpoint: ${checkpointError instanceof Error ? checkpointError.message : String(checkpointError)}`);
+          console.warn('   Continuing without checkpoint (non-fatal)');
+        }
       }
     }
 

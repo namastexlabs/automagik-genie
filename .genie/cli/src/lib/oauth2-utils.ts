@@ -6,13 +6,14 @@
  */
 
 import crypto from 'crypto';
-import * as jose from 'jose';
+// import * as jose from 'jose';
 
 /**
  * Generate RSA key pair for JWT signing
  * Returns { privateKey, publicKey } in PEM format
  */
 export async function generateKeyPair(): Promise<{ privateKey: string; publicKey: string }> {
+  const jose = await import('jose');
   const { privateKey, publicKey } = await jose.generateKeyPair('RS256', {
     modulusLength: 2048,
     extractable: true, // Allow key export for PEM format
@@ -55,6 +56,7 @@ export async function generateAccessToken(
   clientId: string,
   expirySeconds: number = 3600
 ): Promise<string> {
+  const jose = await import('jose');
   const privateKey = await jose.importPKCS8(privateKeyPem, 'RS256');
 
   const jwt = await new jose.SignJWT({
@@ -87,8 +89,9 @@ export async function verifyAccessToken(
   publicKeyPem: string,
   issuer: string,
   audience: string
-): Promise<jose.JWTPayload | null> {
+): Promise<any | null> {
   try {
+    const jose = await import('jose');
     const publicKey = await jose.importSPKI(publicKeyPem, 'RS256');
 
     const { payload } = await jose.jwtVerify(token, publicKey, {

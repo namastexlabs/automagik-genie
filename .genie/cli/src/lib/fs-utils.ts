@@ -64,11 +64,19 @@ export async function moveDirectory(source: string, destination: string): Promis
 export async function snapshotDirectory(source: string, destination: string): Promise<void> {
   const stagingRoot = path.join(path.dirname(source), `.genie-snapshot-${toIsoId()}`);
   const stagingTarget = path.join(stagingRoot, path.basename(source));
-  await ensureDir(stagingRoot);
-  await fsp.cp(source, stagingTarget, { recursive: true, force: true });
-  await ensureDir(path.dirname(destination));
-  await moveDirectory(stagingTarget, destination);
-  await fsp.rm(stagingRoot, { recursive: true, force: true });
+  try {
+    await ensureDir(stagingRoot);
+    await fsp.cp(source, stagingTarget, { recursive: true, force: true });
+    await ensureDir(path.dirname(destination));
+    await moveDirectory(stagingTarget, destination);
+    await fsp.rm(stagingRoot, { recursive: true, force: true });
+  } catch (err) {
+    // Clean up partial staging on failure
+    try {
+      await fsp.rm(stagingRoot, { recursive: true, force: true }).catch(() => {});
+    } catch {}
+    throw new Error(`Failed to create directory snapshot: ${err instanceof Error ? err.message : String(err)}`);
+  }
 }
 
 export async function readJsonFile<T>(filePath: string): Promise<T | null> {
@@ -145,19 +153,27 @@ export async function backupGenieDirectory(
   // Snapshot copy for rollbacks (preserve original, copy to backup)
   const backupRoot = path.join(genieDir, 'backups', backupId);
 
-  // Create backup directory
-  await ensureDir(backupRoot);
+  try {
+    // Create backup directory
+    await ensureDir(backupRoot);
 
-  // Backup entire .genie directory (atomic snapshot)
-  await snapshotDirectory(genieDir, path.join(backupRoot, 'genie'));
+    // Backup entire .genie directory (atomic snapshot)
+    await snapshotDirectory(genieDir, path.join(backupRoot, 'genie'));
 
-  // Backup root documentation files if present
-  const rootDocs = ['AGENTS.md', 'CLAUDE.md'];
-  for (const doc of rootDocs) {
-    const docPath = path.join(workspacePath, doc);
-    if (await pathExists(docPath)) {
-      await fsp.copyFile(docPath, path.join(backupRoot, doc));
+    // Backup root documentation files if present
+    const rootDocs = ['AGENTS.md', 'CLAUDE.md'];
+    for (const doc of rootDocs) {
+      const docPath = path.join(workspacePath, doc);
+      if (await pathExists(docPath)) {
+        await fsp.copyFile(docPath, path.join(backupRoot, doc));
+      }
     }
+  } catch (err) {
+    // Clean up partial backup on failure
+    try {
+      await fsp.rm(backupRoot, { recursive: true, force: true }).catch(() => {});
+    } catch {}
+    throw new Error(`Failed to create backup snapshot: ${err instanceof Error ? err.message : String(err)}`);
   }
 
   return backupId;
@@ -182,19 +198,23 @@ export async function finalizeBackup(
   // Ensure backups directory exists
   await ensureDir(path.join(genieDir, 'backups', backupId));
 
-  // Stage 3: Move temp backup into new .genie/backups/<id>/genie/
   try {
+    // Stage 3: Move temp backup into new .genie/backups/<id>/genie/
     await fsp.rename(tempPath, finalPath);
-  } catch (err) {
-    throw new Error(`Failed to finalize backup: ${err instanceof Error ? err.message : String(err)}`);
-  }
 
-  // Backup root documentation files if present
-  const rootDocs = ['AGENTS.md', 'CLAUDE.md'];
-  for (const doc of rootDocs) {
-    const docPath = path.join(workspacePath, doc);
-    if (await pathExists(docPath)) {
-      await fsp.copyFile(docPath, path.join(genieDir, 'backups', backupId, doc));
+    // Backup root documentation files if present
+    const rootDocs = ['AGENTS.md', 'CLAUDE.md'];
+    for (const doc of rootDocs) {
+      const docPath = path.join(workspacePath, doc);
+      if (await pathExists(docPath)) {
+        await fsp.copyFile(docPath, path.join(genieDir, 'backups', backupId, doc));
+      }
     }
+  } catch (err) {
+    // Attempt cleanup of partial final backup
+    try {
+      await fsp.rm(path.join(genieDir, 'backups', backupId), { recursive: true, force: true }).catch(() => {});
+    } catch {}
+    throw new Error(`Failed to finalize backup: ${err instanceof Error ? err.message : String(err)}`);
   }
 }
