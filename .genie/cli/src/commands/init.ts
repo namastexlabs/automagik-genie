@@ -638,7 +638,7 @@ async function commitTemplateFiles(cwd: string): Promise<void> {
 
   try {
     // Check if there are files to commit
-    const status = execSync('git status --porcelain .genie/ AGENTS.md CLAUDE.md CORE_AGENTS.md .gitignore .mcp.json', {
+    const status = execSync('git status --porcelain .genie/ AGENTS.md CLAUDE.md .gitignore .mcp.json', {
       cwd,
       encoding: 'utf8',
       stdio: ['pipe', 'pipe', 'pipe']
@@ -650,7 +650,7 @@ async function commitTemplateFiles(cwd: string): Promise<void> {
     }
 
     // Stage Genie template files
-    execSync('git add .genie/ AGENTS.md CLAUDE.md CORE_AGENTS.md .gitignore .mcp.json', {
+    execSync('git add .genie/ AGENTS.md CLAUDE.md .gitignore .mcp.json', {
       cwd,
       stdio: 'pipe'
     });
