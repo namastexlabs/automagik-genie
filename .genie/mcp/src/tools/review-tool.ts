@@ -14,6 +14,7 @@ import { checkGitState, formatGitStateError } from '../lib/git-validation.js';
 import { shortenUrl, getApiKeyFromEnv } from '../lib/url-shortener.js';
 import { sessionManager } from '../lib/session-manager.js';
 import { getOrCreateGenieProject } from '../lib/project-detector.js';
+import { formatTaskTitle, extractIssueFromWish } from '../lib/task-title-formatter.js';
 
 // Load ForgeClient from Genie package root (not user's cwd)
 // The MCP server is at: <genie-package>/.genie/mcp/dist/tools/review-tool.js
@@ -177,10 +178,13 @@ export async function executeReviewTool(
 
   let taskResult;
   try {
+    // Extract issue number from wish name (e.g., "395-task-naming-taxonomy" → 395)
+    const issueNumber = extractIssueFromWish(args.wish_name);
+
     taskResult = await forgeClient.createAndStartTask({
       task: {
         project_id: projectId,
-        title: `Review: ${args.wish_name}`,
+        title: formatTaskTitle('MCP', `Review: ${args.wish_name}`, issueNumber),
         description: `Review wish document\n\nWish: ${args.wish_name}\nAgent: ${agent}\n\n---\n\n${wishContent.substring(0, 1000)}...`
       },
       executor_profile_id: {

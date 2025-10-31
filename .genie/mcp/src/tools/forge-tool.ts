@@ -11,6 +11,7 @@ import { checkGitState, formatGitStateError } from '../lib/git-validation.js';
 import { shortenUrl, getApiKeyFromEnv } from '../lib/url-shortener.js';
 import { sessionManager } from '../lib/session-manager.js';
 import { getOrCreateGenieProject } from '../lib/project-detector.js';
+import { formatTaskTitle } from '../lib/task-title-formatter.js';
 import path from 'path';
 import { execSync } from 'child_process';
 
@@ -150,7 +151,7 @@ export async function executeForgeTool(
     taskResult = await forgeClient.createAndStartTask({
       task: {
         project_id: projectId,
-        title: `Forge: ${args.prompt}`,
+        title: formatTaskTitle('MCP', args.prompt),
         description: `Agent: ${args.agent}\n\nPrompt: ${args.prompt}`
       },
       executor_profile_id: {
