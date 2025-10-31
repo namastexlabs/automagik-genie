@@ -56,9 +56,9 @@ export class SessionManager {
       console.warn(`Failed to load agent for workflow ${workflow}, using fallback`);
     }
 
-    // Fallback: Use old neuron-{workflow} pattern
+    // Fallback: Use uppercase workflow name (WISH, FORGE, REVIEW, MASTER)
     return {
-      forge_profile_name: `neuron-${workflow}`,
+      forge_profile_name: workflow.toUpperCase(),
       executor: 'CLAUDE_CODE'
     };
   }
@@ -138,7 +138,7 @@ export class SessionManager {
         task_id: agent.task_id,
         executor_profile_id: {
           executor: agentConfig.executor || 'CLAUDE_CODE',
-          variant: agentConfig.forge_profile_name || `neuron-${workflow}`
+          variant: agentConfig.forge_profile_name || workflow.toUpperCase()
         },
         base_branch: 'main'
       });
