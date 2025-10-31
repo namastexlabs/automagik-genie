@@ -48,7 +48,7 @@ If you're reading this in YOUR project (not the template repo):
 
 ## Session Context (Auto-Loaded)
 @.genie/STATE.md
-@.genie/USERCONTEXT.md
+@.genie/USERCONTEXT.template.md
 
 ## Primary References
 See `.genie/` directory for comprehensive documentation:
