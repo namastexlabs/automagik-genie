@@ -468,54 +468,60 @@ export class ForgeExecutor {
       return this.config.genieProjectId;
     }
 
-    const currentRepoPath = process.cwd();
-    const projects = await this.forge.listProjects();
-    const existingProject = projects.find((p: any) => p.git_repo_path === currentRepoPath);
-
-    if (existingProject) {
-      this.config.genieProjectId = existingProject.id;
-      return existingProject.id;
-    }
-
-    // Auto-detect project name from git repo or directory name
-    let projectName = 'Genie Project';
     try {
-      // Try git remote first
-      const remoteUrl = execSync('git config --get remote.origin.url', {
-        encoding: 'utf8',
-        cwd: currentRepoPath,
-        stdio: ['pipe', 'pipe', 'ignore']
-      }).trim();
+      const currentRepoPath = process.cwd();
+      const projects = await this.forge.listProjects();
+      const existingProject = projects.find((p: any) => p.git_repo_path === currentRepoPath);
 
-      // Extract repo name from URL (e.g., "automagik-genie.git" → "automagik-genie")
-      const match = remoteUrl.match(/\/([^\/]+?)(\.git)?$/);
-      if (match && match[1]) {
-        projectName = match[1].replace(/\.git$/, '');
+      if (existingProject) {
+        this.config.genieProjectId = existingProject.id;
+        return existingProject.id;
       }
-    } catch {
-      // Fallback to directory name if git fails
+
+      // Auto-detect project name from git repo or directory name
+      let projectName = 'Genie Project';
       try {
-        const dirName = execSync('basename "$(pwd)"', {
+        // Try git remote first
+        const remoteUrl = execSync('git config --get remote.origin.url', {
           encoding: 'utf8',
           cwd: currentRepoPath,
           stdio: ['pipe', 'pipe', 'ignore']
         }).trim();
-        if (dirName) {
-          projectName = dirName;
+
+        // Extract repo name from URL (e.g., "automagik-genie.git" → "automagik-genie")
+        const match = remoteUrl.match(/\/([^\/]+?)(\.git)?$/);
+        if (match && match[1]) {
+          projectName = match[1].replace(/\.git$/, '');
         }
       } catch {
-        // Keep default "Genie Project"
+        // Fallback to directory name if git fails
+        try {
+          const dirName = execSync('basename "$(pwd)"', {
+            encoding: 'utf8',
+            cwd: currentRepoPath,
+            stdio: ['pipe', 'pipe', 'ignore']
+          }).trim();
+          if (dirName) {
+            projectName = dirName;
+          }
+        } catch {
+          // Keep default "Genie Project"
+        }
       }
+
+      const newProject = await this.forge.createProject({
+        name: projectName,
+        git_repo_path: currentRepoPath,
+        use_existing_repo: true
+      });
+
+      this.config.genieProjectId = newProject.id;
+      return newProject.id;
+    } catch (error: any) {
+      // Provide context for downstream error handlers
+      const message = error.message || String(error);
+      throw new Error(`Failed to create Forge project: ${message}`);
     }
-
-    const newProject = await this.forge.createProject({
-      name: projectName,
-      git_repo_path: currentRepoPath,
-      use_existing_repo: true
-    });
-
-    this.config.genieProjectId = newProject.id;
-    return newProject.id;
   }
 
   private mapExecutorToProfile(
