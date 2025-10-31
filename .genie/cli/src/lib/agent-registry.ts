@@ -16,6 +16,7 @@ export interface AgentMetadata {
   description: string;
   color?: string;
   emoji?: string;
+  forge_profile_name?: string;  // Explicit Forge profile variant name (overrides derived name)
   genie?: {
     executor?: string;
     executorVariant?: string;
@@ -128,6 +129,7 @@ export class AgentRegistry {
           description: frontmatter.description || '',
           color: frontmatter.color,
           emoji: frontmatter.emoji, // If explicitly set in frontmatter
+          forge_profile_name: frontmatter.forge_profile_name, // Explicit Forge profile variant name
           genie: frontmatter.genie,
           collective,
           filePath: fullPath,
@@ -348,10 +350,17 @@ export class AgentRegistry {
       for (const agent of agentsToSync) {
         if (!agent.fullContent) continue;
 
-        // Use namespaced variant name: CODE_INSTALL, CREATE_INSTALL (explicit collective)
-        // Sanitize agent name: replace spaces and hyphens with underscores for valid Forge variant names
-        const sanitizedName = agent.name.toUpperCase().replace(/[\s-]+/g, '_');
-        const variantName = `${agent.collective.toUpperCase()}_${sanitizedName}`;
+        // Use explicit forge_profile_name if present, otherwise derive from collective/name
+        let variantName: string;
+        if (agent.forge_profile_name) {
+          // Use explicit profile name from frontmatter
+          variantName = agent.forge_profile_name.toUpperCase();
+        } else {
+          // Fall back to derived name (collective_name)
+          // Sanitize agent name: replace spaces and hyphens with underscores for valid Forge variant names
+          const sanitizedName = agent.name.toUpperCase().replace(/[\s-]+/g, '_');
+          variantName = `${agent.collective.toUpperCase()}_${sanitizedName}`;
+        }
 
         // Get collective context for this agent
         const collectiveContext = collectiveContexts[agent.collective] || '';
