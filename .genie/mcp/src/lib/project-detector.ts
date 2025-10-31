@@ -8,18 +8,48 @@
 import { execSync } from 'child_process';
 
 /**
+ * Get the main repository path (handles worktrees correctly)
+ *
+ * When running inside a Forge worktree, process.cwd() returns the worktree path.
+ * We need the main repo path to match against existing projects.
+ *
+ * @returns Main repository path
+ */
+function getMainRepoPath(): string {
+  try {
+    // Get list of worktrees (first one is always the main worktree)
+    const worktreeList = execSync('git worktree list --porcelain', {
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'ignore']
+    });
+
+    // Parse the first worktree entry (main repo)
+    const match = worktreeList.match(/^worktree (.+)$/m);
+    if (match && match[1]) {
+      return match[1];
+    }
+  } catch {
+    // Fall back to current directory if git worktree list fails
+    // (e.g., not a git repo, or git not available)
+  }
+
+  return process.cwd();
+}
+
+/**
  * Get or create Forge project for current workspace
  *
  * Detection logic:
- * 1. Query all projects from Forge
- * 2. Find project where git_repo_path matches process.cwd()
- * 3. If no match, create new project with auto-detected name
+ * 1. Normalize to main repository path (handles worktrees)
+ * 2. Query all projects from Forge
+ * 3. Find project where git_repo_path matches main repo path
+ * 4. If no match, create new project with auto-detected name
  *
  * @param forgeClient - ForgeClient instance
  * @returns Project ID
  */
 export async function getOrCreateGenieProject(forgeClient: any): Promise<string> {
-  const currentRepoPath = process.cwd();
+  const currentRepoPath = getMainRepoPath();
   const projects = await forgeClient.listProjects();
 
   // Find existing project by git repo path
