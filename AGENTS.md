@@ -498,7 +498,7 @@ $ genie helper count-tokens AGENTS.md
   "method": "tiktoken"
 }
 
-$ genie helper count-tokens --before=AGENTS.md --after=CORE_AGENTS.md
+$ genie helper count-tokens --before=old-file.md --after=new-file.md
 {
   "diff": {
     "tokens": -5381,
@@ -568,7 +568,7 @@ $ genie helper count-tokens --before=AGENTS.md --after=CORE_AGENTS.md
 - ❌ Loading static documentation when live queries are available
 
 **Correct Patterns:**
-- ✅ `mcp__genie__list_agents` to discover agents (not CORE_AGENTS.md)
+- ✅ `mcp__genie__list_agents` to discover agents (MCP always up-to-date)
 - ✅ `mcp__genie__get_workspace_info` for product context (not manual file reads)
 - ✅ `mcp__genie__list_spells` to discover spells (not directory scanning)
 - ✅ MCP queries first, file reads only when MCP unavailable

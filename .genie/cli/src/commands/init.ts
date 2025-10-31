@@ -421,7 +421,7 @@ async function copyTemplateFiles(
       // Blacklist takes priority (never copy these user directories)
       if (blacklist.has(firstSeg)) return false;
 
-      // Only copy: agents, workflows, skills, spells, AGENTS.md, CORE_AGENTS.md, config.yaml, templates
+      // Only copy: agents, workflows, skills, spells, AGENTS.md, config.yaml, templates
       if (['agents', 'workflows', 'skills', 'spells'].includes(firstSeg)) return true;
       if (relPath === 'AGENTS.md' || relPath === 'config.yaml') return true;
       if (relPath.endsWith('.template.md')) return true; // Copy all template files
@@ -442,8 +442,8 @@ async function copyTemplateFiles(
 }
 
 async function copyTemplateRootFiles(packageRoot: string, targetDir: string, template: TemplateType): Promise<void> {
-  // Copy AGENTS.md, CORE_AGENTS.md, CLAUDE.md, and .gitignore from package root
-  const rootFiles = ['AGENTS.md', 'CORE_AGENTS.md', 'CLAUDE.md', '.gitignore'];
+  // Copy AGENTS.md, CLAUDE.md, and .gitignore from package root
+  const rootFiles = ['AGENTS.md', 'CLAUDE.md', '.gitignore'];
   for (const file of rootFiles) {
     const sourcePath = path.join(packageRoot, file);
     const targetPath = path.join(targetDir, file);
