@@ -98,26 +98,10 @@ export function checkGitState(): GitStateCheck {
  * Format git state validation error message
  */
 export function formatGitStateError(check: GitStateCheck): string {
-  let error = `🚫 **Cannot start agent - Git working tree is not clean**\n\n`;
+  let error = `🚫 **Commit your changes first**\n\n`;
   error += `${check.message}\n\n`;
-  error += `**Why this matters:**\n`;
-  error += `Agents run in separate worktrees. If you have uncommitted or unpushed changes,\n`;
-  error += `those agents won't see your latest work, causing context drift.\n\n`;
-  error += `**Required steps:**\n`;
-
-  if (check.hasUnstagedChanges) {
-    error += `1. Stage your changes: \`git add .\`\n`;
-  }
-
-  if (check.hasUncommittedChanges || check.hasUnstagedChanges) {
-    error += `2. Commit your changes: \`git commit -m "Your commit message"\`\n`;
-  }
-
-  if (check.hasUnpushedCommits || check.hasUncommittedChanges || check.hasUnstagedChanges) {
-    error += `3. Push to remote: \`git push\`\n`;
-  }
-
-  error += `\nOnce your working tree is clean and pushed, retry this command.\n`;
+  error += `**Why:** Forge uses isolated worktrees. Uncommitted files won't be available (@ references break).\n\n`;
+  error += `**Fix:** Commit your changes, then retry.\n`;
 
   return error;
 }
