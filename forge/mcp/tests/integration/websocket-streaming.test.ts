@@ -1,9 +1,24 @@
 import assert from 'node:assert/strict';
 import type { AddressInfo } from 'net';
-import { beforeEach, afterEach, describe, test } from 'node:test';
+import { before, beforeEach, afterEach, describe, test } from 'node:test';
 import { WebSocketServer, WebSocket } from 'ws';
 import { setTimeout as delay } from 'node:timers/promises';
-import { WebSocketManager } from '../../../../.genie/mcp/dist/websocket-manager';
+
+type WebSocketManagerConstructor = typeof import('../../../../.genie/mcp/src/websocket-manager.ts')['WebSocketManager'];
+type WebSocketManagerInstance = InstanceType<WebSocketManagerConstructor>;
+
+let WebSocketManagerCtor: WebSocketManagerConstructor;
+
+before(async () => {
+  ({ WebSocketManager: WebSocketManagerCtor } = await import('../../../../.genie/mcp/src/websocket-manager.ts'));
+});
+
+function createManager(): WebSocketManagerInstance {
+  if (!WebSocketManagerCtor) {
+    throw new Error('WebSocketManager constructor not loaded');
+  }
+  return new WebSocketManagerCtor();
+}
 
 describe('MCP WebSocket Streaming Validation', () => {
 
@@ -86,7 +101,7 @@ describe('MCP WebSocket Streaming Validation', () => {
     }
   }
 
-  function getClientSocket(manager: WebSocketManager, url: string): WebSocket | undefined {
+  function getClientSocket(manager: WebSocketManagerInstance, url: string): WebSocket | undefined {
     const pool = (manager as unknown as { connectionPool?: Map<string, WebSocket> }).connectionPool;
     return pool?.get(url);
   }
@@ -124,7 +139,7 @@ describe('MCP WebSocket Streaming Validation', () => {
   });
 
   test('1. Connection establishes and remains stable briefly', async () => {
-    const manager = new WebSocketManager();
+  const manager = createManager();
     const errors: Error[] = [];
     const connectionPromise = waitForConnection();
 
@@ -149,7 +164,7 @@ describe('MCP WebSocket Streaming Validation', () => {
   });
 
   test('2. Streams data chunks with correct schema', async () => {
-    const manager = new WebSocketManager();
+  const manager = createManager();
     const received: Array<Record<string, unknown>> = [];
 
     const connectionPromise = waitForConnection((socket) => {
@@ -197,7 +212,7 @@ describe('MCP WebSocket Streaming Validation', () => {
   });
 
   test('3. Handles streaming errors gracefully', async () => {
-    const manager = new WebSocketManager();
+  const manager = createManager();
     const errors: Array<Record<string, unknown>> = [];
 
     const connectionPromise = waitForConnection((socket) => {
@@ -274,7 +289,7 @@ describe('MCP WebSocket Streaming Validation', () => {
   });
 
   test('4. Cleans up on client-initiated disconnect', async () => {
-    const manager = new WebSocketManager();
+  const manager = createManager();
     const received: unknown[] = [];
 
     const connectionPromise = waitForConnection();
@@ -320,7 +335,7 @@ describe('MCP WebSocket Streaming Validation', () => {
   });
 
   test('5. Cleans up on server-initiated disconnect', async () => {
-    const manager = new WebSocketManager();
+  const manager = createManager();
     
     const serverDrivenConnection = waitForConnection((socket) => {
       setTimeout(() => {
