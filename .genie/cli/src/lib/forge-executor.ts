@@ -220,24 +220,36 @@ export class ForgeExecutor {
 
       // Calculate statistics
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
-      const syncedAgentCount = agentCount; // Use total count, not changed count
-      const syncedNeuronCount = neuronCount; // Use total count, not changed count
+      const localAgentCount = agentCount; // Total local agents
+      const localNeuronCount = neuronCount; // Total local neurons
       const executors = await AgentRegistry.getSupportedExecutors(this.forge);
       const executorCount = executors.length;
       const totalMB = (totalPayloadSize / 1024 / 1024).toFixed(2);
 
-      // Build change summary
-      const changes = [];
-      if (added.length > 0) changes.push(`${added.length} added`);
-      if (modified.length > 0) changes.push(`${modified.length} updated`);
-      if (removed.length > 0) changes.push(`${removed.length} deleted`);
-      const changeStr = changes.length > 0 ? ` (${changes.join(', ')})` : '';
+      // Get remote counts from cache (represents what's in Forge before sync)
+      const remoteAgentCount = Object.keys(cache.agentHashes).filter(k => !k.startsWith('neuron/')).length;
+      const remoteNeuronCount = Object.keys(cache.agentHashes).filter(k => k.startsWith('neuron/')).length;
 
-      // Final summary - concise in normal mode, verbose in debug mode
+      // Count what changed by type
+      const addedAgents = added.filter(k => !k.startsWith('neuron/')).length;
+      const addedNeurons = added.filter(k => k.startsWith('neuron/')).length;
+      const removedAgents = removed.filter(k => !k.startsWith('neuron/')).length;
+      const removedNeurons = removed.filter(k => k.startsWith('neuron/')).length;
+
+      // Build git-style diff summary
+      const diffParts = [];
+      if (addedAgents > 0) diffParts.push(`+${addedAgents}a`);
+      if (removedAgents > 0) diffParts.push(`-${removedAgents}a`);
+      if (addedNeurons > 0) diffParts.push(`+${addedNeurons}n`);
+      if (removedNeurons > 0) diffParts.push(`-${removedNeurons}n`);
+      const diffStr = diffParts.length > 0 ? ` (${diffParts.join(' ')})` : '';
+
+      // Final summary - show local/remote counts + git-style diff
       if (debugMode) {
-        console.log(`✅ Synchronized ${syncedAgentCount} agents, ${syncedNeuronCount} neurons${changeStr} across ${executorCount} executors in ${elapsed}s (${totalMB}MB total)`);
+        console.log(`✅ Synchronized ${localAgentCount} agents, ${localNeuronCount} neurons${diffStr} across ${executorCount} executors in ${elapsed}s (${totalMB}MB total)`);
+        console.log(`   Local: ${localAgentCount}a ${localNeuronCount}n | Remote: ${remoteAgentCount}a ${remoteNeuronCount}n`);
       } else {
-        console.log(` ✓ (${syncedAgentCount} agents, ${syncedNeuronCount} neurons synced, ${elapsed}s)`);
+        console.log(` ✓ (${localAgentCount}a ${localNeuronCount}n | ${remoteAgentCount}a ${remoteNeuronCount}n${diffStr}, ${elapsed}s)`);
       }
     } catch (error: any) {
       // Provide helpful error messages for common failures
