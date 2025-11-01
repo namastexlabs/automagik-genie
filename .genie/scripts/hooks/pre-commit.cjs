@@ -136,19 +136,7 @@ function main() {
   }
 
   // Amendment #7: Removed generate-workspace-summary.cjs (redundant with hand-curated knowledge graph in AGENTS.md)
-
-  // Migrate QA workflows from scenarios-from-bugs.md (auto-generate stubs)
-  try {
-    timeExecution('QA migration', () => {
-      const migCode = run('migrate-qa-from-bugs.cjs');
-      if (migCode !== 0) {
-        console.warn('⚠️  QA migration script failed (non-blocking)');
-      }
-      return migCode;
-    });
-  } catch (e) {
-    console.warn('⚠️  QA migration error (non-blocking)');
-  }
+  // Removed migrate-qa-from-bugs.cjs (generated useless TBD files in wrong location, scenarios-from-bugs.md is sufficient)
 
   // Generate token usage and quality summary (non-blocking)
   try {
