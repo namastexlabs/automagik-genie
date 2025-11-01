@@ -220,8 +220,8 @@ export class ForgeExecutor {
 
       // Calculate statistics
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
-      const syncedAgentCount = changedAgents.length;
-      const syncedNeuronCount = changedNeurons.length;
+      const syncedAgentCount = agentCount; // Use total count, not changed count
+      const syncedNeuronCount = neuronCount; // Use total count, not changed count
       const executors = await AgentRegistry.getSupportedExecutors(this.forge);
       const executorCount = executors.length;
       const totalMB = (totalPayloadSize / 1024 / 1024).toFixed(2);
