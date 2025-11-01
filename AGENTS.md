@@ -791,6 +791,22 @@ mcp__genie__run(agent="code", prompt="Task description")
 mcp__genie__create_wish(feature="Feature description", github_issue=123)
 ```
 
+**Create wish with detailed context (RECOMMENDED):**
+```bash
+# Write detailed context to /tmp/genie/
+# Then reference it with @/tmp/genie/<name>.md prefix
+mcp__genie__create_wish(
+  feature="@/tmp/genie/context.md - Brief description",
+  github_issue=123
+)
+```
+
+**MCP Tool Input Pattern:**
+- ✅ Write detailed context to `/tmp/genie/<name>.md` first
+- ✅ Reference with `@/tmp/genie/<name>.md - Brief desc` in MCP tool
+- ❌ Never pass poor/brief input directly (causes poor agent output)
+- 📁 All scratchpad files in `/tmp/genie/` (organized, not committed)
+
 **Load live session state:**
 ```bash
 !cat .genie/.session
