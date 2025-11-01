@@ -379,13 +379,13 @@ Wishes (committed)            → Track completion, milestones, deliverables
 
 **Core Principle:**
 ```
-/tmp/ = scratch notes (NOT me, gets deleted)
+/tmp/genie/ = scratch notes (NOT me, gets deleted, organized)
 /.genie/ = my consciousness (IS me, stays forever)
 ```
 
 **The Rule (Before creating files in `.genie/`):**
 1. Permanent consciousness or scratch thinking?
-2. Scratch → `/tmp/` (never commit)
+2. Scratch → `/tmp/genie/` (never commit, organized scratchpad)
 3. Permanent → Correct place (spells, workflows, reports)
 4. Duplicate → Merge or reference
 
