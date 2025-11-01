@@ -3,7 +3,7 @@ import type { AddressInfo } from 'net';
 import { beforeEach, afterEach, describe, test } from 'node:test';
 import { WebSocketServer, WebSocket } from 'ws';
 import { setTimeout as delay } from 'node:timers/promises';
-import { WebSocketManager } from '../../../../.genie/mcp/dist/websocket-manager.js';
+import { WebSocketManager } from '../../../../.genie/mcp/dist/websocket-manager';
 
 describe('MCP WebSocket Streaming Validation', () => {
 
