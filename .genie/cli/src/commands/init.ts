@@ -424,8 +424,8 @@ async function copyTemplateFiles(
       // Blacklist takes priority (never copy these user directories)
       if (blacklist.has(firstSeg)) return false;
 
-      // Only copy: agents, workflows, skills, spells, scripts, neurons, AGENTS.md, config.yaml, templates
-      if (['agents', 'workflows', 'skills', 'spells', 'scripts', 'neurons'].includes(firstSeg)) return true;
+      // Only copy: agents, workflows, skills, spells, scripts, neurons, product, AGENTS.md, config.yaml, templates
+      if (['agents', 'workflows', 'skills', 'spells', 'scripts', 'neurons', 'product'].includes(firstSeg)) return true;
       if (relPath === 'AGENTS.md' || relPath === 'config.yaml') return true;
       if (relPath.endsWith('.template.md')) return true; // Copy all template files
       return false;
