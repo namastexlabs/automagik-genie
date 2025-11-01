@@ -478,26 +478,44 @@ pnpm test  # Should pass with old code
 - Rollback test: Verify backup restore works
 
 ## Status Log
-- [2025-11-01 15:30 UTC] Wish created
-- [2025-11-01] GitHub issue #424 created
+- [2025-11-01 15:30 UTC] Wish created (initial draft)
+- [2025-11-01 15:45 UTC] GitHub issue #424 created
+- [2025-11-01 16:00 UTC] User feedback received: unified `genie run` architecture clarified
+- [2025-11-01 16:15 UTC] Wish updated with Group D (task monitoring & unified run command)
+- [Pending] Human approval of updated wish document
 - [Pending] Group A execution
 - [Pending] Group B execution
+- [Pending] Group D execution (NEW)
 - [Pending] Group C execution
 - [Pending] Final validation and merge
 
 ---
 
 **Next Actions:**
-1. Human reviews and approves this wish document
+1. Human reviews and approves this wish document (with Group D updates)
 2. Create branch: `git checkout -b wish/424-taxonomy-refactor`
 3. Create backup: `mkdir -p .genie/backups/taxonomy-refactor-$(date +%Y%m%d)`
 4. Execute Group A (type & file renames)
 5. Run tests, capture evidence, get approval
-6. Execute Group B (variable renames & CLI)
+6. Execute Group B (variable renames & CLI base)
 7. Run tests, capture evidence, get approval
-8. Execute Group C (documentation)
-9. Final validation, evidence compilation
-10. Create Done Report
-11. Merge to `dev` branch
+8. Execute Group D (NEW - unified `genie run` with monitoring)
+9. Run tests, capture evidence, get approval
+10. Execute Group C (documentation)
+11. Final validation, evidence compilation
+12. Create Done Report
+13. Merge to `dev` branch
 
 **Wish saved at:** `@.genie/wishes/424-taxonomy-refactor/424-taxonomy-refactor-wish.md`
+
+**Folder structure:**
+```
+.genie/wishes/424-taxonomy-refactor/
+├── 424-taxonomy-refactor-wish.md  ✅ UPDATED with Group D
+├── qa/
+│   ├── group-a/  ✅ (type & file renames)
+│   ├── group-b/  ✅ (variable renames & CLI)
+│   ├── group-c/  ✅ (documentation)
+│   └── group-d/  ✅ NEW (monitoring & unified run)
+└── reports/  ✅
+```
