@@ -252,7 +252,10 @@ export async function runInit(
     let tempBackupPath: string | undefined;
 
     const genieExists = await pathExists(targetGenie);
-    if (genieExists) {
+    // Check if .genie/ has actual content (not just empty state/ directory from version check)
+    const hasActualContent = genieExists ? await genieHasContent(targetGenie) : false;
+
+    if (genieExists && hasActualContent) {
       console.log('');
       console.log('💾 Creating backup before overwriting...');
       const reason = installType === 'old_genie' ? 'old_genie' : 'pre_upgrade';
@@ -475,6 +478,39 @@ async function migrateAgentsDocs(cwd: string): Promise<void> {
     }
   } catch (err) {
     console.log(`⚠️  Agents docs migration skipped: ${(err as Error)?.message || String(err)}`);
+  }
+}
+
+/**
+ * Check if .genie/ has actual content worth backing up
+ * Returns false if it only contains empty state/ directory (from version check)
+ */
+async function genieHasContent(geniePath: string): Promise<boolean> {
+  try {
+    const entries = await fsp.readdir(geniePath);
+
+    // Filter out state/ directory and check if anything else exists
+    const nonStateEntries = entries.filter(entry => entry !== 'state');
+
+    if (nonStateEntries.length > 0) {
+      // Has other directories/files besides state/
+      return true;
+    }
+
+    // Only state/ exists - check if it has any actual content
+    const statePath = path.join(geniePath, 'state');
+    if (await pathExists(statePath)) {
+      const stateEntries = await fsp.readdir(statePath);
+      // Fresh install might have version.json and provider.json from version check
+      // Consider this "empty" since it's just metadata, not user content
+      return false;
+    }
+
+    // Empty .genie/ directory
+    return false;
+  } catch {
+    // If we can't read it, assume it has content to be safe
+    return true;
   }
 }
 
