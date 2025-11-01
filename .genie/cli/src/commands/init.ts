@@ -339,7 +339,7 @@ export async function runInit(
     } catch (error) {
       // Forge unavailable or install flow failed - non-fatal
       console.warn('⚠️  Install orchestration skipped (Forge unavailable)');
-      console.log('   Run `genie` to start Forge and complete installation');
+      console.log(`   Run: genie run master "Run explorer to acquire context, when it ends run the install workflow. Templates: ${templates.join(', ')}"`);
       console.log('');
     }
 
