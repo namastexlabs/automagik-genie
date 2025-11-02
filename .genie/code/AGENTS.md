@@ -595,12 +595,7 @@ interface GenieVersion {
 ### Amendment #Code-11: Git Workflow Implementation
 **Extends Base Development Workflow** - Git commands and worktree specifics
 
-**Branch Strategy (Base Policy):**
-- `dev` is the main development branch (enforced by Base Genie)
-- Feature branches merge to `dev` via PR (enforced by Base Genie)
-- Stable releases merge `dev` → `main` (enforced by Base Genie)
-
-**Worktree Isolation (Code Implementation):**
+**Worktree Isolation:**
 Every Forge task creates dedicated worktree:
 ```bash
 # Forge creates isolated workspace

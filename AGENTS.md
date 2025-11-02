@@ -251,18 +251,7 @@ genie helper count-tokens --before=old.md --after=new.md
 
 **Why:** Uses tiktoken (cl100k_base), same as Claude. Accurate, consistent, auditable. Word count approximations are wrong (2-3x error margin).
 
-### 8. Unified Backup & Version Tracking 🔴 CRITICAL
-**Rule:** Single backup function, single version file, clear package vs workspace separation.
-
-**Terminology:**
-- **PACKAGE UPDATE** = `genie update` (npm binary only, no backups, no workspace changes)
-- **WORKSPACE UPGRADE** = `genie` auto-detects version mismatch, runs init, syncs templates
-
-**Routing:** Check version FIRST (before Forge startup) → mismatch = init → match = start Forge
-
-**Implementation details:** See `.genie/code/AGENTS.md` Amendment #Code-9 (TypeScript interfaces, file locations)
-
-### 10. File Size Discipline - Keep It Under 1000 Lines 🔴 CRITICAL
+### 8. File Size Discipline - Keep It Under 1000 Lines 🔴 CRITICAL
 **Rule:** Source files stay under 1000 lines. Split when crossing threshold.
 
 **Limits:**
@@ -274,9 +263,9 @@ genie helper count-tokens --before=old.md --after=new.md
 
 **Reinforcer:** "That file is too big - I'm getting confused. Can we split it?"
 
-**Refactoring tactics:** See `.genie/code/AGENTS.md` Amendment #Code-10 (extraction patterns, TypeScript specifics)
+**Refactoring tactics:** Code collective responsibility.
 
-### 11. MCP-First Orchestration - Dynamic Over Static 🔴 CRITICAL
+### 9. MCP-First Orchestration - Dynamic Over Static 🔴 CRITICAL
 **Rule:** Master Genie orchestrates through MCP tools, never static file references.
 
 **MCP Tools (Source of Truth):**
@@ -328,7 +317,7 @@ mcp__genie__read_spell - Argument: spell_path="know-yourself"
 mcp__genie__run - Arguments: agent="code", prompt="Task description"
 ```
 
-### 11. ACE Protocol - Evidence-Based Framework Optimization 🔴 CRITICAL
+### 10. ACE Protocol - Evidence-Based Framework Optimization 🔴 CRITICAL
 **Rule:** Before adding learnings, MUST use ACE helpers for validation. All framework changes must be evidence-based and measured.
 
 **Core Principle:**
@@ -361,27 +350,18 @@ ACE (Agentic Context Engineering) ensures framework optimization is data-driven,
 
 ## Development Workflow
 
-**Branch Strategy (Enforced by Base Genie):**
+**Branch Strategy:**
 - `dev` = main development branch
 - Feature branches → `dev` via PR
 - Stable releases: `dev` → `main`
 
-**Core Philosophy:**
-- Forge is PRIMARY entry point
-- Each task = isolated worktree
-- Parallel development enabled
-
-**Implementation:** See `.genie/code/AGENTS.md` Amendment #Code-11 (git commands, worktree specifics)
+**Technical Implementation:** Code collective responsibility.
 
 ## Quality Standards
 
-**Pre-Push Validation:**
-- ✅ All tests must pass
-- ✅ Commit advisory (warns missing wish/issue links)
-- ✅ Cross-reference validation
-- ✅ User file validation
+**Owner:** Master Genie coordinates quality across all collectives.
 
-**Test commands:** See `.genie/code/AGENTS.md` Amendment #Code-12 (pnpm commands, CI/CD hooks)
+**Quality Gates:** Code collective enforces validation, testing, and CI/CD requirements.
 
 ## QA Coordination Protocol
 
