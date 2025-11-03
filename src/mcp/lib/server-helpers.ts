@@ -233,22 +233,9 @@ export function getVersionHeader(): string {
   return `Genie MCP v${getGenieVersion()}\n\n`;
 }
 
-// Sync agent profiles to Forge on startup
+// NOTE: Agent profile sync removed - Forge discovers .genie folders natively
 export async function syncAgentProfilesToForge(): Promise<void> {
-  const workspaceRoot = findWorkspaceRoot();
-  try {
-    const mod = loadForgeExecutor();
-    if (!mod || typeof mod.createForgeExecutor !== 'function') {
-      console.warn('⚠️  Skipping agent profile sync - Forge executor unavailable');
-      return;
-    }
-
-    const forgeExecutor = mod.createForgeExecutor();
-    // Pass workspaceRoot to ensure correct scanning from MCP server context
-    await forgeExecutor.syncProfiles(undefined, workspaceRoot);
-  } catch (error: any) {
-    console.warn(`⚠️  Agent profile sync failed: ${error.message}`);
-  }
+  // No-op: Forge discovers .genie folders natively, sync no longer needed
 }
 
 // Load OAuth2 configuration (if available)

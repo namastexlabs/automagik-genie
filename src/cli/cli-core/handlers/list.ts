@@ -29,15 +29,8 @@ export function createListHandler(ctx: HandlerContext): Handler {
 
     if (target === 'sessions') {
       const forgeExecutor = createForgeExecutor();
-      let forgeAvailable = true;
-      try {
-        // Skip config.forge.executors - incompatible format, Forge loads from its own config
-        await forgeExecutor.syncProfiles();
-      } catch (error) {
-        forgeAvailable = false;
-        const reason = describeForgeError(error);
-        ctx.recordRuntimeWarning(`Forge sync failed: ${reason}`);
-      }
+      // NOTE: Agent profile sync removed - Forge discovers .genie folders natively
+      let forgeAvailable = true; // Assume Forge is available (will fail on listSessions() if not)
 
       if (forgeAvailable) {
         try {

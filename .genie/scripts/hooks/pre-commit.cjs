@@ -116,6 +116,17 @@ function main() {
     exitCode = 1;
   }
 
+  // Path validation (blocking)
+  console.log('🔗 Validating file path references...');
+  const validatePathsPath = path.join(gitRoot, '.genie', 'scripts', 'helpers', 'validate-paths.js');
+  const pathsCheckCode = timeExecution('Path validation', () => {
+    const pathsCheck = spawnSync('node', [validatePathsPath, '--staged'], { stdio: 'inherit' });
+    return pathsCheck.status || 0;
+  });
+  if (pathsCheckCode !== 0) {
+    exitCode = 1;
+  }
+
   // Amendment #7: Git is source of truth - no auto-metadata generation
   // Disabled: update-genie-markdown-metadata.cjs (timestamps/versions duplicate git data)
 

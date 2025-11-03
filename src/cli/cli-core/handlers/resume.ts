@@ -20,14 +20,7 @@ export function createResumeHandler(ctx: HandlerContext): Handler {
     }
 
     const forgeExecutor = createForgeExecutor();
-    try {
-      // Skip config.forge.executors - incompatible format, Forge loads from its own config
-      await forgeExecutor.syncProfiles();
-    } catch (error) {
-      const reason = describeForgeError(error);
-      ctx.recordRuntimeWarning(`Forge sync failed: ${reason}`);
-      throw new Error(`Forge backend unavailable while resuming session '${attemptId}'. ${FORGE_RECOVERY_HINT}`);
-    }
+    // NOTE: Agent profile sync removed - Forge discovers .genie folders natively
 
     try {
       await forgeExecutor.resumeSession(attemptId, prompt);

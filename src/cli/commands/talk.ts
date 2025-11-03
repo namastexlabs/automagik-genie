@@ -84,12 +84,7 @@ export async function runTalk(
 
   // Create Forge session
   const forgeExecutor = createForgeExecutor();
-  try {
-    await forgeExecutor.syncProfiles(config.forge?.executors);
-  } catch (error) {
-    const reason = describeForgeError(error);
-    console.warn(`⚠️  Failed to sync agent profiles to Forge: ${reason}`);
-  }
+  // NOTE: Agent profile sync removed - Forge discovers .genie folders natively
 
   let sessionResult;
   try {

@@ -49,15 +49,7 @@ export function createRunHandler(ctx: HandlerContext): Handler {
     }
 
     const forgeExecutor = createForgeExecutor();
-    try {
-      // Skip config.forge.executors - incompatible format, Forge loads from its own config
-      await forgeExecutor.syncProfiles();
-    } catch (error) {
-      const reason = describeForgeError(error);
-      ctx.recordRuntimeWarning(`Forge sync failed: ${reason}`);
-      console.error(`[DEBUG] syncProfiles error:`, error);
-      throw new Error(`Forge backend unavailable while starting a session. ${FORGE_RECOVERY_HINT}\nReason: ${reason}`);
-    }
+    // NOTE: Agent profile sync removed - Forge discovers .genie folders natively
 
     const startTime = Date.now();
     let sessionResult;
