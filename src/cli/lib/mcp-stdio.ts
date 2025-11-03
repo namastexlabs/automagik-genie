@@ -13,7 +13,7 @@ import { isForgeRunning } from './forge-manager';
  * Requires Forge to already be running
  */
 export async function startMCPStdio(): Promise<void> {
-  const mcpServer = path.join(__dirname, '../../../mcp/dist/server.js');
+  const mcpServer = path.join(__dirname, '../../../dist/mcp/server.js');
 
   // Check if MCP server exists
   if (!fs.existsSync(mcpServer)) {

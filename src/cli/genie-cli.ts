@@ -28,7 +28,7 @@ const magicGradient = gradient(['#ff00ff', '#9933ff', '#0066ff']); // Fuscia →
 
 // Get package version
 const packageJson = JSON.parse(
-  fs.readFileSync(path.join(__dirname, '../../../package.json'), 'utf8')
+  fs.readFileSync(path.join(__dirname, '../../package.json'), 'utf8')
 );
 
 program
