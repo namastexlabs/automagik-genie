@@ -258,7 +258,7 @@ export function loadOAuth2Config(): any | null {
   // Try multiple locations for config-manager.js
   const searchPaths = [
     // 1. User workspace (for dev mode)
-    path.join(workspaceRoot, '.genie', 'cli', 'dist', 'lib', 'config-manager.js'),
+    path.join(workspaceRoot, 'dist', 'cli', 'lib', 'config-manager.js'),
 
     // 2. Global install (resolved relative to this MCP server file)
     // MCP server at: node_modules/automagik-genie/dist/mcp/lib/server-helpers.js
