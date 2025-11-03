@@ -19,7 +19,7 @@ let validateClientCredentialsFn: (providedClientId: string, providedClientSecret
 
 function loadOAuth2Utils() {
   if (!generateAccessTokenFn) {
-    const oauth2Utils = require('../../cli/dist/lib/oauth2-utils.js');
+    const oauth2Utils = require('../../cli/lib/oauth2-utils.js');
     generateAccessTokenFn = oauth2Utils.generateAccessToken;
     validateClientCredentialsFn = oauth2Utils.validateClientCredentials;
   }

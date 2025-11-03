@@ -34,7 +34,7 @@ export class SessionManager {
     try {
       // Import agent registry (resolve from global package or workspace)
       // @ts-ignore - Dynamic import from compiled CLI
-      const { getAgentRegistry } = await import('../../cli/dist/lib/agent-registry.js');
+      const { getAgentRegistry } = await import('../../cli/lib/agent-registry.js');
 
       const registry = await getAgentRegistry();
 

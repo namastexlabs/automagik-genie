@@ -86,12 +86,12 @@ export function loadForgeExecutor(): { createForgeExecutor: () => any } | null {
   // Prefer compiled dist (works in published package)
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    return require('../../cli/dist/lib/forge-executor');
+    return require('../../cli/lib/forge-executor');
   } catch (_distErr) {
     // Fallback to TypeScript sources for local dev (within repo)
     try {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
-      return require('../../cli/src/lib/forge-executor');
+      return require('../../../src/cli/lib/forge-executor');
     } catch (_srcErr) {
       return null;
     }
@@ -261,9 +261,9 @@ export function loadOAuth2Config(): any | null {
     path.join(workspaceRoot, '.genie', 'cli', 'dist', 'lib', 'config-manager.js'),
 
     // 2. Global install (resolved relative to this MCP server file)
-    // MCP server at: node_modules/automagik-genie/.genie/mcp/dist/lib/server-helpers.js
-    // CLI at:        node_modules/automagik-genie/.genie/cli/dist/lib/config-manager.js
-    path.join(__dirname, '../../cli/dist/lib/config-manager.js'),
+    // MCP server at: node_modules/automagik-genie/dist/mcp/lib/server-helpers.js
+    // CLI at:        node_modules/automagik-genie/dist/cli/lib/config-manager.js
+    path.join(__dirname, '../../cli/lib/config-manager.js'),
   ];
 
   for (const configModPath of searchPaths) {
