@@ -53,7 +53,7 @@ export class SessionManager {
         return {
           forge_profile_name: profileName,
           executor: neuronAgent.genie?.executor || 'CLAUDE_CODE',
-          model: neuronAgent.genie?.model,
+          model: neuronAgent.forge?.model, // Model moved to forge namespace
           background: neuronAgent.genie?.background
         };
       }
