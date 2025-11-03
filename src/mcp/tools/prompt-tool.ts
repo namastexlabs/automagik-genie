@@ -14,8 +14,12 @@ import path from 'path';
 import { getOrCreateGenieProject } from '../lib/project-detector.js';
 import { formatTaskTitle } from '../lib/task-title-formatter.js';
 
-// Load ForgeClient from src/lib
-const ForgeClient = require('../../lib/forge-client.js').ForgeClient;
+// Load ForgeClient from src/lib (resolves from package root)
+// Compiled location: dist/mcp/tools/prompt-tool.js
+// Target: src/lib/forge-client.js
+// Path: ../../../src/lib/forge-client.js (dist/mcp/tools -> root -> src/lib)
+const geniePackageRoot = path.resolve(__dirname, '../../..');
+const ForgeClient = require(path.join(geniePackageRoot, 'src/lib/forge-client.js')).ForgeClient;
 
 const FORGE_URL = process.env.FORGE_BASE_URL || 'http://localhost:8887';
 

@@ -8,8 +8,11 @@
 import { z } from 'zod';
 import path from 'path';
 
-// Load ForgeClient
-const ForgeClient = require('../../lib/forge-client.js').ForgeClient;
+// Load ForgeClient from src/lib (resolves from package root)
+// Compiled location: dist/mcp/tools/continue-task-tool.js
+// Target: src/lib/forge-client.js
+const geniePackageRoot = path.resolve(__dirname, '../../..');
+const ForgeClient = require(path.join(geniePackageRoot, 'src/lib/forge-client.js')).ForgeClient;
 
 const FORGE_URL = process.env.FORGE_BASE_URL || 'http://localhost:8887';
 
