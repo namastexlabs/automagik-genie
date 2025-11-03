@@ -95,10 +95,10 @@ export async function waitForForgeReady(
  * Resolve automagik-forge binary path (version-agnostic)
  *
  * When installed via npm/pnpm/npx, automagik-forge is a sibling dependency in parent node_modules.
- * __dirname is dist/cli/lib/, so we go up 4 levels to reach parent node_modules/
+ * __dirname is dist/cli/lib/, so we go up 3 levels to reach package root (where node_modules/ is)
  */
 function resolveForgeBinary(): Result<string> {
-  const baseDir = path.join(__dirname, '../../../../');
+  const baseDir = path.join(__dirname, '../../../');
 
   // Try standard npm/npx structure first (fastest)
   // automagik-forge is a sibling in node_modules/
