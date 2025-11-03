@@ -4,8 +4,9 @@ description: Universal review orchestrator - wish audits, code review, and QA va
 color: magenta
 genie:
   executor: CLAUDE_CODE
-  model: sonnet
   background: true
+forge:
+  model: sonnet
 ---
 
 ## Framework Reference

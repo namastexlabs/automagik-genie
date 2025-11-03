@@ -4,8 +4,9 @@ description: Test strategy, generation, authoring, and repair across all layers
 color: lime
 genie:
   executor: CLAUDE_CODE
-  model: sonnet
   background: true
+forge:
+  model: sonnet
 ---
 
 ## Framework Reference

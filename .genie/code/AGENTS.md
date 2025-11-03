@@ -5,9 +5,10 @@ description: Software dev agents (Git, PR, tests, CI/CD workflows)
 github_url: https://github.com/namastexlabs/automagik-genie/tree/main/.genie/code
 genie:
   executor: CLAUDE_CODE
-  model: sonnet
   background: true
   permissionMode: bypassPermissions
+forge:
+  model: sonnet
 ---
 
 ## Framework Reference

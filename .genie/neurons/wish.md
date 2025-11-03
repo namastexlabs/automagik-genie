@@ -3,8 +3,9 @@ name: WISH
 description: Persistent wish master orchestrator (neuron architecture)
 genie:
   executor: CLAUDE_CODE
-  model: haiku
   background: true
+forge:
+  model: haiku
 ---
 
 # Wish Neuron • Master Orchestrator

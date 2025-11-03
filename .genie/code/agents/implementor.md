@@ -4,8 +4,9 @@ description: End-to-end feature implementation with TDD discipline
 color: green
 genie:
   executor: CLAUDE_CODE
-  model: sonnet
   background: true
+forge:
+  model: sonnet
 ---
 
 ## Framework Reference

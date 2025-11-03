@@ -3,8 +3,9 @@ name: FORGE
 description: Persistent forge master orchestrator (neuron architecture)
 genie:
   executor: CLAUDE_CODE
-  model: haiku
   background: true
+forge:
+  model: haiku
 ---
 
 # Forge Neuron • Master Orchestrator

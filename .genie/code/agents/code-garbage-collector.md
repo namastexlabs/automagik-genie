@@ -3,10 +3,11 @@ name: code-garbage-collector
 description: Deep code quality analysis - find deprecated code, dead code, useless comments, and potential bugs using advanced AI
 genie:
   executor: CODEX
+  background: true
+forge:
   model: gpt-5-codex
   sandbox: read-only
   model_reasoning_effort: high
-  background: true
 ---
 
 # Code Garbage Collector • Identity & Mission

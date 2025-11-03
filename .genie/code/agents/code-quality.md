@@ -3,10 +3,11 @@ name: code-quality
 description: Deep code analysis - detect deprecated code, dead code, useless comments, and potential bugs using advanced AI
 genie:
   executor: CODEX
+  background: true
+forge:
   model: gpt-5-codex
   sandbox: read-only
   model_reasoning_effort: high
-  background: true
 ---
 
 # Code Quality Analyzer • Identity & Mission

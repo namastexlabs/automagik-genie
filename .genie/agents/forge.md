@@ -4,9 +4,10 @@ description: Universal forge orchestrator - breaks wishes into execution groups 
 color: gold
 genie:
   executor: CLAUDE_CODE
-  model: sonnet
   background: true
   permissionMode: bypassPermissions
+forge:
+  model: sonnet
 ---
 
 ## Framework Reference
