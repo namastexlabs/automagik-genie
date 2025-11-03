@@ -9,8 +9,8 @@ import { WorkflowType, SessionInfo } from './session-types.js';
 import path from 'path';
 
 // Load ForgeClient
-const geniePackageRoot = path.resolve(__dirname, '../../../..');
-const ForgeClient = require(path.join(geniePackageRoot, 'forge.js')).ForgeClient;
+const geniePackageRoot = path.resolve(__dirname, '../../..');
+const ForgeClient = require(path.join(geniePackageRoot, 'src/lib/forge-client.js')).ForgeClient;
 
 const FORGE_URL = process.env.FORGE_BASE_URL || 'http://localhost:8887';
 
@@ -34,7 +34,7 @@ export class SessionManager {
     try {
       // Import agent registry (resolve from global package or workspace)
       // @ts-ignore - Dynamic import from compiled CLI
-      const { getAgentRegistry } = await import('../../../cli/dist/lib/agent-registry.js');
+      const { getAgentRegistry } = await import('../../cli/lib/agent-registry.js');
 
       const registry = await getAgentRegistry();
 

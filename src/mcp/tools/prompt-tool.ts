@@ -16,10 +16,10 @@ import { formatTaskTitle } from '../lib/task-title-formatter.js';
 
 // Load ForgeClient from Genie package root (not user's cwd)
 // The MCP server is at: <genie-package>/.genie/mcp/dist/tools/prompt-tool.js
-// forge.js is at: <genie-package>/forge.js
-// So we need to go up 4 levels: tools -> dist -> mcp -> .genie -> root
-const geniePackageRoot = path.resolve(__dirname, '../../../..');
-const ForgeClient = require(path.join(geniePackageRoot, 'forge.js')).ForgeClient;
+// src/lib/forge-client.js is at: <genie-package>/src/lib/forge-client.js
+// So we need to go up 3 levels: tools -> dist -> mcp -> root
+const geniePackageRoot = path.resolve(__dirname, '../../..');
+const ForgeClient = require(path.join(geniePackageRoot, 'src/lib/forge-client.js')).ForgeClient;
 
 const FORGE_URL = process.env.FORGE_BASE_URL || 'http://localhost:8887';
 
