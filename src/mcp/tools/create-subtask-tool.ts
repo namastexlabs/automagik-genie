@@ -11,7 +11,7 @@ import { execSync } from 'child_process';
 import { formatTaskTitle } from '../lib/task-title-formatter.js';
 
 // Load ForgeClient
-const ForgeClient = require('../../../lib/forge-client.js').ForgeClient;
+const ForgeClient = require('../../lib/forge-client.js').ForgeClient;
 
 const FORGE_URL = process.env.FORGE_BASE_URL || 'http://localhost:8887';
 

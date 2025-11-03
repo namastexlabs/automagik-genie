@@ -15,7 +15,7 @@ import { getOrCreateGenieProject } from '../lib/project-detector.js';
 import { formatTaskTitle } from '../lib/task-title-formatter.js';
 
 // Load ForgeClient from src/lib
-const ForgeClient = require('../../../lib/forge-client.js').ForgeClient;
+const ForgeClient = require('../../lib/forge-client.js').ForgeClient;
 
 const FORGE_URL = process.env.FORGE_BASE_URL || 'http://localhost:8887';
 
