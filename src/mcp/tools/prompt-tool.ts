@@ -14,7 +14,7 @@ import path from 'path';
 import { getOrCreateGenieProject } from '../lib/project-detector.js';
 import { formatTaskTitle } from '../lib/task-title-formatter.js';
 
-// Load ForgeClient from src/lib (resolves from package root)
+// Load ForgeClient from Genie package root (not user's cwd)
 // Compiled location: dist/mcp/tools/prompt-tool.js
 // Target: src/lib/forge-client.js
 // Path: ../../../src/lib/forge-client.js (dist/mcp/tools -> root -> src/lib)
