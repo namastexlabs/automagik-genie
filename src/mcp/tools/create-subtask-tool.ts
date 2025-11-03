@@ -11,8 +11,7 @@ import { execSync } from 'child_process';
 import { formatTaskTitle } from '../lib/task-title-formatter.js';
 
 // Load ForgeClient
-const geniePackageRoot = path.resolve(__dirname, '../../../..');
-const ForgeClient = require(path.join(geniePackageRoot, 'forge.js')).ForgeClient;
+const ForgeClient = require('../../../lib/forge-client.js').ForgeClient;
 
 const FORGE_URL = process.env.FORGE_BASE_URL || 'http://localhost:8887';
 
