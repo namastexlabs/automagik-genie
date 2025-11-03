@@ -1,5 +1,15 @@
 # COMPLETE DEPENDENCY MAPPING FOR .GENIE/CLI, .GENIE/MCP & FORGE.JS MIGRATION
 
+> ⚠️ **HISTORICAL DOCUMENT** - This documents the file structure BEFORE Issue #359 migration.
+>
+> **Current structure (after #359):**
+> - `.genie/cli/src/` → `src/cli/`
+> - `.genie/mcp/src/` → `src/mcp/`
+> - `.genie/cli/dist/` → `dist/cli/`
+> - `.genie/mcp/dist/` → `dist/mcp/`
+>
+> This document is preserved for historical reference and understanding the migration scope.
+
 **Project Root:** `/var/tmp/automagik-forge/worktrees/2752-wish-default`
 **Date Generated:** 2025-11-02
 **Analysis Scope:** 100% of external imports + internal cross-folder imports
