@@ -1,5 +1,5 @@
 // @ts-ignore - forge.js is compiled JS without type declarations
-import { ForgeClient } from '../../../../src/lib/forge-client.js';
+import { ForgeClient } from '../../../src/lib/forge-client.js';
 import { execSync } from 'child_process';
 import { createHash } from 'crypto';
 import fs from 'fs';
