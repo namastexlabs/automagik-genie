@@ -59,12 +59,15 @@
 | User conversation 2025-11-01 (initial) | discussion | Initial taxonomy proposal: session→task, run↔talk swap, monitor tool | entire wish |
 | User conversation 2025-11-01 (feedback) | requirements | Clarified `genie run` behavior: browser + monitoring + JSON output | Group D, spec contract |
 | Ultrathink analysis | planning | 13,752 occurrences, 170 files, 4-phase execution plan | Group A, B, C |
-| `@.genie/cli/src/genie.ts:94,133` | code | Command router (run/talk entry points) | Group B |
-| `@.genie/cli/src/cli-core/session-service.ts` | code | Core session orchestration logic | Group A |
-| `@.genie/mcp/src/lib/session-types.ts` | code | TypeScript interface definitions | Group A |
-| `@.genie/mcp/src/server.ts` | code | MCP tool registrations | Group B |
-| `@.genie/cli/src/commands/talk.ts` | code | Current browser-opening behavior (template for new `run`) | Group D |
-| `@.genie/cli/src/commands/run.ts` | code | Current headless behavior (becomes `task`) | Group B |
+| `@src/cli/genie.ts:94,133` | code | Command router (run/talk entry points) | Group B |
+| `@src/cli/cli-core/session-service.ts` | code | Core session orchestration logic | Group A |
+| `@src/mcp/lib/session-types.ts` | code | TypeScript interface definitions | Group A |
+| `@src/mcp/server.ts` | code | MCP tool registrations | Group B, E |
+| `@src/cli/commands/talk.ts` | code | Current browser-opening behavior (template for new `run`) | Group D |
+| `@src/cli/commands/run.ts` | code | Current headless behavior (becomes `task`) | Group B |
+| #359 Migration Complete | milestone | Code moved from .genie/ to src/ structure | All groups |
+| Official MCP SDK | architecture | Using @modelcontextprotocol/sdk (not fastmcp) | Group E |
+| Forge WebSocket Streams | architecture | Real-time logs/diffs/tasks via WebSocket | Group E |
 | `@AGENTS.md` | docs | Quick Reference section with MCP examples | Group C |
 | `@.genie/spells/*.md` | docs | Multiple spells reference MCP tools | Group C |
 | Wait MCP tool (`mcp__wait__wait_minutes`) | external | Existing wait functionality, 2-1440 min range | Group D (monitoring pattern reference) |
@@ -167,11 +170,11 @@ Refactor Genie codebase to align terminology with natural language and user ment
 ### Group A – Type & File Renames (Core Infrastructure)
 - **Goal:** Rename TypeScript interfaces, types, and core files from session → task terminology
 - **Surfaces:**
-  - `@.genie/mcp/src/lib/session-types.ts` → `task-types.ts`
-  - `@.genie/cli/src/cli-core/session-service.ts` → `task-service.ts`
-  - `@.genie/mcp/src/lib/session-manager.ts` → `task-manager.ts`
-  - `@.genie/cli/src/session-store.ts` → `task-store.ts`
-  - `@.genie/cli/src/lib/session-helpers.ts` → `task-helpers.ts`
+  - `@src/mcp/lib/session-types.ts` → `task-types.ts`
+  - `@src/cli/cli-core/session-service.ts` → `task-service.ts`
+  - `@src/mcp/lib/session-manager.ts` → `task-manager.ts`
+  - `@src/cli/session-store.ts` → `task-store.ts`
+  - `@src/cli/lib/session-helpers.ts` → `task-helpers.ts`
   - All imports referencing renamed files
 - **Deliverables:**
   - Files renamed with git mv (preserve history)
@@ -186,22 +189,25 @@ Refactor Genie codebase to align terminology with natural language and user ment
 - **Validation commands:**
   ```bash
   # Before: Count session type references
-  grep -r "interface.*Session" .genie/mcp/src .genie/cli/src --include="*.ts" | wc -l
+  grep -r "interface.*Session" src/mcp src/cli --include="*.ts" | wc -l
 
   # Execute renames
-  git mv .genie/mcp/src/lib/session-types.ts .genie/mcp/src/lib/task-types.ts
-  git mv .genie/cli/src/cli-core/session-service.ts .genie/cli/src/cli-core/task-service.ts
-  # ... (remaining renames)
+  git mv src/mcp/lib/session-types.ts src/mcp/lib/task-types.ts
+  git mv src/cli/cli-core/session-service.ts src/cli/cli-core/task-service.ts
+  git mv src/mcp/lib/session-manager.ts src/mcp/lib/task-manager.ts
+  git mv src/cli/session-store.ts src/cli/task-store.ts
+  git mv src/cli/lib/session-helpers.ts src/cli/lib/task-helpers.ts
 
   # Update imports
-  find .genie -name "*.ts" -exec sed -i 's/from ".*session-types"/from ".*task-types"/g' {} \;
+  find src -name "*.ts" -exec sed -i 's/from ".*session-types"/from ".*task-types"/g' {} \;
+  find src -name "*.ts" -exec sed -i 's/from ".*session-service"/from ".*task-service"/g' {} \;
 
   # Verify TypeScript compilation
-  cd .genie/cli && pnpm run build
-  cd .genie/mcp && pnpm run build
+  pnpm run build:cli
+  pnpm run build:mcp
 
   # After: Verify session types removed
-  grep -r "interface.*Session" .genie/mcp/src .genie/cli/src --include="*.ts" | wc -l  # Should be 0
+  grep -r "interface.*Session" src/mcp src/cli --include="*.ts" | wc -l  # Should be 0
   ```
 - **Approval checkpoint:** Human reviews git diff before committing type renames
 
@@ -209,11 +215,11 @@ Refactor Genie codebase to align terminology with natural language and user ment
 - **Goal:** Rename all variables (sessionId → taskId) and swap CLI commands (run ↔ talk)
 - **Surfaces:**
   - All TypeScript files with `sessionId`, `session_id` variables
-  - `@.genie/cli/src/genie.ts:94,133` (command router cases)
-  - `@.genie/cli/src/commands/talk.ts` → rename to `run.ts`
-  - `@.genie/cli/src/commands/[new]task.ts` (create from old run.ts)
-  - `@.genie/cli/src/cli-core/handlers/run.ts` → `task.ts`
-  - All MCP tool definitions in `@.genie/mcp/src/server.ts`
+  - `@src/cli/genie.ts:94,133` (command router cases)
+  - `@src/cli/commands/talk.ts` → rename to `run.ts`
+  - `@src/cli/commands/[new]task.ts` (create from old run.ts)
+  - `@src/cli/cli-core/handlers/run.ts` → `task.ts`
+  - All MCP tool definitions in `@src/mcp/server.ts`
 - **Deliverables:**
   - Automated search-replace for variables (snake_case, camelCase, kebab-case)
   - CLI command routing swapped
@@ -228,27 +234,26 @@ Refactor Genie codebase to align terminology with natural language and user ment
 - **Validation commands:**
   ```bash
   # Before: Count occurrences
-  echo "session_id: $(grep -r 'session_id' .genie --include='*.ts' --include='*.js' | wc -l)"
-  echo "sessionId: $(grep -r 'sessionId' .genie --include='*.ts' --include='*.js' | wc -l)"
+  echo "session_id: $(grep -r 'session_id' src --include='*.ts' --include='*.js' | wc -l)"
+  echo "sessionId: $(grep -r 'sessionId' src --include='*.ts' --include='*.js' | wc -l)"
 
   # Execute automated replacements (in order: specific → generic)
-  find .genie -name "*.ts" -o -name "*.js" | xargs sed -i 's/session_id/task_id/g'
-  find .genie -name "*.ts" -o -name "*.js" | xargs sed -i 's/sessionId/taskId/g'
-  find .genie -name "*.ts" | xargs sed -i 's/\bSession\b/Task/g'
-  find .genie -name "*.ts" -o -name "*.js" -o -name "*.md" | xargs sed -i 's/session-id/task-id/g'
+  find src -name "*.ts" -o -name "*.js" | xargs sed -i 's/session_id/task_id/g'
+  find src -name "*.ts" -o -name "*.js" | xargs sed -i 's/sessionId/taskId/g'
+  find src -name "*.ts" | xargs sed -i 's/\bSession\b/Task/g'
 
   # Rename CLI command files
-  git mv .genie/cli/src/commands/talk.ts .genie/cli/src/commands/run.ts
-  git mv .genie/cli/src/commands/run.ts .genie/cli/src/commands/task.ts
-  git mv .genie/cli/src/cli-core/handlers/run.ts .genie/cli/src/cli-core/handlers/task.ts
+  git mv src/cli/commands/talk.ts src/cli/commands/run.ts
+  git mv src/cli/commands/run.ts src/cli/commands/task.ts
+  git mv src/cli/cli-core/handlers/run.ts src/cli/cli-core/handlers/task.ts
 
   # Update command router
-  sed -i "s/case 'run':/case 'task':/" .genie/cli/src/genie.ts
-  sed -i "s/case 'talk':/case 'run':/" .genie/cli/src/genie.ts
+  sed -i "s/case 'run':/case 'task':/" src/cli/genie.ts
+  sed -i "s/case 'talk':/case 'run':/" src/cli/genie.ts
 
   # After: Verify counts
-  echo "task_id: $(grep -r 'task_id' .genie --include='*.ts' --include='*.js' | wc -l)"
-  echo "taskId: $(grep -r 'taskId' .genie --include='*.ts' --include='*.js' | wc -l)"
+  echo "task_id: $(grep -r 'task_id' src --include='*.ts' --include='*.js' | wc -l)"
+  echo "taskId: $(grep -r 'taskId' src --include='*.ts' --include='*.js' | wc -l)"
 
   # Test CLI commands
   genie run --help  # Should show interactive mode help
@@ -261,8 +266,8 @@ Refactor Genie codebase to align terminology with natural language and user ment
 - **Surfaces:**
   - `@AGENTS.md` (Quick Reference section)
   - `@.genie/spells/*.md` (all spells referencing MCP tools)
-  - `@.genie/cli/README.md`
-  - `@.genie/mcp/README.md`
+  - `@src/cli/README.md`
+  - `@src/mcp/README.md`
   - `@.genie/product/docs/mcp-interface.md`
   - All CLI help text and command descriptions
   - All error messages and user-facing strings
@@ -308,9 +313,9 @@ Refactor Genie codebase to align terminology with natural language and user ment
 ### Group D – Task Monitoring & Unified `genie run` (NEW Feature)
 - **Goal:** Transform `genie run` into unified command with browser opening, task monitoring, and JSON output
 - **Surfaces:**
-  - `@.genie/cli/src/commands/run.ts` (new implementation, merge talk.ts behavior + monitoring)
-  - `@.genie/cli/src/commands/task.ts` (preserve old run.ts headless behavior)
-  - `@.genie/cli/src/lib/task-monitor.ts` (NEW - WebSocket monitoring logic)
+  - `@src/cli/commands/run.ts` (new implementation, merge talk.ts behavior + monitoring)
+  - `@src/cli/commands/task.ts` (preserve old run.ts headless behavior)
+  - `@src/cli/lib/task-monitor.ts` (NEW - WebSocket monitoring logic)
   - Forge WebSocket client integration
   - Browser opening logic (fullscreen task view)
   - JSON output formatter
@@ -354,6 +359,98 @@ Refactor Genie codebase to align terminology with natural language and user ment
   - Fullscreen task view URL: `http://localhost:{port}/tasks/{task_id}`
   - Monitor pattern: Similar to `mcp__wait__wait_minutes` but event-driven (WebSocket)
 - **Approval checkpoint:** Human tests both `run` and `task` commands, verifies behavior differences
+
+### Group E – WebSocket Migration & MCP Cleanup (CRITICAL)
+- **Goal:** Migrate MCP tools from HTTP polling to WebSocket streaming, cleanup ancient fastmcp code
+- **Context:**
+  - #359 Migration Complete: Code moved from .genie/ to src/
+  - forge/mcp/ uses ancient fastmcp (obsolete)
+  - src/mcp/ uses Official SDK (@modelcontextprotocol/sdk v1.9.0) ✅
+  - Forge API has NO `output`/`logs` fields (WebSocket-first by design)
+  - Current `mcp__genie__view` broken: tries to read non-existent fields
+- **Surfaces:**
+  - `@src/mcp/server.ts` (viewSession function, all MCP tools)
+  - WebSocket integration using Official SDK patterns
+  - Forge WebSocket streams (logs, diffs, tasks)
+- **Deliverables:**
+  - Delete forge/mcp/ (obsolete fastmcp implementation) ✅ DONE
+  - Fix `mcp__genie__view_task` to use WebSocket + Git commit hybrid
+  - Add WebSocket monitoring to `mcp__genie__task` (formerly `run`)
+  - Update tools to Official SDK patterns (no fastmcp references)
+  - Zero HTTP polling for real-time data
+- **Evidence:**
+  - Store in `qa/group-e/`:
+    - `cleanup-log.txt` (forge/mcp deletion confirmation)
+    - `view-tool-test.log` (mcp__genie__view returns actual results)
+    - `websocket-integration-test.log` (real-time streaming validated)
+    - `sdk-verification.log` (no fastmcp references remain)
+- **Validation commands:**
+  ```bash
+  # Verify cleanup
+  ls forge/mcp 2>&1  # Should error: no such directory
+  grep -r "fastmcp" src/ --include="*.{ts,js}"  # Should return: no matches
+
+  # Test fixed view tool
+  # (Start task first)
+  genie run master "Quick test"
+  # (Get task ID, then view it)
+  # Should return actual transcript, not "(No logs available yet)"
+
+  # Verify Official SDK usage
+  grep -r "@modelcontextprotocol/sdk" src/mcp/ --include="*.ts"  # Should find imports
+
+  # Test WebSocket streams
+  # (Manual: Start task, verify real-time logs streaming)
+  ```
+- **Implementation Pattern (Official SDK + WebSocket):**
+  ```typescript
+  // Fix viewSession function (src/mcp/server.ts)
+  async function viewSession(taskId: string) {
+    const forge = new ForgeClient('http://localhost:8887');
+    const processes = await forge.listExecutionProcesses(taskId);
+
+    if (!processes || processes.length === 0) {
+      return { status: 'unknown', transcript: null };
+    }
+
+    const latestProcess = processes[processes.length - 1];
+    const status = latestProcess.status;
+
+    // For completed tasks: Read from git commit
+    if (status === 'completed' && latestProcess.after_head_commit) {
+      const attempt = await forge.getTaskAttempt(taskId);
+      if (attempt.container_ref) {
+        const { execSync } = require('child_process');
+        const commitMsg = execSync(
+          `git --git-dir=${attempt.container_ref}/.git log -1 --format="%B" ${latestProcess.after_head_commit}`,
+          { encoding: 'utf8' }
+        ).trim();
+        return { status, transcript: commitMsg };
+      }
+    }
+
+    // For running tasks: Subscribe to WebSocket
+    if (status === 'running') {
+      return new Promise((resolve) => {
+        const ws = new WebSocket(`ws://localhost:8887/api/execution-processes/${latestProcess.id}/logs`);
+        let logBuffer = '';
+
+        ws.on('message', (data: Buffer) => {
+          logBuffer += data.toString();
+        });
+
+        ws.on('close', () => {
+          resolve({ status: 'running', transcript: logBuffer });
+        });
+
+        setTimeout(() => ws.close(), 30000);  // 30s timeout
+      });
+    }
+
+    return { status, transcript: null };
+  }
+  ```
+- **Approval checkpoint:** Human verifies mcp__genie__view returns actual results, not empty
 
 ## Verification Plan
 
@@ -427,6 +524,8 @@ pnpm test  # Should pass with old code
   - Migration automation for downstream repos (future work)
   - Changes to `.genie/.session` file format (stays as-is)
   - Optional monitoring for `genie task` (keep pure automation)
+  - Refactoring fastmcp docs (deleted, obsolete)
+  - Supporting both fastmcp and Official SDK (Official SDK only)
 - **Success metrics:**
   - Zero occurrences of "Session" types in TypeScript code
   - Zero test failures after all changes
@@ -439,6 +538,11 @@ pnpm test  # Should pass with old code
   - Documentation 100% consistent with new terminology
   - Backup created and rollback tested
   - Token count neutral (±0 tokens)
+  - forge/mcp/ deleted (obsolete fastmcp code)
+  - Zero fastmcp references in src/
+  - `mcp__genie__view` returns actual results (not "(No logs available yet)")
+  - Official SDK (@modelcontextprotocol/sdk) confirmed in src/mcp/
+  - WebSocket streams validated (logs, diffs, tasks)
 - **GitHub issue:** #424
 - **Dependencies:**
   - TypeScript 5.9 compiler
@@ -482,40 +586,49 @@ pnpm test  # Should pass with old code
 - [2025-11-01 15:45 UTC] GitHub issue #424 created
 - [2025-11-01 16:00 UTC] User feedback received: unified `genie run` architecture clarified
 - [2025-11-01 16:15 UTC] Wish updated with Group D (task monitoring & unified run command)
+- [2025-11-02 20:00 UTC] Discovered #359 migration complete (.genie/ → src/)
+- [2025-11-02 20:15 UTC] Identified fastmcp as obsolete (forge/mcp deleted)
+- [2025-11-02 20:30 UTC] Added Group E (WebSocket migration & MCP cleanup)
+- [2025-11-02 20:45 UTC] Updated all paths in wish (.genie/ → src/)
+- [2025-11-02 21:00 UTC] Cleanup complete: forge/mcp deleted, fastmcp references removed
 - [Pending] Human approval of updated wish document
 - [Pending] Group A execution
 - [Pending] Group B execution
-- [Pending] Group D execution (NEW)
-- [Pending] Group C execution
+- [Pending] Group D execution
+- [Pending] Group E execution (NEW - WebSocket migration)
+- [Pending] Group C execution (documentation)
 - [Pending] Final validation and merge
 
 ---
 
 **Next Actions:**
-1. Human reviews and approves this wish document (with Group D updates)
+1. Human reviews and approves this wish document (with Groups D & E updates)
 2. Create branch: `git checkout -b wish/424-taxonomy-refactor`
 3. Create backup: `mkdir -p .genie/backups/taxonomy-refactor-$(date +%Y%m%d)`
 4. Execute Group A (type & file renames)
 5. Run tests, capture evidence, get approval
 6. Execute Group B (variable renames & CLI base)
 7. Run tests, capture evidence, get approval
-8. Execute Group D (NEW - unified `genie run` with monitoring)
+8. Execute Group D (unified `genie run` with monitoring)
 9. Run tests, capture evidence, get approval
-10. Execute Group C (documentation)
-11. Final validation, evidence compilation
-12. Create Done Report
-13. Merge to `dev` branch
+10. Execute Group E (WebSocket migration & MCP cleanup)
+11. Run tests, capture evidence, get approval
+12. Execute Group C (documentation)
+13. Final validation, evidence compilation
+14. Create Done Report
+15. Merge to `dev` branch
 
 **Wish saved at:** `@.genie/wishes/424-taxonomy-refactor/424-taxonomy-refactor-wish.md`
 
 **Folder structure:**
 ```
 .genie/wishes/424-taxonomy-refactor/
-├── 424-taxonomy-refactor-wish.md  ✅ UPDATED with Group D
+├── 424-taxonomy-refactor-wish.md  ✅ UPDATED with Groups D & E
 ├── qa/
 │   ├── group-a/  ✅ (type & file renames)
 │   ├── group-b/  ✅ (variable renames & CLI)
 │   ├── group-c/  ✅ (documentation)
-│   └── group-d/  ✅ NEW (monitoring & unified run)
+│   ├── group-d/  ✅ NEW (monitoring & unified run)
+│   └── group-e/  ✅ NEW (WebSocket migration & MCP cleanup)
 └── reports/  ✅
 ```
