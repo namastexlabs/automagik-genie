@@ -15,9 +15,9 @@ import { getOrCreateGenieProject } from '../lib/project-detector.js';
 import { formatTaskTitle } from '../lib/task-title-formatter.js';
 
 // Load ForgeClient from Genie package root (not user's cwd)
-// The MCP server is at: <genie-package>/.genie/mcp/dist/tools/prompt-tool.js
-// src/lib/forge-client.js is at: <genie-package>/src/lib/forge-client.js
-// So we need to go up 3 levels: tools -> dist -> mcp -> root
+// Compiled location: dist/mcp/tools/prompt-tool.js
+// Target: src/lib/forge-client.js
+// Path: ../../../src/lib/forge-client.js (dist/mcp/tools -> root -> src/lib)
 const geniePackageRoot = path.resolve(__dirname, '../../..');
 const ForgeClient = require(path.join(geniePackageRoot, 'src/lib/forge-client.js')).ForgeClient;
 

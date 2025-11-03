@@ -10,7 +10,9 @@ import path from 'path';
 import { execSync } from 'child_process';
 import { formatTaskTitle } from '../lib/task-title-formatter.js';
 
-// Load ForgeClient
+// Load ForgeClient from src/lib (resolves from package root)
+// Compiled location: dist/mcp/tools/create-subtask-tool.js
+// Target: src/lib/forge-client.js
 const geniePackageRoot = path.resolve(__dirname, '../../..');
 const ForgeClient = require(path.join(geniePackageRoot, 'src/lib/forge-client.js')).ForgeClient;
 

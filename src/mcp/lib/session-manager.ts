@@ -8,7 +8,9 @@
 import { WorkflowType, SessionInfo } from './session-types.js';
 import path from 'path';
 
-// Load ForgeClient
+// Load ForgeClient from src/lib (resolves from package root)
+// Compiled location: dist/mcp/lib/session-manager.js
+// Target: src/lib/forge-client.js
 const geniePackageRoot = path.resolve(__dirname, '../../..');
 const ForgeClient = require(path.join(geniePackageRoot, 'src/lib/forge-client.js')).ForgeClient;
 

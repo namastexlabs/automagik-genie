@@ -16,7 +16,6 @@
     "dist/cli/**/*",
     "dist/mcp/**/*",
     "dist/lib/**/*",
-    "forge.js",
     "src/lib/forge-client.js",
     ".genie/agents/**/*.md",
     ".genie/code/**/*",
