@@ -756,7 +756,7 @@ async function updateProjectConfig(
   executorKey: string,
   model?: string
 ): Promise<void> {
-  // Prefer project-level .genie/config.yaml; fallback to legacy .genie/cli/config.yaml
+  // Prefer project-level .genie/config.yaml; fallback to legacy .genie/cli/config.yaml (user workspace)
   const primaryConfigPath = path.join(genieRoot, 'config.yaml');
   const legacyConfigPath = path.join(genieRoot, 'cli', 'config.yaml');
   const configPath = (await fsp

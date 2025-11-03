@@ -6,7 +6,7 @@
  *
  * Used by: MCP server (server.ts)
  *
- * NOTE: This is a copy of .genie/cli/src/lib/display-transform.ts
+ * NOTE: This is a copy of src/cli/lib/display-transform.ts
  * Both packages (CLI and MCP) are independent, so each maintains its own copy.
  */
 

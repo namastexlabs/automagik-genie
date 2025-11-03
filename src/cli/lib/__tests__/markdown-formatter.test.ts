@@ -6,7 +6,7 @@
  * - Token budget enforcement
  * - Edge cases (empty transcripts, long messages, missing metadata)
  *
- * Run with: node .genie/cli/src/lib/__tests__/markdown-formatter.test.js
+ * Run with: node dist/cli/lib/__tests__/markdown-formatter.test.js
  */
 
 import {
