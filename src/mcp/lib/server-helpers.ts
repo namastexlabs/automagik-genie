@@ -219,8 +219,8 @@ export async function listSessions(): Promise<Array<{ id: string; name: string; 
 // Helper: Get Genie version from package.json
 export function getGenieVersion(): string {
   try {
-    // From .genie/mcp/dist/lib/server-helpers.js → root package.json (4 levels up)
-    const packageJsonPath = path.join(__dirname, '../../../..', 'package.json');
+    // From dist/mcp/lib/server-helpers.js → root package.json (3 levels up)
+    const packageJsonPath = path.join(__dirname, '../../..', 'package.json');
     const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
     return packageJson.version || '0.0.0';
   } catch (error) {

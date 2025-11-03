@@ -34,9 +34,9 @@ export function findWorkspaceRoot(): string {
  * ```
  */
 export function getPackageRoot(): string {
-  // __dirname = .genie/cli/dist/lib/
-  // ../../../../ = workspace root (dev) or package root (npm)
-  return path.resolve(__dirname, '../../../..');
+  // __dirname = dist/cli/lib/
+  // ../../../ = workspace root (dev) or package root (npm)
+  return path.resolve(__dirname, '../../..');
 }
 
 export type TemplateType = 'code' | 'create';

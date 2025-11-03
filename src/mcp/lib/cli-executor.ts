@@ -38,7 +38,7 @@ export interface CliResult {
  * @returns CLI invocation configuration
  */
 export function resolveCliInvocation(workspaceRoot: string): CliInvocation {
-  const distEntry = path.join(workspaceRoot, '.genie/cli/dist/genie-cli.js');
+  const distEntry = path.join(workspaceRoot, 'dist/cli/genie-cli.js');
   if (fs.existsSync(distEntry)) {
     return { command: process.execPath, args: [distEntry] };
   }

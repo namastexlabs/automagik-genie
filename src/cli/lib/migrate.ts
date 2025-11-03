@@ -216,8 +216,8 @@ export function extractCustomizations(coreAgents: string[]): string[] {
  * Copies templates from npm package to user project
  */
 export function copyTemplates(options: { force?: boolean } = {}): void {
-  // Resolve npm package location
-  const packageRoot = path.resolve(__dirname, '../../../..');
+  // Resolve npm package location (from dist/cli/lib/)
+  const packageRoot = path.resolve(__dirname, '../../..');
   // Migration is for code projects (old Genie was for development)
   const templatesSource = path.join(packageRoot, 'templates', 'code');
 
