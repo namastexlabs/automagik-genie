@@ -31,7 +31,7 @@ export async function startGenieServer(debug = false): Promise<void> {
   const startTime = Date.now();
   const timings: Record<string, number> = {};
 
-  const mcpServer = path.join(__dirname, '../../../mcp/dist/server.js');
+  const mcpServer = path.join(__dirname, '../../../dist/mcp/server.js');
 
   // Check if MCP server exists
   if (!fs.existsSync(mcpServer)) {

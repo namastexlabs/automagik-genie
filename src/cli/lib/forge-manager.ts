@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 
 // @ts-ignore - compiled client shipped at project root
-import { ForgeClient } from '../../../../src/lib/forge-client.js';
+import { ForgeClient } from '../../../src/lib/forge-client.js';
 
 export interface ForgeStartOptions {
   baseUrl?: string;
@@ -95,10 +95,10 @@ export async function waitForForgeReady(
  * Resolve automagik-forge binary path (version-agnostic)
  *
  * When installed via npm/pnpm/npx, automagik-forge is a sibling dependency in parent node_modules.
- * __dirname is .genie/cli/dist/lib/, so we go up 5 levels to reach parent node_modules/
+ * __dirname is dist/cli/lib/, so we go up 4 levels to reach parent node_modules/
  */
 function resolveForgeBinary(): Result<string> {
-  const baseDir = path.join(__dirname, '../../../../../');
+  const baseDir = path.join(__dirname, '../../../../');
 
   // Try standard npm/npx structure first (fastest)
   // automagik-forge is a sibling in node_modules/
