@@ -30,7 +30,7 @@ let verifyAccessToken: (token: string, publicKey: string, issuer: string, audien
 // Initialize the verification function lazily
 function getVerifyAccessToken() {
   if (!verifyAccessToken) {
-    const oauth2Utils = require('../../../cli/dist/lib/oauth2-utils.js');
+    const oauth2Utils = require('../../cli/dist/lib/oauth2-utils.js');
     verifyAccessToken = oauth2Utils.verifyAccessToken;
   }
   return verifyAccessToken;
