@@ -29,7 +29,7 @@ function assert(condition, message) {
 // 2. MCP Server Startup (httpStream transport)
 // 3. Tool Discovery (list all 6 tools via MCP protocol)
 // 4. genie_run tool execution
-// 5. genie_list_sessions tool execution
+// 5. genie_list_tasks tool execution
 // 6. genie_view tool execution
 // 7. genie_resume tool execution
 // 8. genie_stop tool execution

@@ -73,6 +73,36 @@ pnpm run build:mcp
 - Disambiguated duplicate parameters: `sessionTaskId` (stats session) vs `forgeTaskId` (forge task)
 - Restored SDK property name `sessionIdGenerator`
 
+## Critical Bugs Fixed (Post-Codex Review) 🔴
+
+### Bug #1: Legacy Migration Breaking (session-store.ts:126-127)
+**Issue:** Automated rename changed `entry.sessionId` → `entry.taskId` in v3 legacy migration code, breaking migration for users upgrading from older versions.
+
+**Root Cause:** The sed replacement was too broad and changed a field name in legacy data format, not current code.
+
+**Fix:** Restored `entry.sessionId` in migration code (this is the LEGACY field name, not subject to rename).
+
+**Evidence:** Codex feedback P1 + manual code review
+
+**Files Changed:**
+- `src/cli/session-store.ts:126-127` - Restored legacy field reference
+
+### Bug #2: MCP Test Suite Breaking (tests/*.test.js)
+**Issue:** Renamed MCP tool `list_sessions` → `list_tasks` in server but didn't update test files, causing all MCP tests to fail with "Method not found".
+
+**Root Cause:** MCP tool rename was in scope (wish explicitly requested it), but I forgot to update test files simultaneously.
+
+**Fix:** Updated all test files to use new tool name `list_tasks`.
+
+**Evidence:** Codex feedback P1 + grep search
+
+**Files Changed:**
+- `tests/mcp-automated.test.js` - 8 references updated
+- `tests/mcp-cli-integration.test.js` - 1 reference updated
+- `tests/mcp-integration.test.js` - 1 reference updated
+
+**Validation:** Re-ran full test suite after fixes - all 19 tests passing ✅
+
 ## Test Results ✅
 
 ### Genie CLI Tests
@@ -138,6 +168,12 @@ All evidence captured in `.genie/wishes/424-taxonomy-refactor/qa/group-b/`:
 - `src/cli/commands/dashboard-live.ts` - Shorthand property fix
 - `src/mcp/server.ts` - MCP tool name updates, description updates, message updates
 - `src/mcp/lib/http-server.ts` - SDK property name restoration
+- `src/cli/session-store.ts` - **🔴 CRITICAL FIX:** Legacy migration field name restored
+
+### Test Files (Updated for MCP Tool Renames)
+- `tests/mcp-automated.test.js` - Updated `list_sessions` → `list_tasks` (8 references)
+- `tests/mcp-cli-integration.test.js` - Updated `list_sessions` → `list_tasks` (1 reference)
+- `tests/mcp-integration.test.js` - Updated `genie_list_sessions` → `genie_list_tasks` (1 reference)
 
 ### CLI Commands (Already Correct)
 - `src/cli/genie-cli.ts` - Parameters already using `taskId`

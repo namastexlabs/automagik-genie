@@ -123,8 +123,8 @@ function normalizeSessionStore(
     Object.entries(incoming.sessions || {}).forEach(([_friendlyName, entry]: [string, any]) => {
       if (!entry || typeof entry !== 'object') return;
 
-      // v3 stored attemptId in the 'taskId' field
-      const attemptId = entry.taskId;
+      // v3 stored attemptId in the 'sessionId' field
+      const attemptId = entry.sessionId;
       if (!attemptId || typeof attemptId !== 'string') return;
 
       // Migrate to v4 format (taskId/projectId will be undefined for migrated sessions)
