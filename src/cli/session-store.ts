@@ -114,7 +114,7 @@ function normalizeSessionStore(
 
   // Version 3 or earlier - MIGRATE to v4
   // Rationale: Preserve user's ability to resume/stop/view existing sessions
-  // Key change: Use attemptId (from v3's sessionId field) as the v4 key
+  // Key change: Use attemptId (from v3's taskId field) as the v4 key
   if (incoming.version && incoming.version < 4) {
     const sessions: Record<string, SessionEntry> = {};
     let migratedCount = 0;
@@ -123,8 +123,8 @@ function normalizeSessionStore(
     Object.entries(incoming.sessions || {}).forEach(([_friendlyName, entry]: [string, any]) => {
       if (!entry || typeof entry !== 'object') return;
 
-      // v3 stored attemptId in the 'sessionId' field
-      const attemptId = entry.sessionId;
+      // v3 stored attemptId in the 'taskId' field
+      const attemptId = entry.taskId;
       if (!attemptId || typeof attemptId !== 'string') return;
 
       // Migrate to v4 format (taskId/projectId will be undefined for migrated sessions)
@@ -163,7 +163,7 @@ function normalizeSessionStore(
     const sessions: Record<string, SessionEntry> = {};
     let migratedCount = 0;
 
-    // v2 sessions were keyed by sessionId (attemptId), already in correct format
+    // v2 sessions were keyed by taskId (attemptId), already in correct format
     Object.entries(incoming.sessions).forEach(([attemptId, entry]: [string, any]) => {
       if (!entry || typeof entry !== 'object') return;
 
