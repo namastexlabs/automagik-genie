@@ -164,9 +164,17 @@ export async function runInit(
         await configureExecutorAuthentication(executor);
       }
     } else {
-      // Automation mode OR upgrade mode: use flags or defaults
-      template = (flags.template || 'code') as TemplateType;
-      templates = [template];
+      // Automation mode OR upgrade mode: use flags or detect from existing installation
+      if (isUpgrade && await pathExists(targetGenie)) {
+        // Upgrade: detect installed collectives from existing .genie/
+        templates = await detectInstalledCollectives(targetGenie);
+        template = templates[0]; // Primary template (first one)
+        console.log(`📦 Detected installed collectives: ${templates.join(', ')}`);
+      } else {
+        // Automation mode (fresh install): use flags or default
+        template = (flags.template || 'code') as TemplateType;
+        templates = [template];
+      }
       executor = DEFAULT_EXECUTOR_KEY;
       model = undefined;
     }
@@ -913,6 +921,32 @@ async function detectTemplateFromGenie(genieRoot: string): Promise<string> {
   if (codeExists) return 'code';
   if (createExists) return 'create';
   return 'code'; // fallback
+}
+
+/**
+ * Detect ALL installed collectives from existing .genie/ structure
+ * Used during upgrades to preserve user's collective selection
+ */
+async function detectInstalledCollectives(genieRoot: string): Promise<string[]> {
+  const collectives: string[] = [];
+
+  // Check for known collective directories
+  const knownCollectives = ['code', 'create'];
+
+  for (const collective of knownCollectives) {
+    const collectivePath = path.join(genieRoot, collective);
+    if (await pathExists(collectivePath)) {
+      collectives.push(collective);
+    }
+  }
+
+  // Fallback if no collectives detected (corrupted .genie/)
+  if (collectives.length === 0) {
+    console.warn('⚠️  No collectives detected, defaulting to code');
+    return ['code'];
+  }
+
+  return collectives;
 }
 async function applyExecutorDefaults(genieRoot: string, executorKey: string, model?: string): Promise<void> {
   await Promise.all([
