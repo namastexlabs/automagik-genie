@@ -86,7 +86,7 @@ async function main(): Promise<void> {
         sessionService,
         emitView,
         recordRuntimeWarning: (msg: string) => {
-          const { recordRuntimeWarning } = require('./lib/session-helpers');
+          const { recordRuntimeWarning } = require('./lib/task-helpers');
           recordRuntimeWarning(msg);
         },
         recordStartupWarning: (msg: string) => {
