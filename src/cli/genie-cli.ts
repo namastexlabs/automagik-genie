@@ -68,43 +68,27 @@ program
 
 // ==================== AGENT ORCHESTRATION ====================
 
-// Run command
+// Run command (unified browser + monitoring)
 program
   .command('run <agent> <prompt>')
-  .description('Run an agent with a prompt (JSON output by default)')
-  .option('-b, --background', 'Run in background mode')
-  .option('-x, --executor <executor>', 'Override executor for this run')
-  .option('-m, --model <model>', 'Override model for the selected executor')
-  .option('-n, --name <name>', 'Friendly session name for easy identification')
-  .option('--raw', 'Output raw text only (no JSON)')
-  .option('--quiet', 'Suppress startup messages')
-  .action((agent: string, prompt: string, options: { background?: boolean; executor?: string; model?: string; name?: string; raw?: boolean; quiet?: boolean }) => {
+  .description('Run agent with browser UI and live monitoring (outputs JSON on completion)')
+  .action((agent: string, prompt: string) => {
     const args = ['run', agent, prompt];
-    if (options.background) {
-      args.push('--background');
-    }
-    if (options.executor) {
-      args.push('--executor', options.executor);
-    }
-    if (options.model) {
-      args.push('--model', options.model);
-    }
-    if (options.name) {
-      args.push('--name', options.name);
-    }
-    if (options.raw) {
-      args.push('--raw');
-    }
-    if (options.quiet) {
-      args.push('--quiet');
-    }
     execGenie(args);
   });
 
-// Talk command
+// Task command (headless execution)
+program
+  .command('task <agent> <prompt>')
+  .description('Run agent task headlessly (no browser, immediate return with task ID)')
+  .action((agent: string, prompt: string) => {
+    execGenie(['task', agent, prompt]);
+  });
+
+// Talk command (deprecated, use 'run' instead)
 program
   .command('talk <agent>')
-  .description('Start interactive browser task with agent (Forge UI)')
+  .description('[Deprecated] Start interactive browser task with agent (use "genie run" instead)')
   .action((agent: string) => {
     execGenie(['talk', agent]);
   });
@@ -246,7 +230,7 @@ const args = process.argv.slice(2);
 const skipVersionCheck = ['--version', '-V', '--help', '-h', 'update', 'init', 'rollback', 'mcp'];
 
 // Non-blocking version check for these commands (show warning but continue)
-const nonBlockingCommands = ['list', 'status', 'dashboard', 'view', 'helper', 'run', 'talk', 'resume', 'stop'];
+const nonBlockingCommands = ['list', 'status', 'dashboard', 'view', 'helper', 'run', 'talk', 'task', 'resume', 'stop'];
 
 // Skip version check for specific agents/spells that need to run regardless of version
 // WHY: Learn spell loads for self-enhancement, install/update handle versions themselves

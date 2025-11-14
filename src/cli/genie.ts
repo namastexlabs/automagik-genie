@@ -142,6 +142,10 @@ async function main(): Promise<void> {
         const { runTalk } = await import('./commands/talk.js');
         await runTalk(parsed, config, paths);
         break;
+      case 'task':
+        const { runTask } = await import('./commands/task.js');
+        await runTask(parsed, config, paths);
+        break;
       case 'cleanup':
         await runCleanup(parsed, config, paths);
         break;
