@@ -104,28 +104,28 @@ program
 // Talk command
 program
   .command('talk <agent>')
-  .description('Start interactive browser session with agent (Forge UI)')
+  .description('Start interactive browser task with agent (Forge UI)')
   .action((agent: string) => {
     execGenie(['talk', agent]);
   });
 
 // Resume command
 program
-  .command('resume <sessionId> <prompt>')
-  .description('Resume an existing agent session')
-  .action((sessionId: string, prompt: string) => {
-    execGenie(['resume', sessionId, prompt]);
+  .command('resume <taskId> <prompt>')
+  .description('Resume an existing agent task')
+  .action((taskId: string, prompt: string) => {
+    execGenie(['resume', taskId, prompt]);
   });
 
 // List command
 program
   .command('list [type]')
-  .description('List agents, sessions, or workflows')
+  .description('List agents, tasks, or workflows')
   .action((type: string | undefined) => {
     const normalized = (type || 'agents').toLowerCase();
-    const validTypes = ['agents', 'sessions', 'workflows'];
+    const validTypes = ['agents', 'tasks', 'workflows'];
     if (!validTypes.includes(normalized)) {
-      console.error('Error: list command accepts agents (default), sessions, or workflows');
+      console.error('Error: list command accepts agents (default), tasks, or workflows');
       process.exit(1);
     }
     execGenie(['list', normalized]);
@@ -133,12 +133,12 @@ program
 
 // View command
 program
-  .command('view <sessionId>')
-  .description('View session transcript')
+  .command('view <taskId>')
+  .description('View task transcript')
   .option('--full', 'Show full transcript')
   .option('--live', 'Live view (auto-refresh)')
-  .action((sessionId: string, options: { full?: boolean; live?: boolean }) => {
-    const args = ['view', sessionId];
+  .action((taskId: string, options: { full?: boolean; live?: boolean }) => {
+    const args = ['view', taskId];
     if (options.full) args.push('--full');
     if (options.live) args.push('--live');
     execGenie(args);
@@ -146,10 +146,10 @@ program
 
 // Stop command
 program
-  .command('stop <sessionId>')
-  .description('Stop a running session')
-  .action((sessionId: string) => {
-    execGenie(['stop', sessionId]);
+  .command('stop <taskId>')
+  .description('Stop a running task')
+  .action((taskId: string) => {
+    execGenie(['stop', taskId]);
   });
 
 // ==================== WORKSPACE MANAGEMENT ====================
