@@ -25,8 +25,6 @@ import { execSync, spawn } from 'child_process';
 import gradient from 'gradient-string';
 import fs from 'fs';
 
-// Genie-themed gradients
-const genieGradient = gradient(['#0066ff', '#9933ff', '#ff00ff']);
 const successGradient = gradient(['#00ff88', '#00ccff', '#0099ff']);
 
 export async function runRun(
@@ -48,13 +46,18 @@ export async function runRun(
     process.exit(1);
   }
 
+  if (parsed.options.background) {
+    const { runTask } = await import('./task.js');
+    return runTask(parsed, config, paths);
+  }
+
   const resolvedAgentName = resolveAgentIdentifier(agentName);
   const agentSpec = loadAgentSpec(resolvedAgentName);
   const agentGenie = agentSpec.meta?.genie || {};
 
-  // Resolve executor configuration
+  // Resolve executor configuration (CLI flags override agent/config defaults)
   const executorKey = normalizeExecutorKeyOrDefault(
-    agentGenie.executor || config.defaults?.executor
+    parsed.options.executor || agentGenie.executor || config.defaults?.executor
   );
   const executorVariant = (
     agentGenie.executorVariant ||
@@ -62,17 +65,22 @@ export async function runRun(
     config.defaults?.executorVariant ||
     'DEFAULT'
   ).trim().toUpperCase();
-  const model = agentGenie.model || config.defaults?.model;
+  const model = parsed.options.model || agentGenie.model || config.defaults?.model;
 
   const { baseUrl } = getForgeConfig();
   const logDir = path.join(process.cwd(), '.genie', 'state');
+  const quiet = parsed.options.quiet || false;
+  const raw = parsed.options.raw || false;
+  const sessionName = parsed.options.name;
 
   // Start Forge if not running
   const forgeRunning = await isForgeRunning(baseUrl);
 
   if (!forgeRunning) {
-    console.log('');
-    process.stderr.write('Starting Forge... ');
+    if (!quiet) {
+      console.log('');
+      process.stderr.write('Starting Forge... ');
+    }
     const startTime = Date.now();
 
     const result = startForgeInBackground({ baseUrl, logDir });
@@ -93,8 +101,10 @@ export async function runRun(
       process.exit(1);
     }
 
-    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-    process.stderr.write(`ready (${elapsed}s)\n`);
+    if (!quiet) {
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      process.stderr.write(`ready (${elapsed}s)\n`);
+    }
   }
 
   // Create Forge session
@@ -108,7 +118,8 @@ export async function runRun(
       executorKey,
       executorVariant,
       executionMode: 'interactive',
-      model
+      model,
+      ...(sessionName && { name: sessionName })
     });
   } catch (error) {
     const reason = describeForgeError(error);
@@ -120,51 +131,59 @@ export async function runRun(
   const attemptId = sessionResult.attemptId;
   const taskUrl = sessionResult.forgeUrl;
 
-  // Show success message
-  console.log('');
-  console.log(successGradient('━'.repeat(60)));
-  console.log(successGradient(`✨ ${resolvedAgentName} task started! ✨`));
-  console.log(successGradient('━'.repeat(60)));
-  console.log('');
-  console.log(`📊 Task ID: ${attemptId}`);
-  console.log(`🌐 Opening browser...`);
-  console.log('');
+  if (!quiet) {
+    console.log('');
+    console.log(successGradient('━'.repeat(60)));
+    console.log(successGradient(`✨ ${resolvedAgentName} task started! ✨`));
+    console.log(successGradient('━'.repeat(60)));
+    console.log('');
+    console.log(`📊 Task ID: ${attemptId}`);
+    console.log(`🌐 Opening browser...`);
+    console.log('');
+  }
 
-  // Open browser to task URL
   openBrowserCrossPlatform(taskUrl);
 
-  // Attach WebSocket monitor
-  console.log('📡 Monitoring task completion...');
-  console.log('');
+  if (!quiet) {
+    console.log('📡 Monitoring task completion...');
+    console.log('');
+  }
 
   try {
     const result = await monitorTaskCompletion({
       attemptId,
       baseUrl,
       onStatus: (status) => {
-        if (status !== 'running') {
+        if (!quiet && status !== 'running') {
           process.stderr.write(`Status: ${status}\n`);
         }
       }
     });
 
-    // Output JSON result
-    const jsonOutput = JSON.stringify({
-      task_url: result.task_url,
-      result: result.output,
-      status: result.status,
-      duration_ms: result.duration_ms,
-      attempt_id: attemptId,
-      ...(result.error && { error: result.error })
-    }, null, 2);
+    if (raw) {
+      console.log(result.output);
+    } else {
+      const jsonOutput = JSON.stringify({
+        task_url: result.task_url,
+        result: result.output,
+        status: result.status,
+        duration_ms: result.duration_ms,
+        attempt_id: attemptId,
+        ...(result.error && { error: result.error })
+      }, null, 2);
 
-    console.log('');
-    console.log(successGradient('━'.repeat(60)));
-    console.log(successGradient('✅ Task Completed'));
-    console.log(successGradient('━'.repeat(60)));
-    console.log('');
-    console.log(jsonOutput);
-    console.log('');
+      if (!quiet) {
+        console.log('');
+        console.log(successGradient('━'.repeat(60)));
+        console.log(successGradient('✅ Task Completed'));
+        console.log(successGradient('━'.repeat(60)));
+        console.log('');
+      }
+      console.log(jsonOutput);
+      if (!quiet) {
+        console.log('');
+      }
+    }
 
     process.exitCode = result.status === 'completed' ? 0 : 1;
   } catch (error) {

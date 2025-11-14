@@ -72,8 +72,32 @@ program
 program
   .command('run <agent> <prompt>')
   .description('Run agent with browser UI and live monitoring (outputs JSON on completion)')
-  .action((agent: string, prompt: string) => {
+  .option('-b, --background', 'Run in background mode (uses headless task instead)')
+  .option('-x, --executor <executor>', 'Override executor for this run')
+  .option('-m, --model <model>', 'Override model for the selected executor')
+  .option('-n, --name <name>', 'Friendly session name for easy identification')
+  .option('--raw', 'Output raw text only (no JSON)')
+  .option('--quiet', 'Suppress startup messages')
+  .action((agent: string, prompt: string, options: { background?: boolean; executor?: string; model?: string; name?: string; raw?: boolean; quiet?: boolean }) => {
     const args = ['run', agent, prompt];
+    if (options.background) {
+      args.push('--background');
+    }
+    if (options.executor) {
+      args.push('--executor', options.executor);
+    }
+    if (options.model) {
+      args.push('--model', options.model);
+    }
+    if (options.name) {
+      args.push('--name', options.name);
+    }
+    if (options.raw) {
+      args.push('--raw');
+    }
+    if (options.quiet) {
+      args.push('--quiet');
+    }
     execGenie(args);
   });
 

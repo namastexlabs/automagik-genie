@@ -104,8 +104,8 @@ async function main(): Promise<void> {
           await emitView(buildRunHelpView(), parsed.options);
           return;
         }
-        if (!handlers) throw new Error('Handlers not initialized');
-        await handlers.run(parsed);
+        const { runRun } = await import('./commands/run.js');
+        await runRun(parsed, config, paths);
         break;
       case 'init':
         if (parsed.options.requestHelp) {

@@ -6,13 +6,14 @@
  */
 
 import WebSocket from 'ws';
+import { ForgeClient } from '../../../src/lib/forge-client.js';
 
 export interface TaskMonitorOptions {
   attemptId: string;
   baseUrl: string;
   onLog?: (log: string) => void;
   onStatus?: (status: string) => void;
-  timeout?: number; // milliseconds, default 5 minutes
+  timeout?: number;
 }
 
 export interface TaskResult {
@@ -40,15 +41,38 @@ export async function monitorTaskCompletion(
     baseUrl,
     onLog,
     onStatus,
-    timeout = 300000 // 5 minutes default
+    timeout = 300000
   } = options;
 
   const startTime = Date.now();
   const taskUrl = `${baseUrl}/tasks/${attemptId}`;
 
-  // Convert HTTP URL to WebSocket URL
-  const wsBaseUrl = baseUrl.replace(/^http/, 'ws');
-  const wsUrl = `${wsBaseUrl}/api/tasks/${attemptId}/normalized-logs/ws`;
+  const client = new ForgeClient(baseUrl, process.env.FORGE_TOKEN);
+  
+  let processId: string;
+  try {
+    const processes = await client.listExecutionProcesses(attemptId);
+    if (!processes || processes.length === 0) {
+      return {
+        status: 'failed',
+        output: '',
+        error: 'No execution process found for task attempt',
+        duration_ms: Date.now() - startTime,
+        task_url: taskUrl
+      };
+    }
+    processId = processes[processes.length - 1].id;
+  } catch (error) {
+    return {
+      status: 'failed',
+      output: '',
+      error: `Failed to fetch execution process: ${error}`,
+      duration_ms: Date.now() - startTime,
+      task_url: taskUrl
+    };
+  }
+
+  const wsUrl = client.getNormalizedLogsStreamUrl(processId);
 
   return new Promise((resolve, reject) => {
     let ws: WebSocket | null = null;
