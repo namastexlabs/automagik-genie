@@ -174,9 +174,15 @@ export async function runRun(
 
       if (!quiet) {
         console.log('');
-        console.log(successGradient('━'.repeat(60)));
-        console.log(successGradient('✅ Task Completed'));
-        console.log(successGradient('━'.repeat(60)));
+        console.log('━'.repeat(60));
+        if (result.status === 'completed') {
+          console.log(successGradient('✅ Task Completed'));
+        } else if (result.status === 'failed') {
+          console.log('❌ Task Failed');
+        } else if (result.status === 'timeout') {
+          console.log('⏱️  Task Timeout');
+        }
+        console.log('━'.repeat(60));
         console.log('');
       }
       console.log(jsonOutput);

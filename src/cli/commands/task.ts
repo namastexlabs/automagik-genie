@@ -51,9 +51,9 @@ export async function runTask(
   const agentSpec = loadAgentSpec(resolvedAgentName);
   const agentGenie = agentSpec.meta?.genie || {};
 
-  // Resolve executor configuration
+  // Resolve executor configuration (CLI flags override agent/config defaults)
   const executorKey = normalizeExecutorKeyOrDefault(
-    agentGenie.executor || config.defaults?.executor
+    parsed.options.executor || agentGenie.executor || config.defaults?.executor
   );
   const executorVariant = (
     agentGenie.executorVariant ||
@@ -61,7 +61,10 @@ export async function runTask(
     config.defaults?.executorVariant ||
     'DEFAULT'
   ).trim().toUpperCase();
-  const model = agentGenie.model || config.defaults?.model;
+  const model = parsed.options.model || agentGenie.model || config.defaults?.model;
+  const sessionName = parsed.options.name;
+  const quiet = parsed.options.quiet || false;
+  const raw = parsed.options.raw || false;
 
   // Ensure Forge is running (quiet mode)
   await ensureForgeRunning(true);
@@ -76,7 +79,8 @@ export async function runTask(
       executorKey,
       executorVariant,
       executionMode: 'background',
-      model
+      model,
+      ...(sessionName && { name: sessionName })
     });
   } catch (error) {
     const reason = describeForgeError(error);
@@ -90,18 +94,23 @@ export async function runTask(
   const attemptId = sessionResult.attemptId;
   const taskUrl = sessionResult.forgeUrl;
 
-  // Output JSON immediately
-  const jsonOutput = {
-    task_id: attemptId,
-    task_url: taskUrl,
-    agent: resolvedAgentName,
-    executor: `${executorKey}:${executorVariant}`,
-    ...(model && { model }),
-    status: 'started',
-    message: 'Task running in background'
-  };
+  // Output based on --raw flag
+  if (raw) {
+    console.log(attemptId);
+  } else {
+    const jsonOutput = {
+      task_id: attemptId,
+      task_url: taskUrl,
+      agent: resolvedAgentName,
+      executor: `${executorKey}:${executorVariant}`,
+      ...(model && { model }),
+      status: 'started',
+      message: 'Task running in background'
+    };
 
-  console.log(JSON.stringify(jsonOutput, null, 2));
+    console.log(JSON.stringify(jsonOutput, null, 2));
+  }
+  
   process.exitCode = 0;
 }
 
