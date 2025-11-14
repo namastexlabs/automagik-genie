@@ -204,10 +204,48 @@ The MCP SDK's `StreamableHTTPServerTransport` uses `sessionIdGenerator` as a pro
 **Domain-Specific Terminology:**
 The stats-tracker domain uses "session" terminology for its own statistics tracking purposes (SessionStats type). This is intentional and correct - it tracks statistics about execution sessions, which is distinct from Forge task terminology.
 
+## Merge Resolution with Group A (Post-Integration) 🔄
+
+**Context:** After completing Group B work, merged with Group A (file renames) from dev branch.
+
+### Merge Conflict Resolution
+**Files in conflict:**
+- `src/cli/session-store.ts` → renamed to `task-store.ts` by Group A
+- `src/cli/cli-core/session-service.ts` → renamed to `task-service.ts` by Group A
+
+**Resolution Strategy:**
+1. Accepted Group A's file renames (correct taxonomy alignment)
+2. Preserved critical legacy migration fix: `entry.sessionId` (v3 field name)
+3. Group B variable renames already applied to codebase (commits a09eaba0, 26d1d259)
+
+**Merge Result:**
+- ✅ File renames preserved (task-store.ts, task-service.ts, task-helpers.ts, task-manager.ts)
+- ✅ Variable renames intact (taskId, taskName, const task)
+- ✅ Critical bug fix intact (legacy migration reads entry.sessionId)
+
+### Test File Updates (Post-Merge)
+Updated test files to match Group A's class/export renames:
+- `tests/genie-cli.test.mjs` - Updated SessionService → TaskService (2 references)
+- `tests/session-service.test.mjs` - Updated SessionService → TaskService + import path (7 references)
+- `tests/mcp-integration.test.js` - Updated SessionService → TaskService (3 references)
+
+### Final Validation (Post-Merge)
+```bash
+pnpm run build:genie
+✅ SUCCESS (zero errors)
+
+pnpm run build:mcp
+✅ SUCCESS (zero errors)
+
+pnpm run test:all
+✅ All tests passed: 19/19
+```
+
 ## Conclusion
 
-Group B implementation is complete and validated. All deliverables met, all tests passing, zero compilation errors. Ready for integration with Groups A and C.
+Group B implementation is complete, validated, and **successfully merged with Group A**. All deliverables met, all tests passing, zero compilation errors. Taxonomy refactor coordination between Group A (file renames) and Group B (variable renames) successful.
 
 ---
 **Implemented by:** Claude Code (Sonnet 4.5)
 **Validated:** 2025-11-14
+**Merge Resolution:** 2025-11-14 (Group A integration complete)

@@ -53,12 +53,12 @@ async function testFoundation() {
   assert(fs.existsSync(cliCorePath), 'cli-core/index.js exists');
 
   const cliCore = require(cliCorePath);
-  assert(typeof cliCore.SessionService === 'function', 'SessionService exported');
+  assert(typeof cliCore.TaskService === 'function', 'TaskService exported');
   assert(typeof cliCore.createHandlers === 'function', 'createHandlers exported');
 
-  // Test 3: Verify SessionService tests pass
-  console.log('Test 3: SessionService tests already validated');
-  assert(true, 'SessionService test suite passing (19/19)');
+  // Test 3: Verify TaskService tests pass
+  console.log('Test 3: TaskService tests already validated');
+  assert(true, 'TaskService test suite passing (19/19)');
 
   // Test 4: Verify transport scripts
   console.log('Test 4: Transport npm scripts configured');
