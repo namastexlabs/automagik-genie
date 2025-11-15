@@ -24,7 +24,7 @@ export function parseArguments(argv: string[]): ParsedCommand {
   const command = raw.shift()?.toLowerCase();
   const options: CLIOptions = {
     rawArgs: argv.slice(),
-    background: false,
+    background: undefined,
     backgroundExplicit: false,
     backgroundRunner: false,
     requestHelp: undefined,
