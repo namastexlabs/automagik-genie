@@ -57,6 +57,11 @@ export function parseArguments(argv: string[]): ParsedCommand {
       options.backgroundExplicit = true;
       continue;
     }
+    if (token === '--no-background') {
+      options.background = false;
+      options.backgroundExplicit = true;
+      continue;
+    }
     if (token === '--executor' || token === '-x') {
       const nextToken = raw[i + 1];
       if (nextToken && !nextToken.startsWith('-')) {
