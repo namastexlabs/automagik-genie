@@ -21,6 +21,7 @@ import { createForgeExecutor } from '../lib/forge-executor';
 import { describeForgeError, FORGE_RECOVERY_HINT } from '../lib/forge-helpers';
 import { normalizeExecutorKeyOrDefault } from '../lib/executor-registry';
 import { monitorTaskCompletion } from '../lib/task-monitor';
+import { TaskService } from '../cli-core/task-service.js';
 
 export async function runTask(
   parsed: ParsedCommand,
@@ -93,6 +94,28 @@ export async function runTask(
 
   const attemptId = sessionResult.attemptId;
   const taskUrl = sessionResult.forgeUrl;
+
+  const sessionService = new TaskService({
+    paths: { sessionsFile: paths.sessionsFile }
+  });
+  const store = sessionService.load();
+  const now = new Date().toISOString();
+  store.sessions[attemptId] = {
+    agent: resolvedAgentName,
+    taskId: sessionResult.taskId,
+    projectId: sessionResult.projectId,
+    executor: executorKey,
+    executorVariant,
+    model: model || undefined,
+    status: 'running',
+    created: now,
+    lastUsed: now,
+    lastPrompt: prompt.slice(0, 200),
+    mode: 'background',
+    forgeUrl: sessionResult.forgeUrl,
+    background: true
+  };
+  await sessionService.save(store);
 
   // Output based on --raw flag
   if (raw) {

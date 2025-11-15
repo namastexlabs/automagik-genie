@@ -187,7 +187,7 @@ export async function runRun(
       console.log(result.output);
     } else {
       const jsonOutput = JSON.stringify({
-        task_url: result.task_url,
+        task_url: taskUrl,
         result: result.output,
         status: result.status,
         duration_ms: result.duration_ms,
