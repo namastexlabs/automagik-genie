@@ -16,13 +16,14 @@ const BASE_CONFIG: GenieConfig = {
   defaults: {
     executor: 'OPENCODE',
     executorVariant: 'DEFAULT',
-    background: true
+    background: false
   },
   paths: {
     baseDir: undefined,
-    sessionsFile: '.genie/state/agents/sessions.json',
+    tasksFile: '.genie/state/tasks.json',
     logsDir: '.genie/state/agents/logs',
-    backgroundDir: '.genie/state/agents/background'
+    backgroundDir: '.genie/state/agents/background',
+    legacySessionsFile: '.genie/state/agents/sessions.json'
   },
   forge: {
     executors: {}
@@ -95,7 +96,7 @@ export function loadConfig(): GenieConfig {
   config.defaults = config.defaults || {};
   if (!config.defaults.executor) config.defaults.executor = 'OPENCODE';
   if (!config.defaults.executorVariant) config.defaults.executorVariant = 'DEFAULT';
-  config.defaults.background = config.defaults.background ?? true;
+  config.defaults.background = config.defaults.background ?? false;
 
   config.forge = config.forge || { executors: {} };
   config.forge.executors = config.forge.executors || {};
@@ -107,16 +108,26 @@ export function loadConfig(): GenieConfig {
 
 export function resolvePaths(paths: ConfigPaths): Required<ConfigPaths> {
   const baseDir = paths.baseDir ? path.resolve(paths.baseDir) : findWorkspaceRoot();
+  const configuredTasksFile = paths.tasksFile || paths.sessionsFile;
+  const tasksFile = configuredTasksFile
+    ? path.resolve(baseDir, configuredTasksFile)
+    : path.join(baseDir, '.genie/state/tasks.json');
+  const legacySessionsFile = path.resolve(
+    baseDir,
+    paths.legacySessionsFile || '.genie/state/agents/sessions.json'
+  );
   return {
     baseDir,
-    sessionsFile: paths.sessionsFile || path.join(baseDir, '.genie/state/agents/sessions.json'),
+    tasksFile,
+    sessionsFile: tasksFile,
+    legacySessionsFile,
     logsDir: paths.logsDir || path.join(baseDir, '.genie/state/agents/logs'),
     backgroundDir: paths.backgroundDir || path.join(baseDir, '.genie/state/agents/background')
   };
 }
 
 export function prepareDirectories(paths: Required<ConfigPaths>): void {
-  [paths.logsDir, paths.backgroundDir, path.dirname(paths.sessionsFile)].forEach((dir) => {
+  [paths.logsDir, paths.backgroundDir, path.dirname(paths.tasksFile)].forEach((dir) => {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
@@ -124,7 +135,14 @@ export function prepareDirectories(paths: Required<ConfigPaths>): void {
 }
 
 export function applyDefaults(options: CLIOptions, defaults?: GenieConfig['defaults']): void {
-  if (!options.backgroundExplicit) {
-    options.background = Boolean(defaults?.background);
+  // Only apply config defaults if user hasn't explicitly set --background or --no-background
+  // The run command defaults to foreground (interactive) mode, so we don't force background: true
+  // Users can still pass --background to enable headless mode
+  if (!options.backgroundExplicit && defaults?.background !== undefined) {
+    // Respect explicit config override, but don't force background: true by default
+    // This allows the run command to default to foreground (interactive) mode
+    options.background = defaults.background;
   }
+  // Note: if backgroundExplicit is false and defaults.background is undefined,
+  // options.background stays as initialized (false), enabling foreground mode
 }

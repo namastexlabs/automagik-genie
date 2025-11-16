@@ -1,6 +1,6 @@
 export interface CLIOptions {
   rawArgs: string[];
-  background: boolean;
+  background?: boolean;
   backgroundExplicit: boolean;
   backgroundRunner: boolean;
   requestHelp?: boolean;
@@ -23,7 +23,13 @@ export interface ParsedCommand {
 
 export interface ConfigPaths {
   baseDir?: string;
+  tasksFile?: string;
+  /**
+   * @deprecated Legacy override for old taxonomy configs.
+   * Prefer tasksFile moving forward.
+   */
   sessionsFile?: string;
+  legacySessionsFile?: string;
   logsDir?: string;
   backgroundDir?: string;
 }
