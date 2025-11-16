@@ -180,7 +180,7 @@ export async function listTasks(): Promise<Array<{ id: string; name: string; age
       const store = JSON.parse(content);
 
       const sessions = Object.entries(store.sessions || {}).map(([key, entry]: [string, any]) => ({
-        id: entry.taskId || key,
+        id: key,  // Use attempt ID as primary identifier for resume/view/stop commands
         name: entry.name || key,
         agent: entry.agent || key,
         status: entry.status || 'unknown',

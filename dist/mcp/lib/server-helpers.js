@@ -176,7 +176,7 @@ async function listTasks() {
             const content = fs_1.default.readFileSync(fallbackFile, 'utf8');
             const store = JSON.parse(content);
             const sessions = Object.entries(store.sessions || {}).map(([key, entry]) => ({
-                id: entry.taskId || key,
+                id: key, // Use attempt ID as primary identifier for resume/view/stop commands
                 name: entry.name || key,
                 agent: entry.agent || key,
                 status: entry.status || 'unknown',
