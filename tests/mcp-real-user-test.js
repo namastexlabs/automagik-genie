@@ -2,7 +2,7 @@
 /**
  * MCP Real User Test
  * Tests the complete workflow a real user would experience:
- * run → view → resume → stop
+ * run → view → continue_task → stop
  */
 
 const { spawn } = require('child_process');
@@ -10,7 +10,7 @@ const path = require('path');
 const assert = require('assert');
 
 console.log('=== MCP Real User Test ===');
-console.log('Simulating real user workflow: run → view → resume → stop\n');
+console.log('Simulating real user workflow: run → view → continue_task → stop\n');
 
 let testsPassed = 0;
 let testsFailed = 0;

@@ -161,13 +161,14 @@ async function runTests() {
     const toolsResponse = await sendMCPRequest(serverProcess, toolsRequest);
     assert(toolsResponse.result, 'tools/list returned result');
     assert(Array.isArray(toolsResponse.result.tools), 'Tools is array');
-    assert(toolsResponse.result.tools.length === 6, `Expected 6 tools, got ${toolsResponse.result.tools.length}`);
+    assert(toolsResponse.result.tools.length >= 8, `Expected 8+ tools, got ${toolsResponse.result.tools.length}`);
 
     const toolNames = toolsResponse.result.tools.map(t => t.name);
     assert(toolNames.includes('list_agents'), 'list_agents tool present');
     assert(toolNames.includes('list_sessions'), 'list_sessions tool present');
     assert(toolNames.includes('run'), 'run tool present');
-    assert(toolNames.includes('resume'), 'resume tool present');
+    assert(!toolNames.includes('resume'), 'resume tool removed (replaced by continue_task)');
+    assert(toolNames.includes('continue_task'), 'continue_task tool present');
     assert(toolNames.includes('view'), 'view tool present');
     assert(toolNames.includes('stop'), 'stop tool present');
 
@@ -266,13 +267,13 @@ async function runTests() {
       process.exit(1);
     } else {
       console.log('✅ Test suite PASSED');
-      console.log('\n📋 Validation Complete:');
-      console.log('  • MCP server starts successfully');
-      console.log('  • All 6 tools operational via stdio transport');
-      console.log('  • Tool schemas valid');
-      console.log('  • Error handling works');
-      console.log('  • Prompts feature functional');
-      console.log('\n✨ Ready for production deployment\n');
+        console.log('\n📋 Validation Complete:');
+        console.log('  • MCP server starts successfully');
+        console.log('  • All core tools operational via stdio transport');
+        console.log('  • Tool schemas valid');
+        console.log('  • Error handling works');
+        console.log('  • Prompts feature functional');
+        console.log('\n✨ Ready for production deployment\n');
       process.exit(0);
     }
 

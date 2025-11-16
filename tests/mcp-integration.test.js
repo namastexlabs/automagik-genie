@@ -27,11 +27,11 @@ function assert(condition, message) {
 // Planned test coverage:
 // 1. MCP Server Startup (stdio transport)
 // 2. MCP Server Startup (httpStream transport)
-// 3. Tool Discovery (list all 6 tools via MCP protocol)
+// 3. Tool Discovery (list all core tools via MCP protocol)
 // 4. genie_run tool execution
 // 5. genie_list_sessions tool execution
 // 6. genie_view tool execution
-// 7. genie_resume tool execution
+// 7. genie_continue_task tool execution
 // 8. genie_stop tool execution
 // 9. Session consistency (CLI creates session → MCP sees it)
 // 10. Session consistency (MCP creates session → CLI sees it)

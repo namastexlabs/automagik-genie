@@ -159,14 +159,15 @@ async function runTests() {
     const toolsResponse = await sendRequest(server, toolsRequest);
     assert(toolsResponse.result, 'tools/list response received');
     assert(Array.isArray(toolsResponse.result.tools), 'Tools array returned');
-    assert(toolsResponse.result.tools.length === 6, `6 tools present (got ${toolsResponse.result.tools.length})`);
+    assert(toolsResponse.result.tools.length >= 8, `8+ tools present (got ${toolsResponse.result.tools.length})`);
 
     const tools = toolsResponse.result.tools;
     const toolNames = tools.map(t => t.name);
     assert(toolNames.includes('list_agents'), 'list_agents tool exists');
     assert(toolNames.includes('list_sessions'), 'list_sessions tool exists');
     assert(toolNames.includes('run'), 'run tool exists');
-    assert(toolNames.includes('resume'), 'resume tool exists');
+    assert(!toolNames.includes('resume'), 'resume tool removed (replaced by continue_task)');
+    assert(toolNames.includes('continue_task'), 'continue_task tool exists');
     assert(toolNames.includes('view'), 'view tool exists');
     assert(toolNames.includes('stop'), 'stop tool exists');
 
@@ -270,7 +271,7 @@ async function runTests() {
       console.log('✅ Test suite PASSED');
       console.log('\n📋 Automated Validation Complete:');
       console.log('  • MCP protocol handshake works');
-      console.log('  • All 6 tools discoverable');
+      console.log('  • All core tools discoverable');
       console.log('  • Tool schemas valid');
       console.log('  • list_agents and list_sessions functional');
       console.log('  • Prompts feature operational');

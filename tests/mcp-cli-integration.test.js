@@ -103,14 +103,15 @@ async function runTests() {
     const toolsResponse = await sendRequest(server, toolsRequest);
     test('tools/list response received', toolsResponse.result !== undefined);
     test('Tools array returned', Array.isArray(toolsResponse.result.tools));
-    test('6 tools present', toolsResponse.result.tools.length === 6);
+    test('8+ tools present', toolsResponse.result.tools.length >= 8);
 
     const toolNames = toolsResponse.result.tools.map(t => t.name);
-    test('All tools discoverable',
+    test('All core tools discoverable',
       toolNames.includes('list_agents') &&
       toolNames.includes('list_sessions') &&
       toolNames.includes('run') &&
-      toolNames.includes('resume') &&
+      toolNames.includes('continue_task') &&
+      !toolNames.includes('resume') &&
       toolNames.includes('view') &&
       toolNames.includes('stop'),
       `Found: ${toolNames.join(', ')}`
@@ -167,7 +168,7 @@ async function runTests() {
     console.log('📋 Validation Complete:');
     console.log('  ✅ genie mcp command accessible');
     console.log('  ✅ MCP server starts via CLI');
-    console.log('  ✅ All 6 tools discoverable');
+    console.log('  ✅ All core tools discoverable');
     console.log('  ✅ Tool execution functional');
     console.log('  ✅ Server stability confirmed');
     process.exit(0);

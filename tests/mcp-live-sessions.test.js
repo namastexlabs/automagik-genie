@@ -2,10 +2,10 @@
 /**
  * MCP Live Session Integration Tests
  *
- * Tests the full lifecycle: run → view → resume → stop
+ * Tests the full lifecycle: run → view → continue_task → stop
  * Validates session state consistency between CLI and MCP
  *
- * Target: 10+ assertions covering all 6 tools with live execution
+ * Target: 10+ assertions covering core tools with live execution
  */
 
 const { spawn } = require('child_process');
@@ -113,8 +113,8 @@ function startServer() {
  */
 async function runTests() {
   console.log('\n=== MCP Live Session Integration Tests ===');
-  console.log('Target: 10+ assertions covering run/resume/view/stop');
-  console.log('Workflow: run agent → view transcript → resume session → stop session\n');
+  console.log('Target: 10+ assertions covering run/continue_task/view/stop');
+  console.log('Workflow: run agent → view transcript → continue_task → stop session\n');
 
   let server;
   let requestId = 1;
@@ -225,34 +225,34 @@ async function runTests() {
       testsFailed += 2; // Mark as failures since we couldn't test
     }
 
-    // Test 7-9: Resume Tool (Continue Session)
-    console.log('\n[Test 7-9] resume Tool - Continue Existing Session');
+    // Test 7-9: continue_task Tool (Continue Session)
+    console.log('\n[Test 7-9] continue_task Tool - Continue Existing Session');
 
     if (sessionId) {
-      const resumeCall = {
+      const continueTaskCall = {
         jsonrpc: '2.0',
         id: requestId++,
         method: 'tools/call',
         params: {
-          name: 'resume',
+          name: 'continue_task',
           arguments: {
-            sessionId: sessionId,
+            attempt_id: sessionId,
             prompt: 'Follow-up test message'
           }
         }
       };
 
-      const resumeResponse = await sendRequest(server, resumeCall, 30000);
-      assert(resumeResponse.result, 'resume tool executed');
+      const continueTaskResponse = await sendRequest(server, continueTaskCall, 30000);
+      assert(continueTaskResponse.result, 'continue_task tool executed');
 
-      const resumeText = resumeResponse.result.content[0]?.text || '';
-      assert(resumeText.length > 0, 'resume tool returned response');
+      const continueTaskText = continueTaskResponse.result.content[0]?.text || '';
+      assert(continueTaskText.length > 0, 'continue_task tool returned response');
       assert(
-        resumeText.includes('Follow-up') || resumeText.includes('resumed') || resumeText.length > 10,
-        'resume tool continued conversation'
+        continueTaskText.includes('Follow-up') || continueTaskText.includes('sent') || continueTaskText.length > 10,
+        'continue_task tool sent follow-up work'
       );
     } else {
-      console.log('  ⚠️  No session ID available for resume test (skipping)');
+      console.log('  ⚠️  No session ID available for continue_task test (skipping)');
       testsFailed += 3; // Mark as failures
     }
 
@@ -351,7 +351,7 @@ async function runTests() {
       console.log('📋 Integration Validation Summary:');
       console.log('  • run tool creates sessions');
       console.log('  • view tool retrieves transcripts');
-      console.log('  • resume tool continues conversations');
+      console.log('  • continue_task tool sends follow-up work');
       console.log('  • stop tool terminates sessions');
       console.log('  • CLI-MCP session state unified\n');
       process.exit(testsPassed >= 10 ? 0 : 1); // Pass if we got 10+ assertions
@@ -360,7 +360,7 @@ async function runTests() {
       console.log('\n📋 Live Session Workflow Validated:');
       console.log('  ✅ run → create session');
       console.log('  ✅ view → retrieve transcript');
-      console.log('  ✅ resume → continue conversation');
+      console.log('  ✅ continue_task → send follow-up work');
       console.log('  ✅ stop → terminate session');
       console.log('  ✅ CLI-MCP state consistency\n');
       process.exit(0);
