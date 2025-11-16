@@ -194,7 +194,7 @@ server.tool('list_agents', 'List all available Genie agents with their capabilit
 });
 
 // Tool: list_sessions - View active and recent sessions
-server.tool('list_sessions', 'List active and recent Genie agent sessions. Shows session names, agents, status, and timing. Use this to find sessions to resume or view.', async () => {
+server.tool('list_sessions', 'List active and recent Genie agent sessions. Shows session names, agents, status, and timing. Use this to find sessions to view or continue.', async () => {
   const sessions = await listSessions();
 
   if (sessions.length === 0) {
@@ -212,7 +212,7 @@ server.tool('list_sessions', 'List active and recent Genie agent sessions. Shows
     response += `   Last Used: ${session.lastUsed}\n\n`;
   });
 
-  response += 'Use "view" with the session ID (e.g., "c74111b4-...") to see transcript or "resume" to continue a session.';
+  response += 'Use "view" with the session ID (e.g., "c74111b4-...") to see transcript or "continue_task" to send follow-up work.';
 
   return { content: [{ type: 'text', text: response }] };
 });
@@ -264,30 +264,12 @@ server.tool('run', 'Start a new Genie agent session. Choose an agent (use list_a
 
     const { displayId } = transformDisplayPath(resolvedAgent);
     const aliasNote = AGENT_ALIASES[args.agent] ? ` (alias: ${args.agent} → ${resolvedAgent})` : '';
-    return { content: [{ type: 'text', text: getVersionHeader() + `Started agent session:\nAgent: ${displayId}${aliasNote}\n\n${output}\n\nUse list_sessions to see the session ID, then use view/resume/stop as needed.` }] };
+    return { content: [{ type: 'text', text: getVersionHeader() + `Started agent session:\nAgent: ${displayId}${aliasNote}\n\n${output}\n\nUse list_sessions to see the session ID, then use view/stop as needed.` }] };
   } catch (error: any) {
     return { content: [{ type: 'text', text: getVersionHeader() + formatCliFailure('start agent session', error) }] };
   }
 });
 
-// Tool: resume - Continue an existing session
-server.tool('resume', 'Resume an existing agent session with a follow-up prompt. Use this to continue conversations, provide additional context, or ask follow-up questions to an agent.', {
-  sessionId: z.string().describe('Session name to resume (get from list_sessions tool). Example: "146-session-name-architecture"'),
-  prompt: z.string().describe('Follow-up message or question for the agent. Build on the previous conversation context.')
-}, async (args) => {
-  try {
-    const cliArgs = ['resume', args.sessionId];
-    if (args.prompt?.length) {
-      cliArgs.push(args.prompt);
-    }
-    const { stdout, stderr } = await runCliCommand(WORKSPACE_ROOT, cliArgs, 120000);
-    const output = stdout + (stderr ? `\n\nStderr:\n${stderr}` : '');
-
-    return { content: [{ type: 'text', text: getVersionHeader() + `Resumed session ${args.sessionId}:\n\n${output}` }] };
-  } catch (error: any) {
-    return { content: [{ type: 'text', text: getVersionHeader() + formatCliFailure('resume session', error) }] };
-  }
-});
 
 // Tool: view - View session transcript
 server.tool('view', 'View the transcript of an agent session. Shows the conversation history, agent outputs, and any artifacts generated. Use full=true for complete transcript or false for recent messages only.', {
@@ -701,7 +683,7 @@ if (debugMode) {
   }
 
   // Dynamically count tools instead of hardcoding
-  const coreTools = ['list_agents', 'list_sessions', 'run', 'resume', 'view', 'stop', 'list_spells', 'read_spell', 'get_workspace_info'];
+  const coreTools = ['list_agents', 'list_sessions', 'run', 'view', 'stop', 'list_spells', 'read_spell', 'get_workspace_info'];
   const wsTools = ['transform_prompt'];
   const neuronTools = ['continue_task', 'create_subtask'];
   const totalTools = coreTools.length + wsTools.length + neuronTools.length;

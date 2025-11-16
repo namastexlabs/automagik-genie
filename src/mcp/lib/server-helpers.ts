@@ -112,7 +112,8 @@ export async function listSessions(): Promise<Array<{ id: string; name: string; 
     const forgeSessions = await forgeExecutor.listSessions();
 
     const sessions = forgeSessions.map((entry: any) => ({
-      name: entry.name || entry.sessionId || 'unknown',
+      id: entry.id,
+      name: entry.name || entry.id || 'unknown',
       agent: entry.agent || 'unknown',
       status: entry.status || 'unknown',
       created: entry.created || 'unknown',
@@ -156,63 +157,8 @@ export async function listSessions(): Promise<Array<{ id: string; name: string; 
       return new Date(b.lastUsed).getTime() - new Date(a.lastUsed).getTime();
     });
   } catch (error) {
-    // Fallback to local sessions.json if Forge API fails
-    console.warn('Failed to fetch Forge sessions, falling back to local store');
-    const sessionsFile = path.join(workspaceRoot, '.genie/state/agents/sessions.json');
-
-    if (!fs.existsSync(sessionsFile)) {
-      return [];
-    }
-
-    try {
-      const content = fs.readFileSync(sessionsFile, 'utf8');
-      const store = JSON.parse(content);
-
-      const sessions = Object.entries(store.sessions || {}).map(([key, entry]: [string, any]) => ({
-        id: entry.sessionId || key,
-        name: entry.name || key,
-        agent: entry.agent || key,
-        status: entry.status || 'unknown',
-        created: entry.created || 'unknown',
-        lastUsed: entry.lastUsed || entry.created || 'unknown'
-      }));
-
-      // Apply same stale filter as Forge path (Fix Bug #5)
-      const now = Date.now();
-      const STALE_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24 hours
-
-      const running = sessions.filter(s => {
-        const status = s.status === 'running' || s.status === 'starting';
-        if (!status) return false;
-
-        // Filter out stale sessions
-        if (s.lastUsed !== 'unknown') {
-          const lastUsedTime = new Date(s.lastUsed).getTime();
-          const age = now - lastUsedTime;
-          if (age > STALE_THRESHOLD_MS) {
-            return false;
-          }
-        }
-        return true;
-      });
-
-      const completed = sessions
-        .filter(s => s.status === 'completed')
-        .sort((a, b) => {
-          if (a.lastUsed === 'unknown') return 1;
-          if (b.lastUsed === 'unknown') return -1;
-          return new Date(b.lastUsed).getTime() - new Date(a.lastUsed).getTime();
-        })
-        .slice(0, 10);
-
-      return [...running, ...completed].sort((a, b) => {
-        if (a.lastUsed === 'unknown') return 1;
-        if (b.lastUsed === 'unknown') return -1;
-        return new Date(b.lastUsed).getTime() - new Date(a.lastUsed).getTime();
-      });
-    } catch (error) {
-      return [];
-    }
+    console.warn('Failed to fetch Forge sessions:', error);
+    return [];
   }
 }
 
