@@ -99,6 +99,17 @@ export async function launchUpdateTask(
       updateAgent = data;
     }
 
+    // Validate update agent has task_id
+    if (!updateAgent?.task_id) {
+      throw new Error(
+        'Update agent task_id is missing.\n\n' +
+          `Agent response: ${JSON.stringify(updateAgent, null, 2)}\n\n` +
+          'Please check Forge API or report this issue.'
+      );
+    }
+
+    console.log(gradient.pastel(`✓ Update agent found: ${updateAgent.task_id}`));
+
     // Get update agent definition from registry
     let updateVariant = 'DEFAULT';
     let updateExecutor = 'CLAUDE_CODE';
