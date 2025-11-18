@@ -6,6 +6,11 @@
  * 2. Init creates Forge task with diff as input to update agent
  * 3. Update agent processes diff and applies changes
  * 4. User monitors progress in Forge dashboard
+ *
+ * CRITICAL: Must run from main workspace, not Forge worktrees
+ * - Forge worktrees use temporary branches (forge/*)
+ * - Using these as base_branch causes 422 API errors
+ * - Detection prevents confusing failures (Issue #034)
  */
 
 import { getForgeConfig } from './service-config.js';
@@ -56,6 +61,26 @@ export async function launchUpdateTask(
   console.log('');
 
   try {
+    // Check if running from Forge worktree (CRITICAL: prevents 422 errors)
+    const isForgeWorktree = workspacePath.includes('/automagik-forge/worktrees/');
+    const currentBranch = getCurrentBranch();
+    const isForgeBranch = currentBranch.startsWith('forge/');
+
+    if (isForgeWorktree || isForgeBranch) {
+      console.error('');
+      console.error(gradient.pastel('❌ Cannot run update from Forge worktree'));
+      console.error('');
+      console.error('You are currently in a Forge task worktree:');
+      console.error(`  Path: ${workspacePath}`);
+      console.error(`  Branch: ${currentBranch}`);
+      console.error('');
+      console.error('Please navigate to your main workspace and try again:');
+      console.error('  cd ~/genie/personal-genie  (or your main Genie directory)');
+      console.error('  genie update');
+      console.error('');
+      throw new Error('Update must be run from main workspace, not Forge worktree');
+    }
+
     // Read diff content
     const diffContent = await fsp.readFile(diffPath, 'utf8');
 
