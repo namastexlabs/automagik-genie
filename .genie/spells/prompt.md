@@ -1,13 +1,3 @@
----
-name: prompt
-description: Advanced prompting guidance and prompt refinement
-genie:
-  executor: CLAUDE_CODE
-  model: sonnet
-  background: true
-  permissionMode: bypassPermissions
----
-
 ## Framework Reference
 
 This agent uses the universal prompting framework documented in AGENTS.md §Prompting Standards Framework:
