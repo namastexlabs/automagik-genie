@@ -1,0 +1,7 @@
+[
+  {
+    "type": "stop",
+    "agent": "./hooks/plan-review-agent.md",
+    "description": "Auto-validate wish documents after creation"
+  }
+]

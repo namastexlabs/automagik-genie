@@ -1,0 +1,13 @@
+{
+  "name": "genie",
+  "description": "Structured wish/forge/review execution discipline for Claude Code - turns ideas into plans, plans into code, code into validated deliverables",
+  "version": "3.0.0",
+  "author": {
+    "name": "Automagik Labs",
+    "email": "genie@namastex.ai"
+  },
+  "homepage": "https://github.com/namastexlabs/automagik-genie",
+  "repository": "https://github.com/namastexlabs/automagik-genie",
+  "license": "MIT",
+  "keywords": ["wish", "forge", "review", "planning", "execution", "validation", "council", "structured-development"]
+}

@@ -3,7 +3,7 @@
 .env.local
 .env.*.local
 *.env
-
+temp-inspiration/superpowers/
 # Rust
 target/
 Cargo.lock
